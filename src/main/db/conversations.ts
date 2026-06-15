@@ -1,0 +1,83 @@
+import { randomUUID } from 'crypto'
+import { getDb } from './index'
+
+export interface Conversation {
+  id: string
+  title: string
+  workspace: string | null
+  created_at: number
+  updated_at: number
+}
+
+export interface Message {
+  id: string
+  conversation_id: string
+  role: 'user' | 'assistant'
+  content: string
+  created_at: number
+}
+
+export function listConversations(): Conversation[] {
+  return getDb()
+    .prepare('SELECT * FROM conversations ORDER BY updated_at DESC')
+    .all() as Conversation[]
+}
+
+export function createConversation(title = 'New chat'): Conversation {
+  const now = Date.now()
+  const conv: Conversation = {
+    id: randomUUID(),
+    title,
+    workspace: null,
+    created_at: now,
+    updated_at: now
+  }
+  getDb()
+    .prepare(
+      'INSERT INTO conversations (id, title, workspace, created_at, updated_at) VALUES (@id, @title, @workspace, @created_at, @updated_at)'
+    )
+    .run(conv)
+  return conv
+}
+
+export function deleteConversation(id: string): void {
+  getDb().prepare('DELETE FROM conversations WHERE id = ?').run(id)
+}
+
+export function renameConversation(id: string, title: string): void {
+  getDb()
+    .prepare('UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?')
+    .run(title, Date.now(), id)
+}
+
+export function getMessages(conversationId: string): Message[] {
+  return getDb()
+    .prepare('SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC')
+    .all(conversationId) as Message[]
+}
+
+export function addMessage(
+  conversationId: string,
+  role: Message['role'],
+  content: string
+): Message {
+  const msg: Message = {
+    id: randomUUID(),
+    conversation_id: conversationId,
+    role,
+    content,
+    created_at: Date.now()
+  }
+  const db = getDb()
+  const tx = db.transaction(() => {
+    db.prepare(
+      'INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (@id, @conversation_id, @role, @content, @created_at)'
+    ).run(msg)
+    db.prepare('UPDATE conversations SET updated_at = ? WHERE id = ?').run(
+      msg.created_at,
+      conversationId
+    )
+  })
+  tx()
+  return msg
+}
