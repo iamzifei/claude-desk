@@ -76,12 +76,14 @@
 | 生产构建 | ✅ 通过 | `npm run build` 三段全部产出 |
 | better-sqlite3 原生模块 | ✅ 通过 | Electron 39 下冒烟：WAL+建表+读写 OK |
 | safeStorage 加密 | ✅ 可用 | 冒烟：isEncryptionAvailable=true |
-| GUI 实际点击/真实对话 | ⏳ 未测 | 需窗口服务器+会吵醒你；且需真实 API key |
+| Electron 应用启动 | ✅ 通过 | `npm run dev` 实跑：main 进程过了 initDb+registerIpc，窗口创建成功，日志 0 error，进程存活 |
+| GUI 实际点击/真实对话 | ⏳ 未测 | 需真实 API key + 手动点击；逻辑已就绪 |
 
-**未测部分的风险评估**：构建和类型都过、最危险的原生模块也验证了，剩下的是纯
-JS/React 逻辑(IPC 往返、流式渲染)。逻辑直观、出大问题概率低，但**没经过真实
-端到端跑一遍**，不排除有小 bug（比如流式渲染时序、optimistic message 替换）。
-你醒来 `npm run dev` 填上 key 点一下就知道了。
+**未测部分的风险评估**：构建、类型、原生模块、Electron 应用启动都已验证通过——
+应用能真实启动、主进程初始化数据库和 IPC 全部正常、窗口创建成功、日志零错误。
+唯一没覆盖的是「填真实 key 发一句话走完整流式闭环」这一步（需要你的 API key +
+手动点击）。剩余风险只在纯前端逻辑的小细节（流式渲染时序、optimistic message
+替换），出大问题概率很低。你醒来 `npm run dev` 填上 key 点一下即可确认。
 
 ---
 
