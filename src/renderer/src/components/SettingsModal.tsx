@@ -1,6 +1,7 @@
 import { JSX, useEffect, useState } from 'react'
-import { ShieldCheck } from 'lucide-react'
+import { ShieldCheck, Sun, Moon } from 'lucide-react'
 import { useStore } from '../store'
+import { cn } from '../lib/utils'
 import type { ProviderInfo } from '../types'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'
 import { Input } from './ui/input'
@@ -55,6 +56,8 @@ export function SettingsModal({ open, onOpenChange }: Props): JSX.Element {
         </DialogHeader>
 
         <div className="space-y-4">
+          <ThemeToggle />
+
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground">供应商</span>
             <select
@@ -114,5 +117,35 @@ export function SettingsModal({ open, onOpenChange }: Props): JSX.Element {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function ThemeToggle(): JSX.Element {
+  const theme = useStore((s) => s.theme)
+  const setTheme = useStore((s) => s.setTheme)
+  const opts = [
+    { value: 'light', label: '浅色', icon: Sun },
+    { value: 'dark', label: '深色', icon: Moon }
+  ]
+  return (
+    <div className="space-y-1.5">
+      <span className="text-xs font-medium text-muted-foreground">外观</span>
+      <div className="flex gap-1 rounded-lg border border-border p-1">
+        {opts.map((o) => (
+          <button
+            key={o.value}
+            onClick={() => setTheme(o.value)}
+            className={cn(
+              'flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-[13px] transition-colors',
+              theme === o.value
+                ? 'bg-accent text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <o.icon className="h-3.5 w-3.5" /> {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }

@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* Class-based dark mode (toggle `.dark` on <html>) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ── Design tokens (shadcn-style), warm light palette aligned to 牛马AI ─── */
 :root {
   --background: #ffffff;
@@ -24,6 +27,31 @@
   --sidebar: #f6f4f0;
   --primary-soft: #faf1e6;
   --radius: 0.75rem;
+}
+
+/* Dark mode — warm neutral dark, amber accent preserved (aligns with 牛马AI 深色模式) */
+.dark {
+  --background: #1a1a1d;
+  --foreground: #ececf0;
+  --card: #232327;
+  --card-foreground: #ececf0;
+  --popover: #232327;
+  --popover-foreground: #ececf0;
+  --primary: #d98a3d;
+  --primary-foreground: #1a1a1d;
+  --secondary: #2b2b30;
+  --secondary-foreground: #ececf0;
+  --muted: #232327;
+  --muted-foreground: #a0a0a8;
+  --accent: #313138;
+  --accent-foreground: #ececf0;
+  --destructive: #e5704b;
+  --border: #34343a;
+  --border-soft: #2c2c31;
+  --input: #34343a;
+  --ring: #d98a3d;
+  --sidebar: #1f1f23;
+  --primary-soft: #33271a;
 }
 
 /* Map tokens to Tailwind color utilities (bg-background, text-muted-foreground, …) */

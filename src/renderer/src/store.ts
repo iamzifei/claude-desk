@@ -12,6 +12,10 @@ import type {
 
 let booted = false
 
+function applyTheme(theme: string): void {
+  document.documentElement.classList.toggle('dark', theme === 'dark')
+}
+
 interface AppState {
   // hierarchy
   workspaces: Workspace[]
@@ -33,8 +37,10 @@ interface AppState {
   globalModel: string
   rightPanel: 'card' | 'files' | 'browser' | null
   files: FileEntry[]
+  theme: string
 
   init: () => Promise<void>
+  setTheme: (theme: string) => Promise<void>
   refreshAll: () => Promise<void>
   refreshConversations: () => Promise<void>
 
@@ -82,6 +88,13 @@ export const useStore = create<AppState>((set, get) => ({
   globalModel: 'claude-opus-4-8',
   rightPanel: null,
   files: [],
+  theme: 'light',
+
+  setTheme: async (theme) => {
+    applyTheme(theme)
+    set({ theme })
+    await window.api.settings.set({ theme })
+  },
 
   init: async () => {
     if (booted) return
@@ -91,6 +104,7 @@ export const useStore = create<AppState>((set, get) => ({
       window.api.settings.getProviders(),
       window.api.workspaces.list()
     ])
+    applyTheme(settings.theme)
     const activeWorkspaceId =
       (settings.activeWorkspace && workspaces.some((w) => w.id === settings.activeWorkspace)
         ? settings.activeWorkspace
@@ -99,6 +113,7 @@ export const useStore = create<AppState>((set, get) => ({
       hasApiKey: settings.hasApiKey,
       providers,
       globalModel: settings.model,
+      theme: settings.theme,
       workspaces,
       activeWorkspaceId
     })
