@@ -50,6 +50,11 @@ function migrate(d: Database.Database): void {
       key   TEXT PRIMARY KEY,
       value TEXT
     );
+    `,
+    // 0002 — per-conversation model override + archive flag (align with 牛马AI)
+    `
+    ALTER TABLE conversations ADD COLUMN model TEXT;
+    ALTER TABLE conversations ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;
     `
   ]
 

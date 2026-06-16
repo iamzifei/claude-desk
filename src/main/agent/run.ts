@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getProvider, DEFAULT_MODEL } from './providers'
-import { getSetting } from '../db/settings'
+import { getSetting, resolveApiKey } from '../db/settings'
 import type { Message } from '../db/conversations'
 
 /**
@@ -32,21 +32,27 @@ export interface RunHandle {
  * @param onChunk  called for every streamed delta and the terminal event
  * @returns a handle whose `cancel()` aborts the in-flight request
  */
-export function runChat(history: Message[], onChunk: (c: Chunk) => void): RunHandle {
+export function runChat(
+  history: Message[],
+  onChunk: (c: Chunk) => void,
+  modelOverride?: string | null
+): RunHandle {
   const controller = new AbortController()
 
   ;(async () => {
-    const apiKey = getSetting('apiKey')
+    const apiKey = resolveApiKey()
     if (!apiKey) {
       onChunk({
         type: 'error',
-        message: 'No API key set. Open Settings and paste your provider API key.'
+        message:
+          'No API key found. Open Settings and paste your provider API key (or set CLAUDE_API_KEY in your environment / ~/.env).'
       })
       return
     }
 
     const provider = getProvider(getSetting('provider') ?? 'anthropic')
-    const model = getSetting('model') ?? DEFAULT_MODEL
+    // Per-conversation model wins over the global default.
+    const model = modelOverride || getSetting('model') || DEFAULT_MODEL
 
     const client = new Anthropic({ apiKey, baseURL: provider.baseURL })
 

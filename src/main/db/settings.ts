@@ -1,4 +1,7 @@
 import { safeStorage } from 'electron'
+import { readFileSync } from 'fs'
+import { homedir } from 'os'
+import { join } from 'path'
 import { getDb } from './index'
 
 /**
@@ -38,6 +41,29 @@ export function setSetting(key: string, value: string, secret = false): void {
     .run(key, stored)
 }
 
+/**
+ * Resolve the API key in priority order:
+ *   1. the key the user saved in Settings (encrypted via safeStorage)
+ *   2. process.env.CLAUDE_API_KEY / ANTHROPIC_API_KEY
+ *   3. CLAUDE_API_KEY in ~/.env
+ * The env fallbacks make `npm run dev` reply out-of-the-box without first
+ * pasting a key into Settings.
+ */
+export function resolveApiKey(): string | null {
+  const stored = getSetting('apiKey')
+  if (stored) return stored
+  const fromEnv = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY
+  if (fromEnv) return fromEnv
+  try {
+    const dotenv = readFileSync(join(homedir(), '.env'), 'utf8')
+    const m = dotenv.match(/^\s*(?:CLAUDE_API_KEY|ANTHROPIC_API_KEY)\s*=\s*(.+?)\s*$/m)
+    if (m) return m[1].replace(/^["']|["']$/g, '')
+  } catch {
+    // no ~/.env — fine
+  }
+  return null
+}
+
 export interface AppSettings {
   provider: string
   model: string
@@ -49,6 +75,8 @@ export function getPublicSettings(): AppSettings {
   return {
     provider: getSetting('provider') ?? 'anthropic',
     model: getSetting('model') ?? 'claude-opus-4-8',
-    hasApiKey: !!getSetting('apiKey')
+    // True if a key is available from any source (stored or env fallback),
+    // so the UI doesn't nag when CLAUDE_API_KEY lives in the environment.
+    hasApiKey: !!resolveApiKey()
   }
 }

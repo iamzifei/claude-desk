@@ -8,10 +8,17 @@ import { registerIpc } from './ipc'
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 1100,
-    height: 760,
+    width: 1180,
+    height: 800,
+    minWidth: 880,
+    minHeight: 560,
     show: false,
     autoHideMenuBar: true,
+    backgroundColor: '#1a1a1d',
+    // Frameless custom title bar (like 牛马AI): native traffic lights on mac,
+    // hidden overlay elsewhere; the app draws its own draggable top bar.
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 14, y: 16 },
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

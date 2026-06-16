@@ -1,5 +1,6 @@
 import { JSX, useEffect, useState } from 'react'
 import { useStore } from './store'
+import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
 import { ChatView } from './components/ChatView'
 import { SettingsModal } from './components/SettingsModal'
@@ -14,8 +15,11 @@ function App(): JSX.Element {
 
   return (
     <div className="app">
-      <Sidebar onOpenSettings={() => setShowSettings(true)} />
-      <ChatView />
+      <TitleBar />
+      <div className="app-body">
+        <Sidebar onOpenSettings={() => setShowSettings(true)} />
+        <ChatView />
+      </div>
       {showSettings ? <SettingsModal onClose={() => setShowSettings(false)} /> : null}
     </div>
   )

@@ -1,50 +1,67 @@
 import { create } from 'zustand'
-import type { Conversation, Message, Chunk, StreamingState } from './types'
+import type { Conversation, Message, Chunk, StreamingState, ProviderInfo } from './types'
 
 // Module-level guard so init() runs only once even under StrictMode.
 let booted = false
 
 interface AppState {
   conversations: Conversation[]
+  openTabs: string[] // conversation ids currently open as tabs (main area)
   activeId: string | null
   messages: Message[]
   streaming: StreamingState | null // non-null while the assistant is replying
   hasApiKey: boolean
+  search: string
+  providers: ProviderInfo[]
+  globalModel: string
+  rightPanel: 'card' | 'files' | 'browser' | null // dockable right panel (stubs)
 
   // bootstrap
   init: () => Promise<void>
   refreshConversations: () => Promise<void>
 
-  // navigation
-  selectConversation: (id: string) => Promise<void>
+  // navigation / tabs
+  openConversation: (id: string) => Promise<void>
+  closeTab: (id: string) => void
   newConversation: () => Promise<void>
   deleteConversation: (id: string) => Promise<void>
+  archiveConversation: (id: string) => Promise<void>
+  renameConversation: (id: string, title: string) => Promise<void>
+  setSearch: (q: string) => void
+  setRightPanel: (p: AppState['rightPanel']) => void
 
   // chat
   send: (text: string) => Promise<void>
   cancel: () => void
+  setActiveModel: (model: string) => Promise<void>
 
-  // internal: handle a streamed chunk
+  // internal
   _onChunk: (conversationId: string, chunk: Chunk) => void
 }
 
 export const useStore = create<AppState>((set, get) => ({
   conversations: [],
+  openTabs: [],
   activeId: null,
   messages: [],
   streaming: null,
   hasApiKey: false,
+  search: '',
+  providers: [],
+  globalModel: 'claude-opus-4-8',
+  rightPanel: null,
 
   init: async () => {
-    // Guard against React StrictMode's double-effect (dev) creating two chats.
     if (booted) return
     booted = true
-    const settings = await window.api.settings.get()
-    set({ hasApiKey: settings.hasApiKey })
+    const [settings, providers] = await Promise.all([
+      window.api.settings.get(),
+      window.api.settings.getProviders()
+    ])
+    set({ hasApiKey: settings.hasApiKey, providers, globalModel: settings.model })
     await get().refreshConversations()
-    // Auto-select the most recent conversation, or create one.
     const { conversations } = get()
-    if (conversations.length > 0) await get().selectConversation(conversations[0].id)
+    if (conversations.length > 0) await get().openConversation(conversations[0].id)
     else await get().newConversation()
   },
 
@@ -52,31 +69,61 @@ export const useStore = create<AppState>((set, get) => ({
     set({ conversations: await window.api.conversations.list() })
   },
 
-  selectConversation: async (id) => {
-    set({ activeId: id, streaming: null })
+  openConversation: async (id) => {
+    set((s) => ({
+      activeId: id,
+      streaming: null,
+      openTabs: s.openTabs.includes(id) ? s.openTabs : [...s.openTabs, id]
+    }))
     set({ messages: await window.api.conversations.messages(id) })
+  },
+
+  closeTab: (id) => {
+    set((s) => {
+      const openTabs = s.openTabs.filter((t) => t !== id)
+      let activeId = s.activeId
+      if (s.activeId === id) activeId = openTabs[openTabs.length - 1] ?? null
+      return { openTabs, activeId }
+    })
+    const next = get().activeId
+    if (next) get().openConversation(next)
+    else get().newConversation()
   },
 
   newConversation: async () => {
     const conv = await window.api.conversations.create()
     await get().refreshConversations()
-    set({ activeId: conv.id, messages: [], streaming: null })
+    set((s) => ({
+      activeId: conv.id,
+      messages: [],
+      streaming: null,
+      openTabs: [...s.openTabs, conv.id]
+    }))
   },
 
   deleteConversation: async (id) => {
     await window.api.conversations.delete(id)
     await get().refreshConversations()
-    const { conversations, activeId } = get()
-    if (activeId === id) {
-      if (conversations.length > 0) await get().selectConversation(conversations[0].id)
-      else await get().newConversation()
-    }
+    get().closeTab(id)
   },
+
+  archiveConversation: async (id) => {
+    await window.api.conversations.archive(id, true)
+    await get().refreshConversations()
+    get().closeTab(id)
+  },
+
+  renameConversation: async (id, title) => {
+    await window.api.conversations.rename(id, title)
+    await get().refreshConversations()
+  },
+
+  setSearch: (q) => set({ search: q }),
+  setRightPanel: (p) => set((s) => ({ rightPanel: s.rightPanel === p ? null : p })),
 
   send: async (text) => {
     const id = get().activeId
     if (!id || get().streaming) return
-    // Optimistically render the user's message; the main process persists it.
     const optimistic: Message = {
       id: `tmp-${Date.now()}`,
       conversation_id: id,
@@ -96,6 +143,13 @@ export const useStore = create<AppState>((set, get) => ({
     if (id) window.api.agent.cancel(id)
   },
 
+  setActiveModel: async (model) => {
+    const id = get().activeId
+    if (!id) return
+    await window.api.conversations.setModel(id, model)
+    await get().refreshConversations()
+  },
+
   _onChunk: (conversationId, chunk) => {
     if (conversationId !== get().activeId) return
     const s = get().streaming
@@ -107,7 +161,6 @@ export const useStore = create<AppState>((set, get) => ({
     } else if (chunk.type === 'error') {
       set({ streaming: { ...s, error: chunk.message } })
     } else if (chunk.type === 'done') {
-      // Reload persisted messages (the assistant turn is now saved) and clear stream.
       window.api.conversations.messages(conversationId).then((messages) => {
         set({ messages, streaming: null })
       })

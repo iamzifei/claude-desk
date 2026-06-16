@@ -21,9 +21,15 @@ const api = {
   },
   conversations: {
     list: () => ipcRenderer.invoke('conversations:list'),
+    listArchived: () => ipcRenderer.invoke('conversations:listArchived'),
+    search: (query: string) => ipcRenderer.invoke('conversations:search', query),
     create: () => ipcRenderer.invoke('conversations:create'),
     delete: (id: string) => ipcRenderer.invoke('conversations:delete', id),
     rename: (id: string, title: string) => ipcRenderer.invoke('conversations:rename', id, title),
+    archive: (id: string, archived: boolean) =>
+      ipcRenderer.invoke('conversations:archive', id, archived),
+    setModel: (id: string, model: string | null) =>
+      ipcRenderer.invoke('conversations:setModel', id, model),
     messages: (id: string) => ipcRenderer.invoke('conversations:messages', id)
   },
   settings: {

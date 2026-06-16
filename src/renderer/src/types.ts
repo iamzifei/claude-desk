@@ -4,6 +4,8 @@ export interface Conversation {
   id: string
   title: string
   workspace: string | null
+  model: string | null
+  archived: number
   created_at: number
   updated_at: number
 }

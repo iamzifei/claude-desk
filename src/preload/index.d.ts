@@ -4,6 +4,8 @@ export interface Conversation {
   id: string
   title: string
   workspace: string | null
+  model: string | null
+  archived: number
   created_at: number
   updated_at: number
 }
@@ -42,9 +44,13 @@ export interface Api {
   }
   conversations: {
     list: () => Promise<Conversation[]>
+    listArchived: () => Promise<Conversation[]>
+    search: (query: string) => Promise<Conversation[]>
     create: () => Promise<Conversation>
     delete: (id: string) => Promise<void>
     rename: (id: string, title: string) => Promise<void>
+    archive: (id: string, archived: boolean) => Promise<void>
+    setModel: (id: string, model: string | null) => Promise<void>
     messages: (id: string) => Promise<Message[]>
   }
   settings: {

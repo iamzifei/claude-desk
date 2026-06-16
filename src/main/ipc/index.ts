@@ -1,9 +1,14 @@
 import { ipcMain, dialog, shell, app, BrowserWindow } from 'electron'
 import {
   listConversations,
+  listArchived,
+  searchConversations,
   createConversation,
   deleteConversation,
   renameConversation,
+  setArchived,
+  setConversationModel,
+  getConversationModel,
   getMessages,
   addMessage
 } from '../db/conversations'
@@ -30,6 +35,8 @@ export function registerIpc(): void {
 
   // ---- conversations: --------------------------------------------------
   ipcMain.handle('conversations:list', () => listConversations())
+  ipcMain.handle('conversations:listArchived', () => listArchived())
+  ipcMain.handle('conversations:search', (_e, query: string) => searchConversations(query))
   ipcMain.handle('conversations:create', () => createConversation())
   ipcMain.handle('conversations:delete', (_e, id: string) => {
     activeRuns.get(id)?.cancel()
@@ -38,6 +45,14 @@ export function registerIpc(): void {
   })
   ipcMain.handle('conversations:rename', (_e, id: string, title: string) =>
     renameConversation(id, title)
+  )
+  ipcMain.handle('conversations:archive', (_e, id: string, archived: boolean) => {
+    activeRuns.get(id)?.cancel()
+    activeRuns.delete(id)
+    setArchived(id, archived)
+  })
+  ipcMain.handle('conversations:setModel', (_e, id: string, model: string | null) =>
+    setConversationModel(id, model)
   )
   ipcMain.handle('conversations:messages', (_e, id: string) => getMessages(id))
 
@@ -53,16 +68,21 @@ export function registerIpc(): void {
     }
 
     let assistant = ''
-    const handle = runChat(history, (chunk) => {
-      if (wc.isDestroyed()) return
-      wc.send('agent:chunk', conversationId, chunk)
-      if (chunk.type === 'text') assistant += chunk.text
-      if (chunk.type === 'done') {
-        if (assistant.trim()) addMessage(conversationId, 'assistant', assistant)
-        activeRuns.delete(conversationId)
-      }
-      if (chunk.type === 'error') activeRuns.delete(conversationId)
-    })
+    const model = getConversationModel(conversationId)
+    const handle = runChat(
+      history,
+      (chunk) => {
+        if (wc.isDestroyed()) return
+        wc.send('agent:chunk', conversationId, chunk)
+        if (chunk.type === 'text') assistant += chunk.text
+        if (chunk.type === 'done') {
+          if (assistant.trim()) addMessage(conversationId, 'assistant', assistant)
+          activeRuns.delete(conversationId)
+        }
+        if (chunk.type === 'error') activeRuns.delete(conversationId)
+      },
+      model
+    )
     activeRuns.set(conversationId, handle)
   })
 
