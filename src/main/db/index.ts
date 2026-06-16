@@ -1,11 +1,15 @@
 import Database from 'better-sqlite3'
 import { app } from 'electron'
 import { join } from 'path'
+import { randomUUID } from 'crypto'
 
 /**
- * Local-first storage. Everything the app produces (conversations, messages,
- * settings) lives in a single SQLite file under Electron's userData dir —
- * the same approach the reference app (newmax.db) uses. No server required.
+ * Local-first storage. Everything the app produces (workspaces, projects,
+ * conversations, messages, settings) lives in a single SQLite file under
+ * Electron's userData dir — the same approach the reference app (newmax.db)
+ * uses. No server required.
+ *
+ * Hierarchy (aligned with 牛马AI): Workspace → Project → Conversation.
  */
 let db: Database.Database
 
@@ -15,7 +19,31 @@ export function initDb(): Database.Database {
   db.pragma('journal_mode = WAL') // better concurrency + crash safety
   db.pragma('foreign_keys = ON')
   migrate(db)
+  ensureDefaults(db)
   return db
+}
+
+/**
+ * Guarantee at least one workspace exists, and that every conversation belongs
+ * to a workspace. Runs every boot — cheap and idempotent.
+ */
+function ensureDefaults(d: Database.Database): void {
+  const wsCount = d.prepare('SELECT COUNT(*) AS n FROM workspaces').get() as { n: number }
+  let defaultWsId: string
+  if (wsCount.n === 0) {
+    defaultWsId = randomUUID()
+    d.prepare(
+      'INSERT INTO workspaces (id, name, root_path, sort, created_at) VALUES (?, ?, NULL, 0, ?)'
+    ).run(defaultWsId, '我的工作区', Date.now())
+  } else {
+    defaultWsId = (
+      d.prepare('SELECT id FROM workspaces ORDER BY sort, created_at LIMIT 1').get() as {
+        id: string
+      }
+    ).id
+  }
+  // Backfill conversations created before the hierarchy existed.
+  d.prepare('UPDATE conversations SET workspace_id = ? WHERE workspace_id IS NULL').run(defaultWsId)
 }
 
 export function getDb(): Database.Database {
@@ -55,6 +83,29 @@ function migrate(d: Database.Database): void {
     `
     ALTER TABLE conversations ADD COLUMN model TEXT;
     ALTER TABLE conversations ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;
+    `,
+    // 0003 — Workspace → Project → Conversation hierarchy (align with 牛马AI)
+    `
+    CREATE TABLE workspaces (
+      id          TEXT PRIMARY KEY,
+      name        TEXT NOT NULL,
+      root_path   TEXT,
+      sort        INTEGER NOT NULL DEFAULT 0,
+      created_at  INTEGER NOT NULL
+    );
+    CREATE TABLE projects (
+      id            TEXT PRIMARY KEY,
+      workspace_id  TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+      name          TEXT NOT NULL,
+      dir_path      TEXT,
+      sort          INTEGER NOT NULL DEFAULT 0,
+      created_at    INTEGER NOT NULL
+    );
+    ALTER TABLE conversations ADD COLUMN workspace_id TEXT;
+    ALTER TABLE conversations ADD COLUMN project_id TEXT;
+    CREATE INDEX idx_conv_ws ON conversations(workspace_id, archived, updated_at);
+    CREATE INDEX idx_conv_proj ON conversations(project_id);
+    CREATE INDEX idx_proj_ws ON projects(workspace_id, sort);
     `
   ]
 

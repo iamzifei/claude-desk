@@ -1,20 +1,11 @@
-import type { Conversation } from './types'
-
-export type DateGroup = '今天' | '昨天' | '更早'
-
-/** Group conversations by recency, matching 牛马AI's 今天 / 昨天 / 更早 buckets. */
-export function groupByDate(convs: Conversation[]): { label: DateGroup; items: Conversation[] }[] {
-  const now = new Date()
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-  const startOfYesterday = startOfToday - 86_400_000
-
-  const buckets: Record<DateGroup, Conversation[]> = { 今天: [], 昨天: [], 更早: [] }
-  for (const c of convs) {
-    if (c.updated_at >= startOfToday) buckets['今天'].push(c)
-    else if (c.updated_at >= startOfYesterday) buckets['昨天'].push(c)
-    else buckets['更早'].push(c)
-  }
-  return (['今天', '昨天', '更早'] as DateGroup[])
-    .map((label) => ({ label, items: buckets[label] }))
-    .filter((g) => g.items.length > 0)
+/** Time-aware greeting, in the spirit of 牛马AI's 「夜深了，安静的时间最适合创作」. */
+export function greeting(): string {
+  const h = new Date().getHours()
+  if (h < 5) return '夜深了，安静的时间最适合创作'
+  if (h < 9) return '早上好，新的一天开始了'
+  if (h < 12) return '上午好，专注做点事吧'
+  if (h < 14) return '中午好，先把灵感记下来'
+  if (h < 18) return '下午好，继续推进吧'
+  if (h < 22) return '晚上好，今天辛苦了'
+  return '夜深了，安静的时间最适合创作'
 }

@@ -1,46 +1,77 @@
 import { create } from 'zustand'
-import type { Conversation, Message, Chunk, StreamingState, ProviderInfo } from './types'
+import type {
+  Workspace,
+  Project,
+  Conversation,
+  Message,
+  Chunk,
+  StreamingState,
+  ProviderInfo,
+  FileEntry
+} from './types'
 
-// Module-level guard so init() runs only once even under StrictMode.
 let booted = false
 
 interface AppState {
-  conversations: Conversation[]
-  openTabs: string[] // conversation ids currently open as tabs (main area)
+  // hierarchy
+  workspaces: Workspace[]
+  activeWorkspaceId: string | null
+  projects: Project[]
+  conversations: Conversation[] // active (non-archived) in current workspace
+  archived: Conversation[]
+
+  // chat session
+  openTabs: string[]
   activeId: string | null
   messages: Message[]
-  streaming: StreamingState | null // non-null while the assistant is replying
+  streaming: StreamingState | null
+
+  // ui / settings
   hasApiKey: boolean
   search: string
   providers: ProviderInfo[]
   globalModel: string
-  rightPanel: 'card' | 'files' | 'browser' | null // dockable right panel (stubs)
+  rightPanel: 'card' | 'files' | 'browser' | null
+  files: FileEntry[]
 
-  // bootstrap
   init: () => Promise<void>
+  refreshAll: () => Promise<void>
   refreshConversations: () => Promise<void>
 
-  // navigation / tabs
+  // workspace
+  switchWorkspace: (id: string) => Promise<void>
+  newWorkspace: () => Promise<void>
+
+  // project
+  newProject: () => Promise<void>
+  renameProject: (id: string, name: string) => Promise<void>
+  deleteProject: (id: string) => Promise<void>
+  bindProjectDir: (id: string) => Promise<void>
+
+  // conversation / tabs
   openConversation: (id: string) => Promise<void>
   closeTab: (id: string) => void
-  newConversation: () => Promise<void>
+  newConversation: (projectId?: string | null) => Promise<void>
   deleteConversation: (id: string) => Promise<void>
   archiveConversation: (id: string) => Promise<void>
   renameConversation: (id: string, title: string) => Promise<void>
+
   setSearch: (q: string) => void
   setRightPanel: (p: AppState['rightPanel']) => void
 
-  // chat
   send: (text: string) => Promise<void>
   cancel: () => void
   setActiveModel: (model: string) => Promise<void>
 
-  // internal
   _onChunk: (conversationId: string, chunk: Chunk) => void
 }
 
 export const useStore = create<AppState>((set, get) => ({
+  workspaces: [],
+  activeWorkspaceId: null,
+  projects: [],
   conversations: [],
+  archived: [],
   openTabs: [],
   activeId: null,
   messages: [],
@@ -50,23 +81,93 @@ export const useStore = create<AppState>((set, get) => ({
   providers: [],
   globalModel: 'claude-opus-4-8',
   rightPanel: null,
+  files: [],
 
   init: async () => {
     if (booted) return
     booted = true
-    const [settings, providers] = await Promise.all([
+    const [settings, providers, workspaces] = await Promise.all([
       window.api.settings.get(),
-      window.api.settings.getProviders()
+      window.api.settings.getProviders(),
+      window.api.workspaces.list()
     ])
-    set({ hasApiKey: settings.hasApiKey, providers, globalModel: settings.model })
-    await get().refreshConversations()
+    const activeWorkspaceId =
+      (settings.activeWorkspace && workspaces.some((w) => w.id === settings.activeWorkspace)
+        ? settings.activeWorkspace
+        : workspaces[0]?.id) ?? null
+    set({
+      hasApiKey: settings.hasApiKey,
+      providers,
+      globalModel: settings.model,
+      workspaces,
+      activeWorkspaceId
+    })
+    await get().refreshAll()
     const { conversations } = get()
     if (conversations.length > 0) await get().openConversation(conversations[0].id)
     else await get().newConversation()
   },
 
+  refreshAll: async () => {
+    const ws = get().activeWorkspaceId
+    if (!ws) return
+    const [projects] = await Promise.all([window.api.projects.list(ws)])
+    set({ projects })
+    await get().refreshConversations()
+  },
+
   refreshConversations: async () => {
-    set({ conversations: await window.api.conversations.list() })
+    const ws = get().activeWorkspaceId
+    if (!ws) return
+    const [conversations, archived] = await Promise.all([
+      window.api.conversations.list(ws),
+      window.api.conversations.listArchived(ws)
+    ])
+    set({ conversations, archived })
+  },
+
+  switchWorkspace: async (id) => {
+    set({ activeWorkspaceId: id, openTabs: [], activeId: null, messages: [], streaming: null })
+    await window.api.settings.set({ activeWorkspace: id })
+    await get().refreshAll()
+    const { conversations } = get()
+    if (conversations.length > 0) await get().openConversation(conversations[0].id)
+    else await get().newConversation()
+  },
+
+  newWorkspace: async () => {
+    const name = window.prompt('新工作区名称', '新工作区')
+    if (!name) return
+    const ws = await window.api.workspaces.create(name)
+    set({ workspaces: await window.api.workspaces.list() })
+    await get().switchWorkspace(ws.id)
+  },
+
+  newProject: async () => {
+    const ws = get().activeWorkspaceId
+    if (!ws) return
+    const name = window.prompt('新项目名称', '新项目')
+    if (!name) return
+    await window.api.projects.create(ws, name)
+    await get().refreshAll()
+  },
+
+  renameProject: async (id, name) => {
+    await window.api.projects.rename(id, name)
+    await get().refreshAll()
+  },
+
+  deleteProject: async (id) => {
+    await window.api.projects.delete(id)
+    await get().refreshAll()
+  },
+
+  bindProjectDir: async (id) => {
+    const dir = await window.api.app.openFolder()
+    if (dir) {
+      await window.api.projects.setDir(id, dir)
+      await get().refreshAll()
+    }
   },
 
   openConversation: async (id) => {
@@ -90,8 +191,10 @@ export const useStore = create<AppState>((set, get) => ({
     else get().newConversation()
   },
 
-  newConversation: async () => {
-    const conv = await window.api.conversations.create()
+  newConversation: async (projectId = null) => {
+    const ws = get().activeWorkspaceId
+    if (!ws) return
+    const conv = await window.api.conversations.create(ws, projectId)
     await get().refreshConversations()
     set((s) => ({
       activeId: conv.id,
@@ -119,7 +222,17 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setSearch: (q) => set({ search: q }),
-  setRightPanel: (p) => set((s) => ({ rightPanel: s.rightPanel === p ? null : p })),
+
+  setRightPanel: (p) => {
+    set((s) => ({ rightPanel: s.rightPanel === p ? null : p }))
+    // When opening the files panel, load the active conversation's project dir.
+    if (get().rightPanel === 'files') {
+      const conv = get().conversations.find((c) => c.id === get().activeId)
+      const proj = get().projects.find((pr) => pr.id === conv?.project_id)
+      if (proj?.dir_path) window.api.files.listDir(proj.dir_path).then((files) => set({ files }))
+      else set({ files: [] })
+    }
+  },
 
   send: async (text) => {
     const id = get().activeId
@@ -169,7 +282,6 @@ export const useStore = create<AppState>((set, get) => ({
   }
 }))
 
-// Wire the IPC stream into the store exactly once.
 window.api.agent.onChunk((conversationId, chunk) => {
   useStore.getState()._onChunk(conversationId, chunk)
 })

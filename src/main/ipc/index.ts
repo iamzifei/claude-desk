@@ -1,4 +1,6 @@
 import { ipcMain, dialog, shell, app, BrowserWindow } from 'electron'
+import { readdirSync } from 'fs'
+import { join } from 'path'
 import {
   listConversations,
   listArchived,
@@ -7,11 +9,26 @@ import {
   deleteConversation,
   renameConversation,
   setArchived,
+  moveToProject,
   setConversationModel,
   getConversationModel,
   getMessages,
   addMessage
 } from '../db/conversations'
+import {
+  listWorkspaces,
+  createWorkspace,
+  renameWorkspace,
+  setWorkspaceRoot,
+  deleteWorkspace
+} from '../db/workspaces'
+import {
+  listProjects,
+  createProject,
+  renameProject,
+  setProjectDir,
+  deleteProject
+} from '../db/projects'
 import { getPublicSettings, setSetting } from '../db/settings'
 import { runChat, type RunHandle } from '../agent/run'
 import { PROVIDERS } from '../agent/providers'
@@ -28,16 +45,45 @@ export function registerIpc(): void {
   ipcMain.handle('settings:set', (_e, patch: Record<string, string>) => {
     if (typeof patch.provider === 'string') setSetting('provider', patch.provider)
     if (typeof patch.model === 'string') setSetting('model', patch.model)
+    if (typeof patch.activeWorkspace === 'string') setSetting('activeWorkspace', patch.activeWorkspace)
+    if (typeof patch.theme === 'string') setSetting('theme', patch.theme)
     // API key is a secret → encrypted at rest via safeStorage.
     if (typeof patch.apiKey === 'string' && patch.apiKey) setSetting('apiKey', patch.apiKey, true)
     return getPublicSettings()
   })
 
+  // ---- workspaces: -----------------------------------------------------
+  ipcMain.handle('workspaces:list', () => listWorkspaces())
+  ipcMain.handle('workspaces:create', (_e, name: string) => createWorkspace(name))
+  ipcMain.handle('workspaces:rename', (_e, id: string, name: string) => renameWorkspace(id, name))
+  ipcMain.handle('workspaces:setRoot', (_e, id: string, path: string | null) =>
+    setWorkspaceRoot(id, path)
+  )
+  ipcMain.handle('workspaces:delete', (_e, id: string) => deleteWorkspace(id))
+
+  // ---- projects: -------------------------------------------------------
+  ipcMain.handle('projects:list', (_e, workspaceId: string) => listProjects(workspaceId))
+  ipcMain.handle('projects:create', (_e, workspaceId: string, name: string) =>
+    createProject(workspaceId, name)
+  )
+  ipcMain.handle('projects:rename', (_e, id: string, name: string) => renameProject(id, name))
+  ipcMain.handle('projects:setDir', (_e, id: string, dir: string | null) => setProjectDir(id, dir))
+  ipcMain.handle('projects:delete', (_e, id: string) => deleteProject(id))
+
   // ---- conversations: --------------------------------------------------
-  ipcMain.handle('conversations:list', () => listConversations())
-  ipcMain.handle('conversations:listArchived', () => listArchived())
-  ipcMain.handle('conversations:search', (_e, query: string) => searchConversations(query))
-  ipcMain.handle('conversations:create', () => createConversation())
+  ipcMain.handle('conversations:list', (_e, workspaceId: string) => listConversations(workspaceId))
+  ipcMain.handle('conversations:listArchived', (_e, workspaceId: string) =>
+    listArchived(workspaceId)
+  )
+  ipcMain.handle('conversations:search', (_e, workspaceId: string, query: string) =>
+    searchConversations(workspaceId, query)
+  )
+  ipcMain.handle('conversations:create', (_e, workspaceId: string, projectId: string | null) =>
+    createConversation(workspaceId, projectId ?? null)
+  )
+  ipcMain.handle('conversations:move', (_e, id: string, projectId: string | null) =>
+    moveToProject(id, projectId)
+  )
   ipcMain.handle('conversations:delete', (_e, id: string) => {
     activeRuns.get(id)?.cancel()
     activeRuns.delete(id)
@@ -101,4 +147,16 @@ export function registerIpc(): void {
     return res.canceled ? null : res.filePaths[0]
   })
   ipcMain.handle('app:openExternal', (_e, url: string) => shell.openExternal(url))
+
+  // ---- files: (project / workspace folder listing for the 文件 panel) ---
+  ipcMain.handle('files:listDir', (_e, dir: string) => {
+    try {
+      return readdirSync(dir, { withFileTypes: true })
+        .filter((d) => !d.name.startsWith('.'))
+        .map((d) => ({ name: d.name, path: join(dir, d.name), isDir: d.isDirectory() }))
+        .sort((a, b) => Number(b.isDir) - Number(a.isDir) || a.name.localeCompare(b.name))
+    } catch {
+      return []
+    }
+  })
 }

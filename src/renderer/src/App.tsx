@@ -1,5 +1,6 @@
 import { JSX, useEffect, useState } from 'react'
 import { useStore } from './store'
+import { TooltipProvider } from './components/ui/tooltip'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
 import { ChatView } from './components/ChatView'
@@ -14,14 +15,16 @@ function App(): JSX.Element {
   }, [init])
 
   return (
-    <div className="app">
-      <TitleBar />
-      <div className="app-body">
-        <Sidebar onOpenSettings={() => setShowSettings(true)} />
-        <ChatView />
+    <TooltipProvider delayDuration={300}>
+      <div className="flex h-screen flex-col bg-sidebar">
+        <TitleBar />
+        <div className="grid min-h-0 flex-1 grid-cols-[232px_1fr]">
+          <Sidebar onOpenSettings={() => setShowSettings(true)} />
+          <ChatView />
+        </div>
+        <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
       </div>
-      {showSettings ? <SettingsModal onClose={() => setShowSettings(false)} /> : null}
-    </div>
+    </TooltipProvider>
   )
 }
 

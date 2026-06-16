@@ -68,6 +68,8 @@ export interface AppSettings {
   provider: string
   model: string
   hasApiKey: boolean
+  activeWorkspace: string | null
+  theme: string // 'light' | 'dark'
 }
 
 /** Settings safe to send to the renderer (never includes the raw key). */
@@ -77,6 +79,8 @@ export function getPublicSettings(): AppSettings {
     model: getSetting('model') ?? 'claude-opus-4-8',
     // True if a key is available from any source (stored or env fallback),
     // so the UI doesn't nag when CLAUDE_API_KEY lives in the environment.
-    hasApiKey: !!resolveApiKey()
+    hasApiKey: !!resolveApiKey(),
+    activeWorkspace: getSetting('activeWorkspace'),
+    theme: getSetting('theme') ?? 'light'
   }
 }

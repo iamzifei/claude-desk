@@ -75,6 +75,23 @@
 
 ---
 
+## 3.5 进度更新（夜间自主 session 2）
+
+拿到录屏权限后,截了**真实牛马AI**(`docs/reference/niuma-main-layout.png`)并据此重做了布局,又按你的要求换成 **shadcn/ui + lucide 图标**。
+
+**已完成:**
+- ✅ **Projects 数据层**:Workspace→Project→Conversation 三级 + 项目绑定文件夹 + 文件面板(migration 0003)
+- ✅ **按真实布局重做**:顶部工作区横标签、左栏功能菜单(新建对话/搜索/定时任务/浏览器/Skill管理/每日回顾)、最近对话/归档分组、底部用户资料、输入区联网开关 + 预设 chips、时间感知问候
+- ✅ **浅色暖调主题**(对齐牛马AI 默认)
+- ✅ **shadcn/ui 重构**:Tailwind v4 + Radix + CVA(= 牛马AI 自己的栈),ui/ 下 button/input/dialog/dropdown-menu/tooltip primitives
+- ✅ **全部 emoji → lucide SVG 图标**(无一处 emoji)
+- ✅ **API key 三级回退**(设置/env/`~/.env`),`~/.env` 的 CLAUDE_API_KEY 开箱即用
+
+**验证(全部实跑通过):**
+- typecheck 0 error;build 通过
+- **截图自检**(Quartz 按窗口 ID 截图):见 `docs/reference/claude-desk-shadcn.png`,与牛马AI 高度一致
+- **CDP 驱动真实 app 端到端发消息**:返回真实 Claude 回复「这句话本身就是我在这个app里的正常回复…✓」——证明 `可以得到ai回复` 在真 app 里成立(用 `~/.env` 的 key)
+
 ## 四、需要你拍板
 醒来后告诉我 **Phase B 先做哪个**:
 1. 卡片预览/导出(最出彩、最像牛马AI 的差异化)

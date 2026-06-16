@@ -4,7 +4,9 @@ import { getDb } from './index'
 export interface Conversation {
   id: string
   title: string
-  workspace: string | null
+  workspace: string | null // legacy free-text field (unused); kept for schema compat
+  workspace_id: string | null
+  project_id: string | null
   model: string | null // per-conversation model override; null → use global default
   archived: number // 0 | 1
   created_at: number
@@ -19,39 +21,49 @@ export interface Message {
   created_at: number
 }
 
-/** Active (non-archived) conversations, newest first. */
-export function listConversations(): Conversation[] {
+/** Active (non-archived) conversations in a workspace, newest first. */
+export function listConversations(workspaceId: string): Conversation[] {
   return getDb()
-    .prepare('SELECT * FROM conversations WHERE archived = 0 ORDER BY updated_at DESC')
-    .all() as Conversation[]
+    .prepare(
+      'SELECT * FROM conversations WHERE workspace_id = ? AND archived = 0 ORDER BY updated_at DESC'
+    )
+    .all(workspaceId) as Conversation[]
 }
 
-/** Archived conversations, newest first. */
-export function listArchived(): Conversation[] {
+/** Archived conversations in a workspace. */
+export function listArchived(workspaceId: string): Conversation[] {
   return getDb()
-    .prepare('SELECT * FROM conversations WHERE archived = 1 ORDER BY updated_at DESC')
-    .all() as Conversation[]
+    .prepare(
+      'SELECT * FROM conversations WHERE workspace_id = ? AND archived = 1 ORDER BY updated_at DESC'
+    )
+    .all(workspaceId) as Conversation[]
 }
 
-/** Full-text-ish search over titles + message content. Returns active convos. */
-export function searchConversations(query: string): Conversation[] {
+/** Search titles + message bodies within a workspace (active conversations). */
+export function searchConversations(workspaceId: string, query: string): Conversation[] {
   const q = `%${query.trim()}%`
   return getDb()
     .prepare(
       `SELECT DISTINCT c.* FROM conversations c
        LEFT JOIN messages m ON m.conversation_id = c.id
-       WHERE c.archived = 0 AND (c.title LIKE ? OR m.content LIKE ?)
+       WHERE c.workspace_id = ? AND c.archived = 0 AND (c.title LIKE ? OR m.content LIKE ?)
        ORDER BY c.updated_at DESC`
     )
-    .all(q, q) as Conversation[]
+    .all(workspaceId, q, q) as Conversation[]
 }
 
-export function createConversation(title = 'New chat'): Conversation {
+export function createConversation(
+  workspaceId: string,
+  projectId: string | null = null,
+  title = '新对话'
+): Conversation {
   const now = Date.now()
   const conv: Conversation = {
     id: randomUUID(),
     title,
     workspace: null,
+    workspace_id: workspaceId,
+    project_id: projectId,
     model: null,
     archived: 0,
     created_at: now,
@@ -59,8 +71,9 @@ export function createConversation(title = 'New chat'): Conversation {
   }
   getDb()
     .prepare(
-      `INSERT INTO conversations (id, title, workspace, model, archived, created_at, updated_at)
-       VALUES (@id, @title, @workspace, @model, @archived, @created_at, @updated_at)`
+      `INSERT INTO conversations
+        (id, title, workspace, workspace_id, project_id, model, archived, created_at, updated_at)
+       VALUES (@id, @title, @workspace, @workspace_id, @project_id, @model, @archived, @created_at, @updated_at)`
     )
     .run(conv)
   return conv
@@ -78,6 +91,10 @@ export function renameConversation(id: string, title: string): void {
 
 export function setArchived(id: string, archived: boolean): void {
   getDb().prepare('UPDATE conversations SET archived = ? WHERE id = ?').run(archived ? 1 : 0, id)
+}
+
+export function moveToProject(id: string, projectId: string | null): void {
+  getDb().prepare('UPDATE conversations SET project_id = ? WHERE id = ?').run(projectId, id)
 }
 
 export function setConversationModel(id: string, model: string | null): void {

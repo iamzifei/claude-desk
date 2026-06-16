@@ -19,11 +19,32 @@ const api = {
       return () => ipcRenderer.removeListener('agent:chunk', listener)
     }
   },
+  workspaces: {
+    list: () => ipcRenderer.invoke('workspaces:list'),
+    create: (name: string) => ipcRenderer.invoke('workspaces:create', name),
+    rename: (id: string, name: string) => ipcRenderer.invoke('workspaces:rename', id, name),
+    setRoot: (id: string, path: string | null) =>
+      ipcRenderer.invoke('workspaces:setRoot', id, path),
+    delete: (id: string) => ipcRenderer.invoke('workspaces:delete', id)
+  },
+  projects: {
+    list: (workspaceId: string) => ipcRenderer.invoke('projects:list', workspaceId),
+    create: (workspaceId: string, name: string) =>
+      ipcRenderer.invoke('projects:create', workspaceId, name),
+    rename: (id: string, name: string) => ipcRenderer.invoke('projects:rename', id, name),
+    setDir: (id: string, dir: string | null) => ipcRenderer.invoke('projects:setDir', id, dir),
+    delete: (id: string) => ipcRenderer.invoke('projects:delete', id)
+  },
   conversations: {
-    list: () => ipcRenderer.invoke('conversations:list'),
-    listArchived: () => ipcRenderer.invoke('conversations:listArchived'),
-    search: (query: string) => ipcRenderer.invoke('conversations:search', query),
-    create: () => ipcRenderer.invoke('conversations:create'),
+    list: (workspaceId: string) => ipcRenderer.invoke('conversations:list', workspaceId),
+    listArchived: (workspaceId: string) =>
+      ipcRenderer.invoke('conversations:listArchived', workspaceId),
+    search: (workspaceId: string, query: string) =>
+      ipcRenderer.invoke('conversations:search', workspaceId, query),
+    create: (workspaceId: string, projectId: string | null) =>
+      ipcRenderer.invoke('conversations:create', workspaceId, projectId),
+    move: (id: string, projectId: string | null) =>
+      ipcRenderer.invoke('conversations:move', id, projectId),
     delete: (id: string) => ipcRenderer.invoke('conversations:delete', id),
     rename: (id: string, title: string) => ipcRenderer.invoke('conversations:rename', id, title),
     archive: (id: string, archived: boolean) =>
@@ -41,6 +62,9 @@ const api = {
     getDefaultWorkspace: () => ipcRenderer.invoke('app:getDefaultWorkspace'),
     openFolder: () => ipcRenderer.invoke('dialog:openFolder'),
     openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url)
+  },
+  files: {
+    listDir: (dir: string) => ipcRenderer.invoke('files:listDir', dir)
   }
 }
 

@@ -1,133 +1,298 @@
 import { JSX, useEffect, useState } from 'react'
+import {
+  PencilLine,
+  Search,
+  Clock,
+  Globe,
+  Puzzle,
+  BarChart3,
+  Settings,
+  MoreHorizontal,
+  ChevronRight,
+  ChevronDown,
+  Plus,
+  Folder,
+  Archive,
+  Trash2,
+  FolderInput,
+  type LucideIcon
+} from 'lucide-react'
 import { useStore } from '../store'
-import { groupByDate } from '../utils'
-import type { Conversation } from '../types'
+import { cn } from '../lib/utils'
+import type { Conversation, Project } from '../types'
+import { Input } from './ui/input'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from './ui/dropdown-menu'
+import { Tip } from './ui/tooltip'
 
 interface Props {
   onOpenSettings: () => void
 }
 
+const NAV: { icon: LucideIcon; label: string; action: 'new' | 'search' | null }[] = [
+  { icon: PencilLine, label: '新建对话', action: 'new' },
+  { icon: Search, label: '搜索', action: 'search' },
+  { icon: Clock, label: '定时任务', action: null },
+  { icon: Globe, label: '浏览器', action: null },
+  { icon: Puzzle, label: 'Skill 管理', action: null },
+  { icon: BarChart3, label: '每日回顾', action: null }
+]
+
 export function Sidebar({ onOpenSettings }: Props): JSX.Element {
   const conversations = useStore((s) => s.conversations)
-  const activeId = useStore((s) => s.activeId)
+  const archived = useStore((s) => s.archived)
+  const projects = useStore((s) => s.projects)
   const search = useStore((s) => s.search)
   const setSearch = useStore((s) => s.setSearch)
-  const open = useStore((s) => s.openConversation)
   const create = useStore((s) => s.newConversation)
+  const newProject = useStore((s) => s.newProject)
+  const ws = useStore((s) => s.activeWorkspaceId)
 
+  const [searchOpen, setSearchOpen] = useState(false)
   const [results, setResults] = useState<Conversation[] | null>(null)
+  const [showArchived, setShowArchived] = useState(false)
 
-  // Debounced server-side search over titles + message bodies.
   useEffect(() => {
-    if (!search.trim()) {
+    if (!search.trim() || !ws) {
       setResults(null)
       return
     }
-    const t = setTimeout(async () => {
-      setResults(await window.api.conversations.search(search))
-    }, 180)
+    const t = setTimeout(async () => setResults(await window.api.conversations.search(ws, search)), 180)
     return () => clearTimeout(t)
-  }, [search])
+  }, [search, ws])
 
-  const list = results ?? conversations
-  const groups = groupByDate(list)
+  const all = results ?? conversations
+  const ungrouped = all.filter((c) => !c.project_id)
+  const inProject = (p: Project): Conversation[] => all.filter((c) => c.project_id === p.id)
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-top">
-        <button className="new-chat" onClick={() => create()}>
-          + 新对话
-        </button>
-        <input
-          className="search"
-          placeholder="搜索对话…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+    <aside className="flex min-h-0 flex-col bg-sidebar">
+      <div className="flex items-center gap-2 px-4 pb-2.5 pt-1">
+        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-[13px] font-bold text-primary-foreground">
+          牛
+        </div>
+        <span className="text-sm font-semibold">牛马AI · Desk</span>
       </div>
 
-      <div className="conv-list">
-        {list.length === 0 ? (
-          <div className="conv-empty">{search ? '没有匹配的对话' : '还没有对话'}</div>
-        ) : (
-          groups.map((g) => (
-            <div key={g.label} className="conv-group">
-              <div className="conv-group-label">{g.label}</div>
-              {g.items.map((c) => (
-                <ConvItem key={c.id} conv={c} active={c.id === activeId} onClick={() => open(c.id)} />
-              ))}
+      <nav className="flex flex-col gap-px px-2 pb-2">
+        {NAV.map((item) => (
+          <button
+            key={item.label}
+            disabled={item.action === null}
+            title={item.action === null ? '即将上线' : undefined}
+            onClick={() => {
+              if (item.action === 'new') create(null)
+              if (item.action === 'search') setSearchOpen((v) => !v)
+            }}
+            className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+          >
+            <item.icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
+            <span>{item.label}</span>
+          </button>
+        ))}
+        {searchOpen ? (
+          <Input
+            autoFocus
+            placeholder="搜索对话…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="mt-1 h-8 text-[13px]"
+          />
+        ) : null}
+      </nav>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+        {projects.map((p) => (
+          <ProjectGroup key={p.id} project={p} items={inProject(p)} />
+        ))}
+
+        <div className="mb-1.5">
+          <div className="flex items-center justify-between px-2 pb-1 pt-1.5">
+            <span className="text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+              最近对话
+            </span>
+            <Tip label="新建项目">
+              <button
+                onClick={() => newProject()}
+                className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] text-muted-foreground/70 transition-colors hover:bg-accent hover:text-primary"
+              >
+                <Plus className="h-3 w-3" /> 项目
+              </button>
+            </Tip>
+          </div>
+          {ungrouped.length === 0 ? (
+            <div className="px-2.5 py-1.5 text-[12.5px] text-muted-foreground/60">
+              {search ? '没有匹配' : '还没有开始对话'}
             </div>
-          ))
-        )}
+          ) : (
+            ungrouped.map((c) => <ConvItem key={c.id} conv={c} />)
+          )}
+        </div>
+
+        {archived.length > 0 ? (
+          <div className="mb-1.5">
+            <button
+              onClick={() => setShowArchived((v) => !v)}
+              className="flex w-full items-center gap-1 px-2 py-1 text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground/70"
+            >
+              {showArchived ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+              归档
+              <span className="ml-auto font-normal text-muted-foreground/50">{archived.length}</span>
+            </button>
+            {showArchived ? archived.map((c) => <ConvItem key={c.id} conv={c} />) : null}
+          </div>
+        ) : null}
       </div>
 
-      <div className="sidebar-rail">
-        <button className="rail-btn" disabled title="技能市场（即将上线）">
-          🧩 技能
-        </button>
-        <button className="rail-btn" onClick={onOpenSettings}>
-          ⚙ 设置
-        </button>
+      <div className="flex items-center justify-between border-t border-border-soft px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+            J
+          </div>
+          <span className="text-[13px] text-muted-foreground">James</span>
+        </div>
+        <Tip label="设置">
+          <button
+            onClick={onOpenSettings}
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+        </Tip>
       </div>
     </aside>
   )
 }
 
-function ConvItem({
-  conv,
-  active,
-  onClick
-}: {
-  conv: Conversation
-  active: boolean
-  onClick: () => void
-}): JSX.Element {
-  const [menu, setMenu] = useState(false)
+function ProjectGroup({ project, items }: { project: Project; items: Conversation[] }): JSX.Element {
+  const [open, setOpen] = useState(true)
+  const create = useStore((s) => s.newConversation)
+  const rename = useStore((s) => s.renameProject)
+  const remove = useStore((s) => s.deleteProject)
+  const bindDir = useStore((s) => s.bindProjectDir)
+
+  return (
+    <div className="mb-1.5">
+      <div className="group flex items-center gap-1 px-2 py-1">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex flex-1 items-center gap-1 text-[12.5px] font-medium text-muted-foreground"
+        >
+          {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+          <Folder className="h-3.5 w-3.5" />
+          <span className="truncate">{project.name}</span>
+        </button>
+        <Tip label="此项目内新建对话">
+          <button
+            onClick={() => create(project.id)}
+            className="rounded p-0.5 text-muted-foreground/70 opacity-0 transition hover:bg-accent hover:text-primary group-hover:opacity-100"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        </Tip>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="rounded p-0.5 text-muted-foreground/70 opacity-0 transition hover:bg-accent hover:text-foreground group-hover:opacity-100">
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onSelect={() => {
+                const n = window.prompt('重命名项目', project.name)
+                if (n?.trim()) rename(project.id, n.trim())
+              }}
+            >
+              <PencilLine /> 重命名
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => bindDir(project.id)}>
+              <FolderInput /> {project.dir_path ? '更换文件夹' : '绑定文件夹'}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              destructive
+              onSelect={() => {
+                if (window.confirm(`删除项目「${project.name}」？对话会移到最近对话。`))
+                  remove(project.id)
+              }}
+            >
+              <Trash2 /> 删除项目
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      {open ? (
+        items.length === 0 ? (
+          <div className="px-2.5 py-1 text-[12.5px] text-muted-foreground/50">空项目</div>
+        ) : (
+          items.map((c) => <ConvItem key={c.id} conv={c} />)
+        )
+      ) : null}
+    </div>
+  )
+}
+
+function ConvItem({ conv }: { conv: Conversation }): JSX.Element {
+  const activeId = useStore((s) => s.activeId)
+  const open = useStore((s) => s.openConversation)
   const remove = useStore((s) => s.deleteConversation)
   const archive = useStore((s) => s.archiveConversation)
   const rename = useStore((s) => s.renameConversation)
 
-  const doRename = (): void => {
-    setMenu(false)
-    const title = window.prompt('重命名对话', conv.title)
-    if (title && title.trim()) rename(conv.id, title.trim())
-  }
-
   return (
-    <div className={`conv-item ${active ? 'active' : ''}`} onClick={onClick}>
-      <span className="conv-title">{conv.title}</span>
-      <button
-        className="conv-more"
-        title="更多"
-        onClick={(e) => {
-          e.stopPropagation()
-          setMenu((m) => !m)
-        }}
-      >
-        ⋯
-      </button>
-      {menu ? (
-        <div className="conv-menu" onClick={(e) => e.stopPropagation()}>
-          <button onClick={doRename}>重命名</button>
+    <div
+      onClick={() => open(conv.id)}
+      className={cn(
+        'group flex cursor-pointer items-center gap-1.5 rounded-lg py-2 pl-2.5 pr-1.5 text-[13.5px] transition-colors',
+        conv.id === activeId
+          ? 'bg-accent text-foreground'
+          : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
+      )}
+    >
+      <span className="flex-1 truncate">{conv.title}</span>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
           <button
-            onClick={() => {
-              setMenu(false)
-              archive(conv.id)
+            onClick={(e) => e.stopPropagation()}
+            className="rounded p-0.5 text-muted-foreground/70 opacity-0 transition hover:text-foreground group-hover:opacity-100 data-[state=open]:opacity-100"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+          <DropdownMenuItem
+            onSelect={() => {
+              const t = window.prompt('重命名对话', conv.title)
+              if (t?.trim()) rename(conv.id, t.trim())
             }}
           >
-            归档
-          </button>
-          <button
-            className="danger"
-            onClick={() => {
-              setMenu(false)
+            <PencilLine /> 重命名
+          </DropdownMenuItem>
+          {conv.archived ? null : (
+            <DropdownMenuItem onSelect={() => archive(conv.id)}>
+              <Archive /> 归档
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            destructive
+            onSelect={() => {
               if (window.confirm(`删除「${conv.title}」？`)) remove(conv.id)
             }}
           >
-            删除
-          </button>
-        </div>
-      ) : null}
+            <Trash2 /> 删除
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }
