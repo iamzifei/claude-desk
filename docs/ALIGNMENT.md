@@ -92,6 +92,14 @@
 - **截图自检**(Quartz 按窗口 ID 截图):见 `docs/reference/claude-desk-shadcn.png`,与牛马AI 高度一致
 - **CDP 驱动真实 app 端到端发消息**:返回真实 Claude 回复「这句话本身就是我在这个app里的正常回复…✓」——证明 `可以得到ai回复` 在真 app 里成立(用 `~/.env` 的 key)
 
+## 3.6 视觉记录(docs/reference/)
+- `niuma-main-layout.png` — 真实牛马AI(对齐基准)
+- `claude-desk-shadcn.png` — 本项目空状态(浅色,shadcn+lucide)
+- `claude-desk-chat.png` — 对话中(markdown/代码块/思考折叠渲染)
+- `claude-desk-dark.png` — 深色模式
+
+新增:**深色模式**(token 化,设置里 浅色/深色 切换,持久化)——对齐牛马AI 深色模式。
+
 ## 四、需要你拍板
 醒来后告诉我 **Phase B 先做哪个**:
 1. 卡片预览/导出(最出彩、最像牛马AI 的差异化)
