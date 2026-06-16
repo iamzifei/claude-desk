@@ -5,6 +5,12 @@ import icon from '../../resources/icon.png?asset'
 import { initDb } from './db'
 import { registerIpc } from './ipc'
 
+// Opt-in dev remote-debugging port (off by default). Enable for CDP-driven QA:
+//   CLAUDE_DESK_CDP=9223 npm run dev
+if (is.dev && process.env.CLAUDE_DESK_CDP) {
+  app.commandLine.appendSwitch('remote-debugging-port', process.env.CLAUDE_DESK_CDP)
+}
+
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
