@@ -1,5 +1,66 @@
+import { resolve, dirname, basename, join, sep } from 'path'
+import { realpathSync } from 'fs'
 import { resolveApiKey, getSetting } from '../db/settings'
 import { getProvider, DEFAULT_MODEL } from './providers'
+
+type PermResult =
+  | { behavior: 'allow'; updatedInput: Record<string, unknown> }
+  | { behavior: 'deny'; message: string }
+
+// Tools that only read or are harness-internal — always safe.
+const READONLY = new Set(['Read', 'Glob', 'Grep', 'LS', 'TodoWrite', 'WebSearch', 'WebFetch', 'Task'])
+const FILE_WRITE = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
+// Obviously-destructive bash patterns we refuse even inside the project dir.
+const BASH_DENY = [
+  /\bsudo\b/,
+  /\brm\s+-[a-z]*r[a-z]*f|\brm\s+-[a-z]*f[a-z]*r/, // rm -rf / -fr
+  /\bmkfs\b|\bdd\s+if=|\b:\(\)\s*\{|\bshutdown\b|\breboot\b/,
+  /\bchmod\s+-R\s+0?777\s+\//
+]
+
+/** Resolve a tool's target path and require it to stay under realpath(cwd). */
+function underCwd(filePath: unknown, realCwd: string): boolean {
+  if (typeof filePath !== 'string') return false
+  const abs = resolve(realCwd, filePath)
+  let real = abs
+  try {
+    real = realpathSync(abs)
+  } catch {
+    try {
+      real = join(realpathSync(dirname(abs)), basename(abs))
+    } catch {
+      real = abs
+    }
+  }
+  return real === realCwd || real.startsWith(realCwd + sep)
+}
+
+/** Permission gate: confine file writes to cwd; block destructive bash. */
+function makeCanUseTool(cwd: string) {
+  let realCwd = cwd
+  try {
+    realCwd = realpathSync(cwd)
+  } catch {
+    /* use as-is */
+  }
+  return async (toolName: string, input: Record<string, unknown>): Promise<PermResult> => {
+    const allow = { behavior: 'allow' as const, updatedInput: input }
+    if (READONLY.has(toolName)) return allow
+    if (FILE_WRITE.has(toolName)) {
+      const p = input.file_path ?? input.notebook_path ?? input.path
+      return underCwd(p, realCwd)
+        ? allow
+        : { behavior: 'deny', message: `已拒绝：只能在工作目录内修改文件（${realCwd}）。` }
+    }
+    if (toolName === 'Bash') {
+      const cmd = String(input.command ?? '')
+      if (BASH_DENY.some((re) => re.test(cmd)))
+        return { behavior: 'deny', message: '已拒绝：该命令被安全策略阻止（sudo / rm -rf / 磁盘操作等）。' }
+      return allow
+    }
+    return allow
+  }
+}
 
 export type CodingEvent =
   | { type: 'text'; text: string }
@@ -50,12 +111,28 @@ export async function runCodingAgent(
   }
   const provider = getProvider(getSetting('provider') ?? 'anthropic')
   const model = getSetting('model') ?? DEFAULT_MODEL
-  const env: Record<string, string> = { ...process.env, ANTHROPIC_API_KEY: apiKey } as Record<
-    string,
-    string
-  >
-  // PWD overrides the `cwd` option for the Claude Code subprocess; the Electron
-  // process's PWD (home/root) would otherwise scope the agent to the wrong dir.
+
+  // Pass only a minimal env to the subprocess — never forward arbitrary
+  // process.env (which may hold other API keys/tokens) into the agent's shell.
+  const env: Record<string, string> = {}
+  for (const k of [
+    'PATH',
+    'HOME',
+    'USER',
+    'LOGNAME',
+    'SHELL',
+    'LANG',
+    'LC_ALL',
+    'TERM',
+    'TMPDIR',
+    'SSL_CERT_FILE',
+    'NODE_EXTRA_CA_CERTS'
+  ]) {
+    const v = process.env[k]
+    if (v) env[k] = v
+  }
+  env.ANTHROPIC_API_KEY = apiKey
+  // PWD overrides the `cwd` option for the Claude Code subprocess.
   env.PWD = cwd
   if (provider.id !== 'anthropic') env.ANTHROPIC_BASE_URL = provider.baseURL
 
@@ -70,8 +147,10 @@ export async function runCodingAgent(
       options: {
         cwd,
         model,
-        permissionMode: 'bypassPermissions',
-        allowDangerouslySkipPermissions: true,
+        // Programmatic permissions instead of a blanket bypass: confine file
+        // writes to cwd and block destructive bash (see makeCanUseTool).
+        permissionMode: 'default',
+        canUseTool: makeCanUseTool(cwd),
         env,
         stderr: () => {}
       }
