@@ -115,6 +115,13 @@
 - **工程坑**:Electron 主进程 fetch 的 FormData/Blob 跨 realm 会失败 → 改成**手搓 multipart Buffer**。
 - **验证**:转写逻辑在 plain Node 22 用真实 key 跑通(HTTP 200 + 正确识别 macOS `say` 合成的英文句子)。沙箱里 Electron 进程连不到 api.openai.com(connect timeout;Anthropic 可达、OpenAI IP 不可达)——网络出口问题,非代码问题,在能访问端点的网络上即可用。设置「语音转写」区 + 麦克风按钮截图 `claude-desk-voice.png`。
 
+## 3.10 浏览器自动化(已完成)
+左栏「浏览器」→ 内嵌浏览器(`<webview>`)+ AI agent。
+- **内嵌浏览器**:地址栏 + 前进/后退/刷新,能加载真实外网。
+- **AI agent loop**:截图 + 注入 JS 提取可交互元素(打 `data-cda-idx` 标记)→ Claude **视觉**用强制 tool-use 选下一步动作(click/type/navigate/scroll/done)→ 在 webview 里执行 → 循环(最多 12 步)+ 步骤日志。这就是 browser-use 那套「截图+元素索引」范式。
+- **完整端到端验证(CDP 实跑)**:webview 加载 example.com → AI 决定点击 [0] Learn more → 跳转到 iana.org → 识别新页面 → 给出正确结论「跳转到了 https://www.iana.org/help/example-domains」。全程自主完成。截图 `claude-desk-browser.png`。
+- 这是本会话验证最充分的功能(沙箱里 webview 能联网 + Anthropic 可达,全链路真跑通)。
+
 ## 3.6 视觉记录(docs/reference/)
 - `niuma-main-layout.png` — 真实牛马AI(对齐基准)
 - `claude-desk-shadcn.png` — 本项目空状态(浅色,shadcn+lucide)
