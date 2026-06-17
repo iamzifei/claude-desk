@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 import { getDb } from './index'
+import { formatMaterialsPrompt } from './skill-parse'
 
 export interface Material {
   id: string
@@ -68,14 +69,5 @@ export function buildMaterialsSystemPrompt(): string {
   const mats = getDb()
     .prepare('SELECT title, content, url, tags FROM materials WHERE in_context = 1 ORDER BY created_at')
     .all() as { title: string; content: string; url: string | null; tags: string | null }[]
-  if (mats.length === 0) return ''
-  return (
-    '以下是用户「素材库」中当前启用的参考素材，创作时可引用其中的事实、观点、风格或数据：\n\n' +
-    mats
-      .map(
-        (m) =>
-          `【${m.title}】${m.tags ? `（标签：${m.tags}）` : ''}\n${m.content}${m.url ? `\n来源：${m.url}` : ''}`
-      )
-      .join('\n\n')
-  )
+  return formatMaterialsPrompt(mats)
 }

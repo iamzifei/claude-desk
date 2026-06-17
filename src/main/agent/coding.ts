@@ -1,7 +1,7 @@
-import { resolve, dirname, basename, join, sep } from 'path'
 import { realpathSync } from 'fs'
 import { resolveApiKey, getSetting } from '../db/settings'
 import { getProvider, DEFAULT_MODEL } from './providers'
+import { underCwd, bashAllowed } from './coding-guard'
 
 type PermResult =
   | { behavior: 'allow'; updatedInput: Record<string, unknown> }
@@ -10,30 +10,6 @@ type PermResult =
 // Tools that only read or are harness-internal — always safe.
 const READONLY = new Set(['Read', 'Glob', 'Grep', 'LS', 'TodoWrite', 'WebSearch', 'WebFetch', 'Task'])
 const FILE_WRITE = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
-// Obviously-destructive bash patterns we refuse even inside the project dir.
-const BASH_DENY = [
-  /\bsudo\b/,
-  /\brm\s+-[a-z]*r[a-z]*f|\brm\s+-[a-z]*f[a-z]*r/, // rm -rf / -fr
-  /\bmkfs\b|\bdd\s+if=|\b:\(\)\s*\{|\bshutdown\b|\breboot\b/,
-  /\bchmod\s+-R\s+0?777\s+\//
-]
-
-/** Resolve a tool's target path and require it to stay under realpath(cwd). */
-function underCwd(filePath: unknown, realCwd: string): boolean {
-  if (typeof filePath !== 'string') return false
-  const abs = resolve(realCwd, filePath)
-  let real = abs
-  try {
-    real = realpathSync(abs)
-  } catch {
-    try {
-      real = join(realpathSync(dirname(abs)), basename(abs))
-    } catch {
-      real = abs
-    }
-  }
-  return real === realCwd || real.startsWith(realCwd + sep)
-}
 
 /** Permission gate: confine file writes to cwd; block destructive bash. */
 function makeCanUseTool(cwd: string) {
@@ -53,8 +29,7 @@ function makeCanUseTool(cwd: string) {
         : { behavior: 'deny', message: `已拒绝：只能在工作目录内修改文件（${realCwd}）。` }
     }
     if (toolName === 'Bash') {
-      const cmd = String(input.command ?? '')
-      if (BASH_DENY.some((re) => re.test(cmd)))
+      if (!bashAllowed(String(input.command ?? '')))
         return { behavior: 'deny', message: '已拒绝：该命令被安全策略阻止（sudo / rm -rf / 磁盘操作等）。' }
       return allow
     }

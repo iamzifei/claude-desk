@@ -1,5 +1,8 @@
 import { randomUUID } from 'crypto'
 import { getDb } from './index'
+import { computeNextRun } from './schedule-util'
+
+export { computeNextRun }
 
 export interface ScheduledTask {
   id: string
@@ -20,18 +23,6 @@ export type NewTask = Pick<
   ScheduledTask,
   'name' | 'prompt' | 'schedule_kind' | 'interval_min' | 'at_hour' | 'at_minute'
 >
-
-/** Next fire time (ms) for a task, computed from `from`. */
-export function computeNextRun(t: NewTask, from: number): number {
-  if (t.schedule_kind === 'interval') {
-    return from + Math.max(1, t.interval_min ?? 60) * 60_000
-  }
-  // daily at_hour:at_minute — next occurrence strictly after `from`
-  const d = new Date(from)
-  const next = new Date(d.getFullYear(), d.getMonth(), d.getDate(), t.at_hour ?? 9, t.at_minute ?? 0, 0, 0)
-  if (next.getTime() <= from) next.setDate(next.getDate() + 1)
-  return next.getTime()
-}
 
 export function listTasks(workspaceId: string): ScheduledTask[] {
   return getDb()

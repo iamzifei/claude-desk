@@ -1,5 +1,8 @@
 import { randomUUID } from 'crypto'
 import { getDb } from './index'
+import { parseSkillMd, formatSkillsPrompt } from './skill-parse'
+
+export { parseSkillMd }
 
 export interface Skill {
   id: string
@@ -53,25 +56,5 @@ export function buildSkillsSystemPrompt(): string {
   const enabled = getDb()
     .prepare('SELECT name, content FROM skills WHERE enabled = 1 ORDER BY created_at')
     .all() as { name: string; content: string }[]
-  if (enabled.length === 0) return ''
-  return (
-    '你已加载以下技能（Skills），在相关任务中遵循它们的指引：\n\n' +
-    enabled.map((s) => `## 技能：${s.name}\n${s.content}`).join('\n\n')
-  )
-}
-
-/** Parse a SKILL.md-style document (YAML-ish frontmatter + body) into a skill. */
-export function parseSkillMd(text: string): NewSkill {
-  const m = text.match(/^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/)
-  if (!m) return { name: '导入的技能', content: text.trim(), source: 'imported' }
-  const fm = m[1]
-  const body = m[2].trim()
-  const get = (k: string): string | undefined =>
-    fm.match(new RegExp(`^${k}\\s*:\\s*(.+)$`, 'm'))?.[1]?.trim().replace(/^["']|["']$/g, '')
-  return {
-    name: get('name') || '导入的技能',
-    description: get('description'),
-    content: body || text.trim(),
-    source: 'imported'
-  }
+  return formatSkillsPrompt(enabled)
 }
