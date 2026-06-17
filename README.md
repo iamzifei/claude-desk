@@ -1,12 +1,12 @@
-# Claude Desk
+# 墨栖 InkNest
 
-A local-first **Claude Code–style desktop client**, built as a clean-room reimplementation
-of the architecture behind 牛马AI (newmax). Electron + electron-vite + React, talking to the
-official Anthropic SDK (and Anthropic-compatible providers) directly from your machine with
-your own API key. **No backend required.**
+**内容创作者的素材库 × AI 创作台。** 面向抖音 / 小红书 / 公众号 / YouMind 等平台的图文与
+多媒体创作者:沉淀自己的素材与上下文,用 AI 高效产出多平台内容。本地优先(BYO-key,无后端),
+Electron + electron-vite + React,直连官方 Anthropic SDK 与兼容供应商。
 
-> Form A (BYO-key, local-only) MVP. See `复刻方案.md` in `~/Downloads/牛马AI-electron-extract/`
-> for the full staged plan and how to grow this into a paid product (accounts, billing, API proxy).
+> 起源:对 牛马AI (newmax) 架构的 clean-room 复刻,已演进为面向内容创作者的差异化产品
+> (新品牌 / 冷靛紫视觉 / 素材库 / 创作预设)。设计与定位见 `docs/DESIGN.md`,
+> 功能验证记录见 `docs/ALIGNMENT.md`。
 
 ## What works today
 
