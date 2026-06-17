@@ -128,6 +128,14 @@
   - **完整验证**:sherpa 在 Electron 下加载 OK(N-API 免重编);模型下载成功(228MB);离线转写在 **plain Node 和真实 Electron app 里**都返回正确文本("The quick brown fox…")。模型已预置进 userData,显示「模型已就绪」。截图 `claude-desk-offline-voice.png`。
   - 这是本会话第二个完全对齐牛马AI 实现的功能(同引擎同模型)。
 
+## 3.12 真·编程 agent(已完成)
+左栏「编程」→ 真正的 agentic coding(Claude Code 引擎 `@anthropic-ai/claude-agent-sdk`)。
+- 选工作目录 → 给任务 → agent 在该目录里**真的读写文件、跑 bash**,流式展示动作日志(工具调用 + 文本)+ 最终结果。`Query.interrupt()` 可停。
+- `bypassPermissions` 限定在所选目录 + 警告横幅。
+- **工程坑**:Electron 主进程的 `PWD` 会盖过 SDK 的 `cwd`,导致 agent 写到 home;修复=把 `env.PWD` 钉到 cwd + 任务里加"只在当前目录操作"的约束。
+- **完整验证(CDP 真跑)**:在真实 app 里跑一个任务 → 在所选 cwd 里创建了 result.txt(内容正确)、流式 tool:Write/tool:Bash/result 事件、**home 目录干净无污染**。截图 `claude-desk-coding.png`。
+- 这是"Claude Code 桌面端"最核心的能力——和牛马AI 一样真正能改代码跑命令。
+
 ## 3.6 视觉记录(docs/reference/)
 - `niuma-main-layout.png` — 真实牛马AI(对齐基准)
 - `claude-desk-shadcn.png` — 本项目空状态(浅色,shadcn+lucide)
