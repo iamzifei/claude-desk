@@ -45,7 +45,14 @@ import {
   type NewTask
 } from '../db/scheduledTasks'
 import { listNotes, createNote, deleteNote, type Note } from '../db/notes'
-import { getPublicSettings, setSetting } from '../db/settings'
+import {
+  getPublicSettings,
+  setSetting,
+  getSetting,
+  resolveTranscriptionKey,
+  DEFAULT_TRANSCRIBE_URL,
+  DEFAULT_TRANSCRIBE_MODEL
+} from '../db/settings'
 import { runChat, runOnce, type RunHandle } from '../agent/run'
 import { runTaskById } from '../scheduler'
 import { PROVIDERS } from '../agent/providers'
@@ -71,8 +78,14 @@ export function registerIpc(): void {
     if (typeof patch.model === 'string') setSetting('model', patch.model)
     if (typeof patch.activeWorkspace === 'string') setSetting('activeWorkspace', patch.activeWorkspace)
     if (typeof patch.theme === 'string') setSetting('theme', patch.theme)
-    // API key is a secret → encrypted at rest via safeStorage.
+    if (typeof patch.transcriptionBaseUrl === 'string')
+      setSetting('transcriptionBaseUrl', patch.transcriptionBaseUrl)
+    if (typeof patch.transcriptionModel === 'string')
+      setSetting('transcriptionModel', patch.transcriptionModel)
+    // Secrets → encrypted at rest via safeStorage.
     if (typeof patch.apiKey === 'string' && patch.apiKey) setSetting('apiKey', patch.apiKey, true)
+    if (typeof patch.transcriptionKey === 'string' && patch.transcriptionKey)
+      setSetting('transcriptionKey', patch.transcriptionKey, true)
     return getPublicSettings()
   })
 
@@ -220,6 +233,57 @@ export function registerIpc(): void {
       { id: 't', conversation_id: 't', role: 'user', content: prompt, created_at: Date.now() }
     ])
     return createNote(ws, 'minutes', dateTitle('会议纪要'), content)
+  })
+
+  // ---- transcribe: (语音输入/转写 — OpenAI-compatible Whisper) ---------
+  ipcMain.handle('transcribe:audio', async (_e, base64: string, mime: string) => {
+    const key = resolveTranscriptionKey()
+    if (!key) {
+      return {
+        error: '未配置转写 key。在设置里填，或在 ~/.env 设置 OPENAI_API_KEY。'
+      }
+    }
+    const baseUrl = getSetting('transcriptionBaseUrl') ?? DEFAULT_TRANSCRIBE_URL
+    const model = getSetting('transcriptionModel') ?? DEFAULT_TRANSCRIBE_MODEL
+    const ext = mime.includes('webm')
+      ? 'webm'
+      : mime.includes('wav')
+        ? 'wav'
+        : mime.includes('mp4') || mime.includes('m4a')
+          ? 'm4a'
+          : 'ogg'
+    try {
+      // Build the multipart body manually as a Buffer. Electron main's fetch
+      // (undici) can fail on FormData/Blob from a different realm — a raw Buffer
+      // body with an explicit boundary avoids that.
+      const boundary = `----claudedesk${Date.now().toString(16)}`
+      const audio = Buffer.from(base64, 'base64')
+      const head = Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="audio.${ext}"\r\n` +
+          `Content-Type: ${mime}\r\n\r\n`
+      )
+      const tail = Buffer.from(
+        `\r\n--${boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\n${model}\r\n` +
+          `--${boundary}--\r\n`
+      )
+      const body = Buffer.concat([head, audio, tail])
+      const res = await fetch(`${baseUrl.replace(/\/$/, '')}/audio/transcriptions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${key}`,
+          'Content-Type': `multipart/form-data; boundary=${boundary}`
+        },
+        body
+      })
+      if (!res.ok) {
+        return { error: `转写失败 ${res.status}: ${(await res.text()).slice(0, 200)}` }
+      }
+      const data = (await res.json()) as { text?: string }
+      return { text: data.text ?? '' }
+    } catch (e) {
+      const err = e as { message?: string; cause?: { message?: string } }
+      return { error: `转写出错：${err.message ?? String(e)}${err.cause?.message ? ' (' + err.cause.message + ')' : ''}` }
+    }
   })
 
   // ---- export: (card preview → PNG / PDF / clipboard) -----------------

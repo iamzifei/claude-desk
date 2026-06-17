@@ -89,6 +89,9 @@ export interface PublicSettings {
   hasApiKey: boolean
   activeWorkspace: string | null
   theme: string
+  transcriptionBaseUrl: string
+  transcriptionModel: string
+  hasTranscriptionKey: boolean
 }
 
 export interface ProviderInfo {

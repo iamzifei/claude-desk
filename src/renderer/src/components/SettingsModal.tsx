@@ -22,6 +22,10 @@ export function SettingsModal({ open, onOpenChange }: Props): JSX.Element {
   const [apiKey, setApiKey] = useState('')
   const [hasApiKey, setHasApiKey] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [trBase, setTrBase] = useState('')
+  const [trModel, setTrModel] = useState('')
+  const [trKey, setTrKey] = useState('')
+  const [hasTrKey, setHasTrKey] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -33,6 +37,10 @@ export function SettingsModal({ open, onOpenChange }: Props): JSX.Element {
         setModel(settings.model)
         setHasApiKey(settings.hasApiKey)
         setApiKey('')
+        setTrBase(settings.transcriptionBaseUrl)
+        setTrModel(settings.transcriptionModel)
+        setHasTrKey(settings.hasTranscriptionKey)
+        setTrKey('')
       }
     )
   }, [open])
@@ -40,8 +48,14 @@ export function SettingsModal({ open, onOpenChange }: Props): JSX.Element {
   const current = providers.find((p) => p.id === provider)
 
   const save = async (): Promise<void> => {
-    const patch: Record<string, string> = { provider, model }
+    const patch: Record<string, string> = {
+      provider,
+      model,
+      transcriptionBaseUrl: trBase.trim(),
+      transcriptionModel: trModel.trim()
+    }
     if (apiKey.trim()) patch.apiKey = apiKey.trim()
+    if (trKey.trim()) patch.transcriptionKey = trKey.trim()
     const next = await window.api.settings.set(patch)
     useStore.setState({ hasApiKey: next.hasApiKey, globalModel: next.model })
     setSaved(true)
@@ -107,6 +121,36 @@ export function SettingsModal({ open, onOpenChange }: Props): JSX.Element {
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
             密钥经系统钥匙串（Electron safeStorage）加密存储，仅用于从本机直连供应商。
           </p>
+
+          <div className="border-t border-border-soft pt-3.5">
+            <div className="mb-2 text-xs font-medium text-foreground">语音转写</div>
+            <div className="space-y-2.5">
+              <input
+                className={fieldCls}
+                value={trBase}
+                onChange={(e) => setTrBase(e.target.value)}
+                placeholder="转写端点，如 https://api.openai.com/v1"
+              />
+              <input
+                className={fieldCls}
+                value={trModel}
+                onChange={(e) => setTrModel(e.target.value)}
+                placeholder="转写模型，如 whisper-1"
+              />
+              <Input
+                type="password"
+                value={trKey}
+                onChange={(e) => setTrKey(e.target.value)}
+                placeholder={
+                  hasTrKey ? '••••••••（已设置，留空保持不变）' : '转写 key（兼容 OpenAI /audio/transcriptions）'
+                }
+              />
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                OpenAI 兼容的 Whisper 端点即可；未填则回退到环境变量 / ~/.env 的 OPENAI_API_KEY。也可指向
+                SiliconFlow 的 SenseVoice（牛马AI 同款模型，有免费额度）。
+              </p>
+            </div>
+          </div>
         </div>
 
         <DialogFooter>

@@ -1,5 +1,5 @@
 import { JSX, useState, useRef, useEffect, KeyboardEvent } from 'react'
-import { Plus, Wrench, Globe, Mic, ArrowUp, Square, ChevronDown, Sparkles } from 'lucide-react'
+import { Plus, Wrench, Globe, Mic, ArrowUp, Square, ChevronDown, Sparkles, Loader2 } from 'lucide-react'
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
 import { Tip } from './ui/tooltip'
@@ -24,6 +24,10 @@ const CHIPS: { label: string; prompt: string }[] = [
 export function Composer(): JSX.Element {
   const [text, setText] = useState('')
   const [web, setWeb] = useState(false)
+  const [recording, setRecording] = useState(false)
+  const [transcribing, setTranscribing] = useState(false)
+  const recorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
   const taRef = useRef<HTMLTextAreaElement>(null)
   const streaming = useStore((s) => s.streaming)
   const messages = useStore((s) => s.messages)
@@ -48,6 +52,47 @@ export function Composer(): JSX.Element {
     el.style.height = 'auto'
     el.style.height = Math.min(el.scrollHeight, 200) + 'px'
   }, [text])
+
+  // 语音输入: record from the mic, transcribe via the IPC, insert into the box.
+  const toggleMic = async (): Promise<void> => {
+    if (recording) {
+      recorderRef.current?.stop()
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const rec = new MediaRecorder(stream)
+      chunksRef.current = []
+      rec.ondataavailable = (e) => e.data.size > 0 && chunksRef.current.push(e.data)
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop())
+        setRecording(false)
+        const mime = rec.mimeType || 'audio/webm'
+        const blob = new Blob(chunksRef.current, { type: mime })
+        if (blob.size < 1200) return // too short / silence
+        setTranscribing(true)
+        try {
+          const buf = new Uint8Array(await blob.arrayBuffer())
+          let bin = ''
+          for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i])
+          const res = await window.api.voice.transcribe(btoa(bin), mime.split(';')[0])
+          if ('text' in res && res.text.trim()) {
+            setText((prev) => (prev ? prev + ' ' : '') + res.text.trim())
+            taRef.current?.focus()
+          } else if ('error' in res) {
+            window.alert(res.error)
+          }
+        } finally {
+          setTranscribing(false)
+        }
+      }
+      rec.start()
+      recorderRef.current = rec
+      setRecording(true)
+    } catch {
+      window.alert('无法访问麦克风，请检查系统权限。')
+    }
+  }
 
   const submit = (): void => {
     const trimmed = text.trim()
@@ -124,12 +169,24 @@ export function Composer(): JSX.Element {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Tip label="语音输入（即将上线）">
+            <Tip label={recording ? '停止录音' : transcribing ? '转写中…' : '语音输入'}>
               <button
-                disabled
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground disabled:opacity-45"
+                onClick={toggleMic}
+                disabled={transcribing}
+                className={cn(
+                  'flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:opacity-60',
+                  recording
+                    ? 'animate-pulse bg-destructive/15 text-destructive'
+                    : 'text-muted-foreground hover:bg-accent'
+                )}
               >
-                <Mic className="h-[17px] w-[17px]" />
+                {transcribing ? (
+                  <Loader2 className="h-[17px] w-[17px] animate-spin" />
+                ) : recording ? (
+                  <Square className="h-3.5 w-3.5 fill-current" />
+                ) : (
+                  <Mic className="h-[17px] w-[17px]" />
+                )}
               </button>
             </Tip>
             {isStreaming ? (

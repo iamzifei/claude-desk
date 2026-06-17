@@ -64,12 +64,36 @@ export function resolveApiKey(): string | null {
   return null
 }
 
+/**
+ * Transcription key (OpenAI-compatible /audio/transcriptions): stored setting,
+ * else process.env.OPENAI_API_KEY, else OPENAI_API_KEY in ~/.env.
+ */
+export function resolveTranscriptionKey(): string | null {
+  const stored = getSetting('transcriptionKey')
+  if (stored) return stored
+  if (process.env.OPENAI_API_KEY) return process.env.OPENAI_API_KEY
+  try {
+    const dotenv = readFileSync(join(homedir(), '.env'), 'utf8')
+    const m = dotenv.match(/^\s*OPENAI_API_KEY\s*=\s*(.+?)\s*$/m)
+    if (m) return m[1].replace(/^["']|["']$/g, '')
+  } catch {
+    /* no ~/.env */
+  }
+  return null
+}
+
+export const DEFAULT_TRANSCRIBE_URL = 'https://api.openai.com/v1'
+export const DEFAULT_TRANSCRIBE_MODEL = 'whisper-1'
+
 export interface AppSettings {
   provider: string
   model: string
   hasApiKey: boolean
   activeWorkspace: string | null
   theme: string // 'light' | 'dark'
+  transcriptionBaseUrl: string
+  transcriptionModel: string
+  hasTranscriptionKey: boolean
 }
 
 /** Settings safe to send to the renderer (never includes the raw key). */
@@ -81,6 +105,9 @@ export function getPublicSettings(): AppSettings {
     // so the UI doesn't nag when CLAUDE_API_KEY lives in the environment.
     hasApiKey: !!resolveApiKey(),
     activeWorkspace: getSetting('activeWorkspace'),
-    theme: getSetting('theme') ?? 'light'
+    theme: getSetting('theme') ?? 'light',
+    transcriptionBaseUrl: getSetting('transcriptionBaseUrl') ?? DEFAULT_TRANSCRIBE_URL,
+    transcriptionModel: getSetting('transcriptionModel') ?? DEFAULT_TRANSCRIBE_MODEL,
+    hasTranscriptionKey: !!resolveTranscriptionKey()
   }
 }

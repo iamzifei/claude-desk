@@ -86,6 +86,10 @@ const api = {
   files: {
     listDir: (dir: string) => ipcRenderer.invoke('files:listDir', dir)
   },
+  voice: {
+    transcribe: (base64: string, mime: string) =>
+      ipcRenderer.invoke('transcribe:audio', base64, mime)
+  },
   exporter: {
     capture: (rect: { x: number; y: number; width: number; height: number }) =>
       ipcRenderer.invoke('export:capture', rect),

@@ -84,7 +84,12 @@ export interface PublicSettings {
   hasApiKey: boolean
   activeWorkspace: string | null
   theme: string
+  transcriptionBaseUrl: string
+  transcriptionModel: string
+  hasTranscriptionKey: boolean
 }
+
+export type TranscribeResult = { text: string } | { error: string }
 
 export interface ProviderInfo {
   id: string
@@ -134,6 +139,9 @@ export interface Api {
         apiKey: string
         activeWorkspace: string
         theme: string
+        transcriptionBaseUrl: string
+        transcriptionModel: string
+        transcriptionKey: string
       }>
     ) => Promise<PublicSettings>
   }
@@ -158,6 +166,9 @@ export interface Api {
   }
   files: {
     listDir: (dir: string) => Promise<FileEntry[]>
+  }
+  voice: {
+    transcribe: (base64: string, mime: string) => Promise<TranscribeResult>
   }
   exporter: {
     capture: (rect: { x: number; y: number; width: number; height: number }) => Promise<string>
