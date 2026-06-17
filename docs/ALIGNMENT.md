@@ -122,6 +122,12 @@
 - **完整端到端验证(CDP 实跑)**:webview 加载 example.com → AI 决定点击 [0] Learn more → 跳转到 iana.org → 识别新页面 → 给出正确结论「跳转到了 https://www.iana.org/help/example-domains」。全程自主完成。截图 `claude-desk-browser.png`。
 - 这是本会话验证最充分的功能(沙箱里 webview 能联网 + Anthropic 可达,全链路真跑通)。
 
+## 3.11 技能市场 + 离线语音(已完成)
+- **技能市场**:Skill 管理视图,新建/启用/停用/删除/导入(SKILL.md frontmatter)。启用的技能注入到对话系统提示。验证:建一个"回复必加前缀"的技能 → 发消息 → 回复确实带该前缀。截图 `claude-desk-skills.png`。
+- **离线语音(彻底对齐牛马AI)**:`sherpa-onnx-node` + **SenseVoice** int8 模型(hf-mirror,牛马AI 同款)。完全本机运行、无 key、无联网。设置里「云端/本地」切换 + 下载模型(~230MB)进度。
+  - **完整验证**:sherpa 在 Electron 下加载 OK(N-API 免重编);模型下载成功(228MB);离线转写在 **plain Node 和真实 Electron app 里**都返回正确文本("The quick brown fox…")。模型已预置进 userData,显示「模型已就绪」。截图 `claude-desk-offline-voice.png`。
+  - 这是本会话第二个完全对齐牛马AI 实现的功能(同引擎同模型)。
+
 ## 3.6 视觉记录(docs/reference/)
 - `niuma-main-layout.png` — 真实牛马AI(对齐基准)
 - `claude-desk-shadcn.png` — 本项目空状态(浅色,shadcn+lucide)
