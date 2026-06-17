@@ -54,6 +54,7 @@ import {
   DEFAULT_TRANSCRIBE_MODEL
 } from '../db/settings'
 import { runChat, runOnce, type RunHandle } from '../agent/run'
+import { decideBrowserAction, type PageElement } from '../agent/browser'
 import { runTaskById } from '../scheduler'
 import { PROVIDERS } from '../agent/providers'
 
@@ -234,6 +235,19 @@ export function registerIpc(): void {
     ])
     return createNote(ws, 'minutes', dateTitle('会议纪要'), content)
   })
+
+  // ---- browser: (浏览器自动化 agent decision) -------------------------
+  ipcMain.handle(
+    'browser:decide',
+    (
+      _e,
+      task: string,
+      history: string[],
+      screenshotB64: string,
+      url: string,
+      elements: PageElement[]
+    ) => decideBrowserAction(task, history, screenshotB64, url, elements)
+  )
 
   // ---- transcribe: (语音输入/转写 — OpenAI-compatible Whisper) ---------
   ipcMain.handle('transcribe:audio', async (_e, base64: string, mime: string) => {

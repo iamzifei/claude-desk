@@ -55,7 +55,22 @@ export interface Note {
   created_at: number
 }
 
-export type MainView = 'chat' | 'scheduled' | 'review' | 'minutes'
+export interface PageElement {
+  index: number
+  tag: string
+  text: string
+}
+
+export interface BrowserAction {
+  thought: string
+  action: 'click' | 'type' | 'navigate' | 'scroll' | 'done'
+  index?: number
+  text?: string
+  url?: string
+  answer?: string
+}
+
+export type MainView = 'chat' | 'scheduled' | 'review' | 'minutes' | 'browser'
 
 export interface Conversation {
   id: string

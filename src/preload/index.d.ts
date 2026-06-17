@@ -91,6 +91,21 @@ export interface PublicSettings {
 
 export type TranscribeResult = { text: string } | { error: string }
 
+export interface PageElement {
+  index: number
+  tag: string
+  text: string
+}
+
+export interface BrowserAction {
+  thought: string
+  action: 'click' | 'type' | 'navigate' | 'scroll' | 'done'
+  index?: number
+  text?: string
+  url?: string
+  answer?: string
+}
+
 export interface ProviderInfo {
   id: string
   label: string
@@ -169,6 +184,15 @@ export interface Api {
   }
   voice: {
     transcribe: (base64: string, mime: string) => Promise<TranscribeResult>
+  }
+  browser: {
+    decide: (
+      task: string,
+      history: string[],
+      screenshotB64: string,
+      url: string,
+      elements: PageElement[]
+    ) => Promise<BrowserAction>
   }
   exporter: {
     capture: (rect: { x: number; y: number; width: number; height: number }) => Promise<string>

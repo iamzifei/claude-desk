@@ -9,6 +9,7 @@ import { TabBar } from './TabBar'
 import { RightDock, RightPanel } from './RightPanel'
 import { ScheduledView } from './ScheduledView'
 import { NotesView } from './NotesView'
+import { BrowserView } from './BrowserView'
 
 export function ChatView(): JSX.Element {
   const view = useStore((s) => s.view)
@@ -22,6 +23,8 @@ export function ChatView(): JSX.Element {
         <NotesView type="review" />
       ) : view === 'minutes' ? (
         <NotesView type="minutes" />
+      ) : view === 'browser' ? (
+        <BrowserView />
       ) : (
         <ChatArea />
       )}

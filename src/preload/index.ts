@@ -90,6 +90,15 @@ const api = {
     transcribe: (base64: string, mime: string) =>
       ipcRenderer.invoke('transcribe:audio', base64, mime)
   },
+  browser: {
+    decide: (
+      task: string,
+      history: string[],
+      screenshotB64: string,
+      url: string,
+      elements: unknown[]
+    ) => ipcRenderer.invoke('browser:decide', task, history, screenshotB64, url, elements)
+  },
   exporter: {
     capture: (rect: { x: number; y: number; width: number; height: number }) =>
       ipcRenderer.invoke('export:capture', rect),
