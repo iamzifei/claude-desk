@@ -101,6 +101,14 @@
   - 离屏窗口 + CSS `@page` + `printToPDF` 生成单页 PDF
 - 验证(CDP):capture 返回合法 PNG、pdfFromImage 返回合法 `%PDF`;面板 UI 见 `claude-desk-card.png`
 
+## 3.8 定时任务 / 每日回顾 / 会议纪要(已完成)
+左栏导航现在切换主区视图(chat / scheduled / review / minutes):
+- **定时任务**:配置「每天 HH:MM」或「每隔 N 分钟」跑一段提示词;主进程 `scheduler.ts` 每 30s 检查到期任务,用 `runOnce` 跑完,结果存成一条新对话;支持 启用/停用、立即运行、删除。
+- **每日回顾**:汇总今天的对话 → 生成一份结构化回顾(要点/决策/待办/记忆点),存为 note。
+- **会议纪要**:粘贴会议记录/转写 → 生成结构化纪要(摘要/要点/决策/行动项),存为 note。
+- 共用 `runOnce()` 一次性引擎;`data:changed` 广播让定时任务结果自动出现在列表。
+- 验证(CDP):定时任务 runNow 创建了带 AI 回复的对话;会议纪要从转写生成了 387 字纪要;视图与导航高亮均正确。截图 `claude-desk-scheduled.png` / `claude-desk-minutes.png`。
+
 ## 3.6 视觉记录(docs/reference/)
 - `niuma-main-layout.png` — 真实牛马AI(对齐基准)
 - `claude-desk-shadcn.png` — 本项目空状态(浅色,shadcn+lucide)
