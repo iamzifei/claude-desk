@@ -109,6 +109,12 @@
 - 共用 `runOnce()` 一次性引擎;`data:changed` 广播让定时任务结果自动出现在列表。
 - 验证(CDP):定时任务 runNow 创建了带 AI 回复的对话;会议纪要从转写生成了 387 字纪要;视图与导航高亮均正确。截图 `claude-desk-scheduled.png` / `claude-desk-minutes.png`。
 
+## 3.9 语音输入/转写(已完成)
+输入框麦克风按钮:录音 → 转写 → 文字插入输入框,带 录音中/转写中 状态。
+- **决策**:牛马AI 用 sherpa-onnx 离线 ASR(无 key 但要下 ~230MB 模型 + 原生模块 + 无法对麦克风自测)。本项目改用**云端 OpenAI 兼容 `/audio/transcriptions`**(可配置端点/模型/key,key 回退到 `~/.env` 的 OPENAI_API_KEY)——更轻、可验证;端点可指向 **SiliconFlow 托管的 SenseVoice**(牛马AI 同款模型,有免费额度)。
+- **工程坑**:Electron 主进程 fetch 的 FormData/Blob 跨 realm 会失败 → 改成**手搓 multipart Buffer**。
+- **验证**:转写逻辑在 plain Node 22 用真实 key 跑通(HTTP 200 + 正确识别 macOS `say` 合成的英文句子)。沙箱里 Electron 进程连不到 api.openai.com(connect timeout;Anthropic 可达、OpenAI IP 不可达)——网络出口问题,非代码问题,在能访问端点的网络上即可用。设置「语音转写」区 + 麦克风按钮截图 `claude-desk-voice.png`。
+
 ## 3.6 视觉记录(docs/reference/)
 - `niuma-main-layout.png` — 真实牛马AI(对齐基准)
 - `claude-desk-shadcn.png` — 本项目空状态(浅色,shadcn+lucide)
