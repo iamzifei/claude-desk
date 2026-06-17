@@ -92,6 +92,15 @@
 - **截图自检**(Quartz 按窗口 ID 截图):见 `docs/reference/claude-desk-shadcn.png`,与牛马AI 高度一致
 - **CDP 驱动真实 app 端到端发消息**:返回真实 Claude 回复「这句话本身就是我在这个app里的正常回复…✓」——证明 `可以得到ai回复` 在真 app 里成立(用 `~/.env` 的 key)
 
+## 3.7 卡片预览/导出(Phase B,已完成)
+牛马AI 的招牌差异化功能。把 AI 回复渲染成可调样式的卡片并导出:
+- 背景预设(米白/纯白/天青/暮光/墨黑)+ 宽度 + 内边距 + 圆角
+- 导出:**复制图片**(剪贴板)/ **PNG**(保存对话框)/ **PDF**
+- **关键决策**:做卡片时 npm registry 不可达,装不上 `html-to-image`/`jspdf`。于是改用 **Electron 原生能力**实现(更可靠、零依赖、离线可用):
+  - `webContents.capturePage(rect)` 截卡片区域为高清 PNG(retina 2x)
+  - 离屏窗口 + CSS `@page` + `printToPDF` 生成单页 PDF
+- 验证(CDP):capture 返回合法 PNG、pdfFromImage 返回合法 `%PDF`;面板 UI 见 `claude-desk-card.png`
+
 ## 3.6 视觉记录(docs/reference/)
 - `niuma-main-layout.png` — 真实牛马AI(对齐基准)
 - `claude-desk-shadcn.png` — 本项目空状态(浅色,shadcn+lucide)
