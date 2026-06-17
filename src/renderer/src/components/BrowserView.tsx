@@ -69,20 +69,37 @@ export function BrowserView(): JSX.Element {
   const extract = async (): Promise<PageElement[]> =>
     (await wv().executeJavaScript(EXTRACT_JS, true)) as PageElement[]
 
+  // The element index comes from the model's tool output, which is influenced
+  // by (untrusted) page content — never interpolate it raw into executeJavaScript.
+  // Coerce to a bounded integer; anything else is rejected. Values are still
+  // passed via JSON.stringify so they can't break out of the JS string.
+  const safeIdx = (v: unknown): number | null => {
+    const n = Number(v)
+    return Number.isInteger(n) && n >= 0 && n < 5000 ? n : null
+  }
+
   const exec = async (a: BrowserAction): Promise<void> => {
-    if (a.action === 'navigate' && a.url) {
+    if (a.action === 'navigate' && typeof a.url === 'string') {
       go(a.url)
       await delay(2000)
-    } else if (a.action === 'click' && a.index != null) {
+    } else if (a.action === 'click') {
+      const idx = safeIdx(a.index)
+      if (idx === null) return
       await wv().executeJavaScript(
-        `(()=>{const el=document.querySelector('[data-cda-idx="${a.index}"]'); if(el){el.scrollIntoView({block:'center'}); el.click(); return true} return false})()`,
+        `(()=>{const el=document.querySelector('[data-cda-idx='+${JSON.stringify(
+          String(idx)
+        )}+']'); if(el){el.scrollIntoView({block:'center'}); el.click(); return true} return false})()`,
         true
       )
       await delay(1500)
-    } else if (a.action === 'type' && a.index != null) {
+    } else if (a.action === 'type') {
+      const idx = safeIdx(a.index)
+      if (idx === null) return
       await wv().executeJavaScript(
-        `(()=>{const el=document.querySelector('[data-cda-idx="${a.index}"]'); if(el){el.focus(); el.value=${JSON.stringify(
-          a.text ?? ''
+        `(()=>{const el=document.querySelector('[data-cda-idx='+${JSON.stringify(
+          String(idx)
+        )}+']'); if(el){el.focus(); el.value=${JSON.stringify(
+          String(a.text ?? '')
         )}; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); return true} return false})()`,
         true
       )
