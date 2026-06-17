@@ -87,6 +87,16 @@ export type CodingEvent =
   | { type: 'error'; message: string }
   | { type: 'done' }
 
+export interface Material {
+  id: string
+  title: string
+  content: string
+  url: string | null
+  tags: string | null
+  in_context: number
+  created_at: number
+}
+
 export type MainView =
   | 'chat'
   | 'scheduled'
@@ -95,6 +105,7 @@ export type MainView =
   | 'browser'
   | 'skills'
   | 'coding'
+  | 'materials'
 
 export interface Conversation {
   id: string

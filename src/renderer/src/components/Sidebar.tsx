@@ -8,6 +8,7 @@ import {
   BarChart3,
   ClipboardList,
   Code2,
+  Library,
   Settings,
   MoreHorizontal,
   ChevronRight,
@@ -45,16 +46,18 @@ type NavAction =
   | 'browser'
   | 'skills'
   | 'coding'
+  | 'materials'
   | null
 const NAV: { icon: LucideIcon; label: string; action: NavAction }[] = [
-  { icon: PencilLine, label: '新建对话', action: 'new' },
+  { icon: PencilLine, label: '新建创作', action: 'new' },
   { icon: Search, label: '搜索', action: 'search' },
+  { icon: Library, label: '素材库', action: 'materials' },
+  { icon: Puzzle, label: '技能', action: 'skills' },
   { icon: Code2, label: '编程', action: 'coding' },
+  { icon: Globe, label: '浏览器', action: 'browser' },
   { icon: Clock, label: '定时任务', action: 'scheduled' },
   { icon: BarChart3, label: '每日回顾', action: 'review' },
-  { icon: ClipboardList, label: '会议纪要', action: 'minutes' },
-  { icon: Globe, label: '浏览器', action: 'browser' },
-  { icon: Puzzle, label: 'Skill 管理', action: 'skills' }
+  { icon: ClipboardList, label: '会议纪要', action: 'minutes' }
 ]
 
 export function Sidebar({ onOpenSettings }: Props): JSX.Element {

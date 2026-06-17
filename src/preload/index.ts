@@ -106,6 +106,15 @@ const api = {
     delete: (id: string) => ipcRenderer.invoke('skills:delete', id),
     import: () => ipcRenderer.invoke('skills:import')
   },
+  materials: {
+    list: () => ipcRenderer.invoke('materials:list'),
+    search: (q: string) => ipcRenderer.invoke('materials:search', q),
+    create: (m: unknown) => ipcRenderer.invoke('materials:create', m),
+    update: (id: string, m: unknown) => ipcRenderer.invoke('materials:update', id, m),
+    toggleContext: (id: string, on: boolean) =>
+      ipcRenderer.invoke('materials:toggleContext', id, on),
+    delete: (id: string) => ipcRenderer.invoke('materials:delete', id)
+  },
   browser: {
     decide: (
       task: string,

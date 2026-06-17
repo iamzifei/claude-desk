@@ -54,6 +54,15 @@ import {
   type NewSkill
 } from '../db/skills'
 import {
+  listMaterials,
+  searchMaterials,
+  createMaterial,
+  updateMaterial,
+  toggleMaterialContext,
+  deleteMaterial,
+  type NewMaterial
+} from '../db/materials'
+import {
   getPublicSettings,
   setSetting,
   getSetting,
@@ -247,6 +256,16 @@ export function registerIpc(): void {
     ])
     return createNote(ws, 'minutes', dateTitle('会议纪要'), content)
   })
+
+  // ---- materials: (素材库) --------------------------------------------
+  ipcMain.handle('materials:list', () => listMaterials())
+  ipcMain.handle('materials:search', (_e, q: string) => searchMaterials(q))
+  ipcMain.handle('materials:create', (_e, m: NewMaterial) => createMaterial(m))
+  ipcMain.handle('materials:update', (_e, id: string, m: NewMaterial) => updateMaterial(id, m))
+  ipcMain.handle('materials:toggleContext', (_e, id: string, on: boolean) =>
+    toggleMaterialContext(id, on)
+  )
+  ipcMain.handle('materials:delete', (_e, id: string) => deleteMaterial(id))
 
   // ---- coding: (真·编程 agent — Claude Code engine) -------------------
   ipcMain.handle('coding:run', (e, runId: string, task: string, cwd: string) => {

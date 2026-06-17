@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getProvider, DEFAULT_MODEL } from './providers'
 import { getSetting, resolveApiKey } from '../db/settings'
 import { buildSkillsSystemPrompt } from '../db/skills'
+import { buildMaterialsSystemPrompt } from '../db/materials'
 import type { Message } from '../db/conversations'
 
 /**
@@ -56,7 +57,10 @@ export function runChat(
     const model = modelOverride || getSetting('model') || DEFAULT_MODEL
 
     const client = new Anthropic({ apiKey, baseURL: provider.baseURL })
-    const system = buildSkillsSystemPrompt() // enabled skills, if any
+    // Enabled skills + in-context materials shape the assistant.
+    const system = [buildSkillsSystemPrompt(), buildMaterialsSystemPrompt()]
+      .filter(Boolean)
+      .join('\n\n')
 
     try {
       const stream = client.messages.stream(

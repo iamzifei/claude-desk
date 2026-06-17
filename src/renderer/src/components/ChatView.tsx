@@ -12,6 +12,7 @@ import { NotesView } from './NotesView'
 import { BrowserView } from './BrowserView'
 import { SkillsView } from './SkillsView'
 import { CodingView } from './CodingView'
+import { MaterialsView } from './MaterialsView'
 
 export function ChatView(): JSX.Element {
   const view = useStore((s) => s.view)
@@ -31,6 +32,8 @@ export function ChatView(): JSX.Element {
         <SkillsView />
       ) : view === 'coding' ? (
         <CodingView />
+      ) : view === 'materials' ? (
+        <MaterialsView />
       ) : (
         <ChatArea />
       )}

@@ -109,6 +109,23 @@ export interface NewSkill {
   source?: string
 }
 
+export interface Material {
+  id: string
+  title: string
+  content: string
+  url: string | null
+  tags: string | null
+  in_context: number
+  created_at: number
+}
+
+export interface NewMaterial {
+  title: string
+  content: string
+  url?: string
+  tags?: string
+}
+
 export interface PageElement {
   index: number
   tag: string
@@ -224,6 +241,14 @@ export interface Api {
     toggle: (id: string, enabled: boolean) => Promise<void>
     delete: (id: string) => Promise<void>
     import: () => Promise<Skill | null>
+  }
+  materials: {
+    list: () => Promise<Material[]>
+    search: (q: string) => Promise<Material[]>
+    create: (m: NewMaterial) => Promise<Material>
+    update: (id: string, m: NewMaterial) => Promise<void>
+    toggleContext: (id: string, on: boolean) => Promise<void>
+    delete: (id: string) => Promise<void>
   }
   browser: {
     decide: (

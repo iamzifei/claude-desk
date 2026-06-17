@@ -12,14 +12,23 @@ import {
 } from './ui/dropdown-menu'
 
 const CHIPS: { label: string; prompt: string }[] = [
-  { label: '写作', prompt: '帮我写一篇关于「」的文章，' },
-  { label: 'PPT', prompt: '帮我做一份关于「」的演示大纲，' },
-  { label: '调研报告', prompt: '帮我写一份关于「」的调研报告，' },
-  { label: '需求分析', prompt: '帮我分析「」的产品需求，' },
-  { label: '视频', prompt: '帮我写一个关于「」的短视频脚本，' },
-  { label: '设计', prompt: '帮我设计「」，' },
-  { label: 'Excel', prompt: '帮我用表格整理「」，' },
-  { label: '编程', prompt: '帮我实现「」，要求：' }
+  {
+    label: '小红书',
+    prompt: '帮我写一篇小红书图文，主题「」。要求：标题有钩子（emoji 适度）、正文分点易读、结尾引导互动、附 3-5 个话题标签。'
+  },
+  {
+    label: '公众号',
+    prompt: '帮我写一篇公众号文章，主题「」。要求：抓人的标题、清晰的结构、有信息增量、口吻贴合读者。'
+  },
+  {
+    label: '抖音脚本',
+    prompt: '帮我写一条抖音短视频口播脚本，主题「」。给出 3 秒钩子开场、分镜与口播文案，控制在 60 秒内。'
+  },
+  { label: '视频脚本', prompt: '帮我写一个视频脚本，主题「」。包含开场、主体、结尾，并标注节奏与镜头建议。' },
+  { label: '起标题', prompt: '帮我给「」起 10 个高点击率标题，覆盖悬念/利益/反差/数字等不同钩子类型。' },
+  { label: '选题', prompt: '围绕「」帮我策划 10 个内容选题，每个说明切入角度和钩子。' },
+  { label: '改写润色', prompt: '帮我润色改写下面这段内容，让它更有感染力、更口语化：\n' },
+  { label: '评论回复', prompt: '帮我写几条高情商的评论区回复：\n' }
 ]
 
 export function Composer(): JSX.Element {
@@ -77,7 +86,7 @@ export function Composer(): JSX.Element {
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="发送消息…  (Enter 发送，Shift+Enter 换行)"
+          placeholder="描述你想创作的内容，或直接提问…  (Enter 发送，Shift+Enter 换行)"
           className="block max-h-[200px] w-full resize-none bg-transparent px-2.5 pb-1 pt-2 text-[14.5px] leading-relaxed outline-none placeholder:text-muted-foreground"
         />
         <div className="flex items-center justify-between px-1">
