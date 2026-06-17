@@ -70,7 +70,17 @@ export interface BrowserAction {
   answer?: string
 }
 
-export type MainView = 'chat' | 'scheduled' | 'review' | 'minutes' | 'browser'
+export interface Skill {
+  id: string
+  name: string
+  description: string | null
+  content: string
+  enabled: number
+  source: string
+  created_at: number
+}
+
+export type MainView = 'chat' | 'scheduled' | 'review' | 'minutes' | 'browser' | 'skills'
 
 export interface Conversation {
   id: string

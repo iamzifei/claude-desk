@@ -91,6 +91,23 @@ export interface PublicSettings {
 
 export type TranscribeResult = { text: string } | { error: string }
 
+export interface Skill {
+  id: string
+  name: string
+  description: string | null
+  content: string
+  enabled: number
+  source: string
+  created_at: number
+}
+
+export interface NewSkill {
+  name: string
+  description?: string
+  content: string
+  source?: string
+}
+
 export interface PageElement {
   index: number
   tag: string
@@ -184,6 +201,13 @@ export interface Api {
   }
   voice: {
     transcribe: (base64: string, mime: string) => Promise<TranscribeResult>
+  }
+  skills: {
+    list: () => Promise<Skill[]>
+    create: (s: NewSkill) => Promise<Skill>
+    toggle: (id: string, enabled: boolean) => Promise<void>
+    delete: (id: string) => Promise<void>
+    import: () => Promise<Skill | null>
   }
   browser: {
     decide: (

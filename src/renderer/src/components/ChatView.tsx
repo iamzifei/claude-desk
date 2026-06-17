@@ -10,6 +10,7 @@ import { RightDock, RightPanel } from './RightPanel'
 import { ScheduledView } from './ScheduledView'
 import { NotesView } from './NotesView'
 import { BrowserView } from './BrowserView'
+import { SkillsView } from './SkillsView'
 
 export function ChatView(): JSX.Element {
   const view = useStore((s) => s.view)
@@ -25,6 +26,8 @@ export function ChatView(): JSX.Element {
         <NotesView type="minutes" />
       ) : view === 'browser' ? (
         <BrowserView />
+      ) : view === 'skills' ? (
+        <SkillsView />
       ) : (
         <ChatArea />
       )}

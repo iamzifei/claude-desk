@@ -35,7 +35,7 @@ interface Props {
   onOpenSettings: () => void
 }
 
-type NavAction = 'new' | 'search' | 'scheduled' | 'review' | 'minutes' | 'browser' | null
+type NavAction = 'new' | 'search' | 'scheduled' | 'review' | 'minutes' | 'browser' | 'skills' | null
 const NAV: { icon: LucideIcon; label: string; action: NavAction }[] = [
   { icon: PencilLine, label: '新建对话', action: 'new' },
   { icon: Search, label: '搜索', action: 'search' },
@@ -43,7 +43,7 @@ const NAV: { icon: LucideIcon; label: string; action: NavAction }[] = [
   { icon: BarChart3, label: '每日回顾', action: 'review' },
   { icon: ClipboardList, label: '会议纪要', action: 'minutes' },
   { icon: Globe, label: '浏览器', action: 'browser' },
-  { icon: Puzzle, label: 'Skill 管理', action: null }
+  { icon: Puzzle, label: 'Skill 管理', action: 'skills' }
 ]
 
 export function Sidebar({ onOpenSettings }: Props): JSX.Element {

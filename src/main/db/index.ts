@@ -132,6 +132,18 @@ function migrate(d: Database.Database): void {
       created_at    INTEGER NOT NULL
     );
     CREATE INDEX idx_notes_ws_type ON notes(workspace_id, type, created_at);
+    `,
+    // 0005 — skills (技能市场). Global; enabled skills inject into the system prompt.
+    `
+    CREATE TABLE skills (
+      id          TEXT PRIMARY KEY,
+      name        TEXT NOT NULL,
+      description TEXT,
+      content     TEXT NOT NULL,
+      enabled     INTEGER NOT NULL DEFAULT 1,
+      source      TEXT NOT NULL DEFAULT 'custom',
+      created_at  INTEGER NOT NULL
+    );
     `
   ]
 

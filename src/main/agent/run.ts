@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getProvider, DEFAULT_MODEL } from './providers'
 import { getSetting, resolveApiKey } from '../db/settings'
+import { buildSkillsSystemPrompt } from '../db/skills'
 import type { Message } from '../db/conversations'
 
 /**
@@ -55,6 +56,7 @@ export function runChat(
     const model = modelOverride || getSetting('model') || DEFAULT_MODEL
 
     const client = new Anthropic({ apiKey, baseURL: provider.baseURL })
+    const system = buildSkillsSystemPrompt() // enabled skills, if any
 
     try {
       const stream = client.messages.stream(
@@ -63,6 +65,7 @@ export function runChat(
           max_tokens: 64000, // streaming → generous ceiling (see claude-api guidance)
           // Adaptive thinking, with a readable summary streamed to the UI.
           thinking: { type: 'adaptive', display: 'summarized' },
+          ...(system ? { system } : {}),
           messages: history.map((m) => ({ role: m.role, content: m.content }))
         },
         { signal: controller.signal }

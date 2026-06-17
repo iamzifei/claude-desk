@@ -90,6 +90,13 @@ const api = {
     transcribe: (base64: string, mime: string) =>
       ipcRenderer.invoke('transcribe:audio', base64, mime)
   },
+  skills: {
+    list: () => ipcRenderer.invoke('skills:list'),
+    create: (s: unknown) => ipcRenderer.invoke('skills:create', s),
+    toggle: (id: string, enabled: boolean) => ipcRenderer.invoke('skills:toggle', id, enabled),
+    delete: (id: string) => ipcRenderer.invoke('skills:delete', id),
+    import: () => ipcRenderer.invoke('skills:import')
+  },
   browser: {
     decide: (
       task: string,

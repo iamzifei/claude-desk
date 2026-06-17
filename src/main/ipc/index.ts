@@ -1,5 +1,5 @@
 import { ipcMain, dialog, shell, app, BrowserWindow, clipboard, nativeImage } from 'electron'
-import { readdirSync, writeFileSync, unlinkSync } from 'fs'
+import { readdirSync, writeFileSync, unlinkSync, readFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
@@ -45,6 +45,14 @@ import {
   type NewTask
 } from '../db/scheduledTasks'
 import { listNotes, createNote, deleteNote, type Note } from '../db/notes'
+import {
+  listSkills,
+  createSkill,
+  toggleSkill,
+  deleteSkill,
+  parseSkillMd,
+  type NewSkill
+} from '../db/skills'
 import {
   getPublicSettings,
   setSetting,
@@ -234,6 +242,26 @@ export function registerIpc(): void {
       { id: 't', conversation_id: 't', role: 'user', content: prompt, created_at: Date.now() }
     ])
     return createNote(ws, 'minutes', dateTitle('会议纪要'), content)
+  })
+
+  // ---- skills: (技能市场) ---------------------------------------------
+  ipcMain.handle('skills:list', () => listSkills())
+  ipcMain.handle('skills:create', (_e, s: NewSkill) => createSkill(s))
+  ipcMain.handle('skills:toggle', (_e, id: string, enabled: boolean) => toggleSkill(id, enabled))
+  ipcMain.handle('skills:delete', (_e, id: string) => deleteSkill(id))
+  ipcMain.handle('skills:import', async () => {
+    const win = BrowserWindow.getFocusedWindow()
+    const opts = {
+      properties: ['openFile' as const],
+      filters: [{ name: 'Skill / Markdown', extensions: ['md', 'markdown', 'txt'] }]
+    }
+    const res = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts)
+    if (res.canceled || !res.filePaths[0]) return null
+    try {
+      return createSkill(parseSkillMd(readFileSync(res.filePaths[0], 'utf8')))
+    } catch {
+      return null
+    }
   })
 
   // ---- browser: (浏览器自动化 agent decision) -------------------------
