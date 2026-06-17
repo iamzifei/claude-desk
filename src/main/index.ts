@@ -21,7 +21,7 @@ function createWindow(): void {
     minHeight: 560,
     show: false,
     autoHideMenuBar: true,
-    backgroundColor: '#f6f4f0',
+    backgroundColor: '#f4f3fb',
     // Frameless custom title bar (like 牛马AI): native traffic lights on mac,
     // hidden overlay elsewhere; the app draws its own draggable top bar.
     titleBarStyle: 'hiddenInset',

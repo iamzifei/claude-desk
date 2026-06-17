@@ -89,10 +89,12 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
   return (
     <aside className="flex min-h-0 flex-col bg-sidebar">
       <div className="flex items-center gap-2 px-4 pb-2.5 pt-1">
-        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-[13px] font-bold text-primary-foreground">
-          牛
+        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-[#6d5dfb] to-[#a06dfb] text-[13px] font-bold text-white shadow-sm">
+          墨
         </div>
-        <span className="text-sm font-semibold">牛马AI · Desk</span>
+        <span className="text-sm font-semibold tracking-tight">
+          墨栖 <span className="text-muted-foreground/70">InkNest</span>
+        </span>
       </div>
 
       <nav className="flex flex-col gap-px px-2 pb-2">

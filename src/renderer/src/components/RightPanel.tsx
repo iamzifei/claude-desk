@@ -37,7 +37,7 @@ function Stub({ panel }: { panel: PanelKey }): JSX.Element {
     <div className="m-auto max-w-[240px] px-6 text-center text-muted-foreground">
       <Icon className="mx-auto mb-3 h-9 w-9 opacity-60" strokeWidth={1.5} />
       <p className="text-sm">「{TITLES[panel]}」面板</p>
-      <p className="mt-1 text-xs text-muted-foreground/70">布局已对齐牛马AI；功能在后续阶段接入。</p>
+      <p className="mt-1 text-xs text-muted-foreground/70">此面板将在后续阶段接入。</p>
     </div>
   )
 }

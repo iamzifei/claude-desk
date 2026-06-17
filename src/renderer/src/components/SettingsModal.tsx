@@ -181,13 +181,13 @@ export function SettingsModal({ open, onOpenChange }: Props): JSX.Element {
                 />
                 <p className="text-xs leading-relaxed text-muted-foreground">
                   OpenAI 兼容的 Whisper 端点即可；未填则回退到 ~/.env 的 OPENAI_API_KEY。也可指向 SiliconFlow 的
-                  SenseVoice（牛马AI 同款模型，有免费额度）。
+                  SenseVoice（有免费额度）。
                 </p>
               </div>
             ) : (
               <div className="space-y-2.5">
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  本地离线识别（sherpa-onnx + SenseVoice，牛马AI 同款模型）：完全在本机运行，无需 key、无需联网。
+                  本地离线识别（sherpa-onnx + SenseVoice 模型）：完全在本机运行，无需 key、无需联网。
                   首次需下载约 230MB 模型。
                 </p>
                 {modelReady ? (

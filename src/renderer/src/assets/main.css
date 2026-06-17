@@ -3,55 +3,57 @@
 /* Class-based dark mode (toggle `.dark` on <html>) */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ── Design tokens (shadcn-style), warm light palette aligned to 牛马AI ─── */
+/* ── 墨栖 InkNest — design tokens ───────────────────────────────────────
+   Cool indigo-violet creative identity (a deliberate departure from the
+   warm-amber reference look). Content-creator studio vibe: clean, airy. */
 :root {
-  --background: #ffffff;
-  --foreground: #2b2b30;
+  --background: #fcfcff;
+  --foreground: #1c1c28;
   --card: #ffffff;
-  --card-foreground: #2b2b30;
+  --card-foreground: #1c1c28;
   --popover: #ffffff;
-  --popover-foreground: #2b2b30;
-  --primary: #d98a3d;
+  --popover-foreground: #1c1c28;
+  --primary: #6d5dfb;
   --primary-foreground: #ffffff;
-  --secondary: #f3f1ec;
-  --secondary-foreground: #2b2b30;
-  --muted: #f6f4f0;
-  --muted-foreground: #6b6b73;
-  --accent: #ece9e3;
-  --accent-foreground: #2b2b30;
-  --destructive: #d2603e;
-  --border: #e6e2da;
-  --border-soft: #efece6;
-  --input: #e6e2da;
-  --ring: #d98a3d;
-  --sidebar: #f6f4f0;
-  --primary-soft: #faf1e6;
-  --radius: 0.75rem;
+  --secondary: #f1f1f8;
+  --secondary-foreground: #1c1c28;
+  --muted: #f5f5fb;
+  --muted-foreground: #6a6a7d;
+  --accent: #ecebfa;
+  --accent-foreground: #4a3fd0;
+  --destructive: #e05570;
+  --border: #e7e7f1;
+  --border-soft: #f0f0f7;
+  --input: #e3e3ef;
+  --ring: #6d5dfb;
+  --sidebar: #f4f3fb;
+  --primary-soft: #eeebff;
+  --radius: 0.85rem;
 }
 
-/* Dark mode — warm neutral dark, amber accent preserved (aligns with 牛马AI 深色模式) */
+/* Dark mode — indigo-tinted deep slate, brighter violet accent */
 .dark {
-  --background: #1a1a1d;
-  --foreground: #ececf0;
-  --card: #232327;
-  --card-foreground: #ececf0;
-  --popover: #232327;
-  --popover-foreground: #ececf0;
-  --primary: #d98a3d;
-  --primary-foreground: #1a1a1d;
-  --secondary: #2b2b30;
-  --secondary-foreground: #ececf0;
-  --muted: #232327;
-  --muted-foreground: #a0a0a8;
-  --accent: #313138;
-  --accent-foreground: #ececf0;
-  --destructive: #e5704b;
-  --border: #34343a;
-  --border-soft: #2c2c31;
-  --input: #34343a;
-  --ring: #d98a3d;
-  --sidebar: #1f1f23;
-  --primary-soft: #33271a;
+  --background: #15151e;
+  --foreground: #ececf3;
+  --card: #1e1e2a;
+  --card-foreground: #ececf3;
+  --popover: #1e1e2a;
+  --popover-foreground: #ececf3;
+  --primary: #8174ff;
+  --primary-foreground: #15151e;
+  --secondary: #26263460;
+  --secondary-foreground: #ececf3;
+  --muted: #20202c;
+  --muted-foreground: #9a9ab0;
+  --accent: #2c2c40;
+  --accent-foreground: #c4bcff;
+  --destructive: #f0607e;
+  --border: #2f2f40;
+  --border-soft: #26262f;
+  --input: #2f2f40;
+  --ring: #8174ff;
+  --sidebar: #1a1a25;
+  --primary-soft: #272448;
 }
 
 /* Map tokens to Tailwind color utilities (bg-background, text-muted-foreground, …) */

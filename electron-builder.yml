@@ -1,5 +1,5 @@
 appId: com.electron.app
-productName: claude-desk
+productName: InkNest
 directories:
   buildResources: build
 files:
