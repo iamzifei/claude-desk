@@ -36,6 +36,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^1.20.0",
     "react-markdown": "^10.1.0",
+    "sherpa-onnx-node": "^1.13.3",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.1",
     "zustand": "^5.0.14"

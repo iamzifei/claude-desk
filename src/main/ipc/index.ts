@@ -63,6 +63,7 @@ import {
 } from '../db/settings'
 import { runChat, runOnce, type RunHandle } from '../agent/run'
 import { decideBrowserAction, type PageElement } from '../agent/browser'
+import { isModelReady, downloadModel, transcribePcm, broadcastModelProgress } from '../voice/offline'
 import { runTaskById } from '../scheduler'
 import { PROVIDERS } from '../agent/providers'
 
@@ -87,6 +88,8 @@ export function registerIpc(): void {
     if (typeof patch.model === 'string') setSetting('model', patch.model)
     if (typeof patch.activeWorkspace === 'string') setSetting('activeWorkspace', patch.activeWorkspace)
     if (typeof patch.theme === 'string') setSetting('theme', patch.theme)
+    if (typeof patch.transcriptionEngine === 'string')
+      setSetting('transcriptionEngine', patch.transcriptionEngine)
     if (typeof patch.transcriptionBaseUrl === 'string')
       setSetting('transcriptionBaseUrl', patch.transcriptionBaseUrl)
     if (typeof patch.transcriptionModel === 'string')
@@ -276,6 +279,25 @@ export function registerIpc(): void {
       elements: PageElement[]
     ) => decideBrowserAction(task, history, screenshotB64, url, elements)
   )
+
+  // ---- voice (offline): sherpa-onnx SenseVoice (牛马AI 同款,离线无 key) --
+  ipcMain.handle('voice:localStatus', () => ({ ready: isModelReady() }))
+  ipcMain.handle('voice:downloadModel', async () => {
+    try {
+      await downloadModel((pct) => broadcastModelProgress(pct))
+      return { ok: true }
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+  ipcMain.handle('voice:transcribeLocal', async (_e, samples: number[], sampleRate: number) => {
+    try {
+      const text = await transcribePcm(Float32Array.from(samples), sampleRate)
+      return { text }
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : String(e) }
+    }
+  })
 
   // ---- transcribe: (语音输入/转写 — OpenAI-compatible Whisper) ---------
   ipcMain.handle('transcribe:audio', async (_e, base64: string, mime: string) => {

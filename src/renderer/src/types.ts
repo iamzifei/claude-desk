@@ -114,6 +114,7 @@ export interface PublicSettings {
   hasApiKey: boolean
   activeWorkspace: string | null
   theme: string
+  transcriptionEngine: string
   transcriptionBaseUrl: string
   transcriptionModel: string
   hasTranscriptionKey: boolean

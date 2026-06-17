@@ -84,6 +84,7 @@ export interface PublicSettings {
   hasApiKey: boolean
   activeWorkspace: string | null
   theme: string
+  transcriptionEngine: string
   transcriptionBaseUrl: string
   transcriptionModel: string
   hasTranscriptionKey: boolean
@@ -171,6 +172,7 @@ export interface Api {
         apiKey: string
         activeWorkspace: string
         theme: string
+        transcriptionEngine: string
         transcriptionBaseUrl: string
         transcriptionModel: string
         transcriptionKey: string
@@ -201,6 +203,13 @@ export interface Api {
   }
   voice: {
     transcribe: (base64: string, mime: string) => Promise<TranscribeResult>
+    localStatus: () => Promise<{ ready: boolean }>
+    downloadModel: () => Promise<{ ok: boolean; error?: string }>
+    transcribeLocal: (
+      samples: number[],
+      sampleRate: number
+    ) => Promise<{ text: string } | { error: string }>
+    onModelProgress: (cb: (pct: number) => void) => () => void
   }
   skills: {
     list: () => Promise<Skill[]>

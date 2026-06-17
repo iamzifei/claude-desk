@@ -88,7 +88,16 @@ const api = {
   },
   voice: {
     transcribe: (base64: string, mime: string) =>
-      ipcRenderer.invoke('transcribe:audio', base64, mime)
+      ipcRenderer.invoke('transcribe:audio', base64, mime),
+    localStatus: () => ipcRenderer.invoke('voice:localStatus'),
+    downloadModel: () => ipcRenderer.invoke('voice:downloadModel'),
+    transcribeLocal: (samples: number[], sampleRate: number) =>
+      ipcRenderer.invoke('voice:transcribeLocal', samples, sampleRate),
+    onModelProgress: (cb: (pct: number) => void) => {
+      const listener = (_e: unknown, pct: number): void => cb(pct)
+      ipcRenderer.on('voice:modelProgress', listener)
+      return () => ipcRenderer.removeListener('voice:modelProgress', listener)
+    }
   },
   skills: {
     list: () => ipcRenderer.invoke('skills:list'),

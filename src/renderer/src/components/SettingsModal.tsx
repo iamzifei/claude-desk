@@ -1,5 +1,5 @@
 import { JSX, useEffect, useState } from 'react'
-import { ShieldCheck, Sun, Moon } from 'lucide-react'
+import { ShieldCheck, Sun, Moon, Download, Check } from 'lucide-react'
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
 import type { ProviderInfo } from '../types'
@@ -22,10 +22,13 @@ export function SettingsModal({ open, onOpenChange }: Props): JSX.Element {
   const [apiKey, setApiKey] = useState('')
   const [hasApiKey, setHasApiKey] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [trEngine, setTrEngine] = useState('cloud')
   const [trBase, setTrBase] = useState('')
   const [trModel, setTrModel] = useState('')
   const [trKey, setTrKey] = useState('')
   const [hasTrKey, setHasTrKey] = useState(false)
+  const [modelReady, setModelReady] = useState(false)
+  const [dl, setDl] = useState<number | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -37,13 +40,24 @@ export function SettingsModal({ open, onOpenChange }: Props): JSX.Element {
         setModel(settings.model)
         setHasApiKey(settings.hasApiKey)
         setApiKey('')
+        setTrEngine(settings.transcriptionEngine)
         setTrBase(settings.transcriptionBaseUrl)
         setTrModel(settings.transcriptionModel)
         setHasTrKey(settings.hasTranscriptionKey)
         setTrKey('')
       }
     )
+    window.api.voice.localStatus().then((s) => setModelReady(s.ready))
+    return window.api.voice.onModelProgress((pct) => setDl(pct))
   }, [open])
+
+  const downloadModel = async (): Promise<void> => {
+    setDl(0)
+    const res = await window.api.voice.downloadModel()
+    setDl(null)
+    if (res.ok) setModelReady(true)
+    else if (res.error) window.alert(res.error)
+  }
 
   const current = providers.find((p) => p.id === provider)
 
@@ -51,6 +65,7 @@ export function SettingsModal({ open, onOpenChange }: Props): JSX.Element {
     const patch: Record<string, string> = {
       provider,
       model,
+      transcriptionEngine: trEngine,
       transcriptionBaseUrl: trBase.trim(),
       transcriptionModel: trModel.trim()
     }
@@ -124,32 +139,78 @@ export function SettingsModal({ open, onOpenChange }: Props): JSX.Element {
 
           <div className="border-t border-border-soft pt-3.5">
             <div className="mb-2 text-xs font-medium text-foreground">语音转写</div>
-            <div className="space-y-2.5">
-              <input
-                className={fieldCls}
-                value={trBase}
-                onChange={(e) => setTrBase(e.target.value)}
-                placeholder="转写端点，如 https://api.openai.com/v1"
-              />
-              <input
-                className={fieldCls}
-                value={trModel}
-                onChange={(e) => setTrModel(e.target.value)}
-                placeholder="转写模型，如 whisper-1"
-              />
-              <Input
-                type="password"
-                value={trKey}
-                onChange={(e) => setTrKey(e.target.value)}
-                placeholder={
-                  hasTrKey ? '••••••••（已设置，留空保持不变）' : '转写 key（兼容 OpenAI /audio/transcriptions）'
-                }
-              />
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                OpenAI 兼容的 Whisper 端点即可；未填则回退到环境变量 / ~/.env 的 OPENAI_API_KEY。也可指向
-                SiliconFlow 的 SenseVoice（牛马AI 同款模型，有免费额度）。
-              </p>
+            <div className="mb-2.5 flex gap-1 rounded-lg border border-border p-1">
+              {[
+                { v: 'cloud', label: '云端 API' },
+                { v: 'local', label: '本地离线' }
+              ].map((o) => (
+                <button
+                  key={o.v}
+                  onClick={() => setTrEngine(o.v)}
+                  className={cn(
+                    'flex-1 rounded-md py-1.5 text-[13px] transition-colors',
+                    trEngine === o.v ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {o.label}
+                </button>
+              ))}
             </div>
+
+            {trEngine === 'cloud' ? (
+              <div className="space-y-2.5">
+                <input
+                  className={fieldCls}
+                  value={trBase}
+                  onChange={(e) => setTrBase(e.target.value)}
+                  placeholder="转写端点，如 https://api.openai.com/v1"
+                />
+                <input
+                  className={fieldCls}
+                  value={trModel}
+                  onChange={(e) => setTrModel(e.target.value)}
+                  placeholder="转写模型，如 whisper-1"
+                />
+                <Input
+                  type="password"
+                  value={trKey}
+                  onChange={(e) => setTrKey(e.target.value)}
+                  placeholder={
+                    hasTrKey ? '••••••••（已设置，留空保持不变）' : '转写 key（兼容 OpenAI /audio/transcriptions）'
+                  }
+                />
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  OpenAI 兼容的 Whisper 端点即可；未填则回退到 ~/.env 的 OPENAI_API_KEY。也可指向 SiliconFlow 的
+                  SenseVoice（牛马AI 同款模型，有免费额度）。
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  本地离线识别（sherpa-onnx + SenseVoice，牛马AI 同款模型）：完全在本机运行，无需 key、无需联网。
+                  首次需下载约 230MB 模型。
+                </p>
+                {modelReady ? (
+                  <div className="flex items-center gap-2 text-[13px] text-primary">
+                    <Check className="h-4 w-4" /> 模型已就绪
+                  </div>
+                ) : dl !== null ? (
+                  <div className="space-y-1.5">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full bg-primary transition-all"
+                        style={{ width: `${Math.round(dl * 100)}%` }}
+                      />
+                    </div>
+                    <div className="text-xs text-muted-foreground">下载中 {Math.round(dl * 100)}%…</div>
+                  </div>
+                ) : (
+                  <Button size="sm" variant="secondary" onClick={downloadModel}>
+                    <Download className="h-4 w-4" /> 下载离线模型（约 230MB）
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

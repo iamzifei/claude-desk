@@ -91,6 +91,7 @@ export interface AppSettings {
   hasApiKey: boolean
   activeWorkspace: string | null
   theme: string // 'light' | 'dark'
+  transcriptionEngine: string // 'cloud' | 'local'
   transcriptionBaseUrl: string
   transcriptionModel: string
   hasTranscriptionKey: boolean
@@ -106,6 +107,7 @@ export function getPublicSettings(): AppSettings {
     hasApiKey: !!resolveApiKey(),
     activeWorkspace: getSetting('activeWorkspace'),
     theme: getSetting('theme') ?? 'light',
+    transcriptionEngine: getSetting('transcriptionEngine') ?? 'cloud',
     transcriptionBaseUrl: getSetting('transcriptionBaseUrl') ?? DEFAULT_TRANSCRIBE_URL,
     transcriptionModel: getSetting('transcriptionModel') ?? DEFAULT_TRANSCRIBE_MODEL,
     hasTranscriptionKey: !!resolveTranscriptionKey()
