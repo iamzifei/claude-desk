@@ -63,6 +63,7 @@ import {
 } from '../db/settings'
 import { runChat, runOnce, type RunHandle } from '../agent/run'
 import { decideBrowserAction, type PageElement } from '../agent/browser'
+import { runCodingAgent, cancelCoding } from '../agent/coding'
 import { isModelReady, downloadModel, transcribePcm, broadcastModelProgress } from '../voice/offline'
 import { runTaskById } from '../scheduler'
 import { PROVIDERS } from '../agent/providers'
@@ -246,6 +247,15 @@ export function registerIpc(): void {
     ])
     return createNote(ws, 'minutes', dateTitle('会议纪要'), content)
   })
+
+  // ---- coding: (真·编程 agent — Claude Code engine) -------------------
+  ipcMain.handle('coding:run', (e, runId: string, task: string, cwd: string) => {
+    const wc = e.sender
+    runCodingAgent(runId, task, cwd, (ev) => {
+      if (!wc.isDestroyed()) wc.send('coding:event', runId, ev)
+    })
+  })
+  ipcMain.handle('coding:cancel', (_e, runId: string) => cancelCoding(runId))
 
   // ---- skills: (技能市场) ---------------------------------------------
   ipcMain.handle('skills:list', () => listSkills())

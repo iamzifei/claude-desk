@@ -115,6 +115,16 @@ const api = {
       elements: unknown[]
     ) => ipcRenderer.invoke('browser:decide', task, history, screenshotB64, url, elements)
   },
+  coding: {
+    run: (runId: string, task: string, cwd: string) =>
+      ipcRenderer.invoke('coding:run', runId, task, cwd),
+    cancel: (runId: string) => ipcRenderer.invoke('coding:cancel', runId),
+    onEvent: (cb: (runId: string, ev: unknown) => void) => {
+      const listener = (_e: unknown, runId: string, ev: unknown): void => cb(runId, ev)
+      ipcRenderer.on('coding:event', listener)
+      return () => ipcRenderer.removeListener('coding:event', listener)
+    }
+  },
   exporter: {
     capture: (rect: { x: number; y: number; width: number; height: number }) =>
       ipcRenderer.invoke('export:capture', rect),

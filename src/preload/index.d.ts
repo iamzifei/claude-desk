@@ -124,6 +124,13 @@ export interface BrowserAction {
   answer?: string
 }
 
+export type CodingEvent =
+  | { type: 'text'; text: string }
+  | { type: 'tool'; name: string; summary: string }
+  | { type: 'result'; text: string }
+  | { type: 'error'; message: string }
+  | { type: 'done' }
+
 export interface ProviderInfo {
   id: string
   label: string
@@ -226,6 +233,11 @@ export interface Api {
       url: string,
       elements: PageElement[]
     ) => Promise<BrowserAction>
+  }
+  coding: {
+    run: (runId: string, task: string, cwd: string) => Promise<void>
+    cancel: (runId: string) => Promise<void>
+    onEvent: (cb: (runId: string, ev: CodingEvent) => void) => () => void
   }
   exporter: {
     capture: (rect: { x: number; y: number; width: number; height: number }) => Promise<string>

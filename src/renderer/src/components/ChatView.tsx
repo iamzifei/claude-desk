@@ -11,6 +11,7 @@ import { ScheduledView } from './ScheduledView'
 import { NotesView } from './NotesView'
 import { BrowserView } from './BrowserView'
 import { SkillsView } from './SkillsView'
+import { CodingView } from './CodingView'
 
 export function ChatView(): JSX.Element {
   const view = useStore((s) => s.view)
@@ -28,6 +29,8 @@ export function ChatView(): JSX.Element {
         <BrowserView />
       ) : view === 'skills' ? (
         <SkillsView />
+      ) : view === 'coding' ? (
+        <CodingView />
       ) : (
         <ChatArea />
       )}

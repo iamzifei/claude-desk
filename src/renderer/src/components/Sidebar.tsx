@@ -7,6 +7,7 @@ import {
   Puzzle,
   BarChart3,
   ClipboardList,
+  Code2,
   Settings,
   MoreHorizontal,
   ChevronRight,
@@ -35,10 +36,20 @@ interface Props {
   onOpenSettings: () => void
 }
 
-type NavAction = 'new' | 'search' | 'scheduled' | 'review' | 'minutes' | 'browser' | 'skills' | null
+type NavAction =
+  | 'new'
+  | 'search'
+  | 'scheduled'
+  | 'review'
+  | 'minutes'
+  | 'browser'
+  | 'skills'
+  | 'coding'
+  | null
 const NAV: { icon: LucideIcon; label: string; action: NavAction }[] = [
   { icon: PencilLine, label: '新建对话', action: 'new' },
   { icon: Search, label: '搜索', action: 'search' },
+  { icon: Code2, label: '编程', action: 'coding' },
   { icon: Clock, label: '定时任务', action: 'scheduled' },
   { icon: BarChart3, label: '每日回顾', action: 'review' },
   { icon: ClipboardList, label: '会议纪要', action: 'minutes' },

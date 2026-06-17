@@ -80,7 +80,21 @@ export interface Skill {
   created_at: number
 }
 
-export type MainView = 'chat' | 'scheduled' | 'review' | 'minutes' | 'browser' | 'skills'
+export type CodingEvent =
+  | { type: 'text'; text: string }
+  | { type: 'tool'; name: string; summary: string }
+  | { type: 'result'; text: string }
+  | { type: 'error'; message: string }
+  | { type: 'done' }
+
+export type MainView =
+  | 'chat'
+  | 'scheduled'
+  | 'review'
+  | 'minutes'
+  | 'browser'
+  | 'skills'
+  | 'coding'
 
 export interface Conversation {
   id: string
