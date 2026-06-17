@@ -22,6 +22,41 @@ export interface FileEntry {
   isDir: boolean
 }
 
+export interface ScheduledTask {
+  id: string
+  workspace_id: string | null
+  name: string
+  prompt: string
+  schedule_kind: 'interval' | 'daily'
+  interval_min: number | null
+  at_hour: number | null
+  at_minute: number | null
+  enabled: number
+  last_run: number | null
+  next_run: number | null
+  created_at: number
+}
+
+export interface NewScheduledTask {
+  name: string
+  prompt: string
+  schedule_kind: 'interval' | 'daily'
+  interval_min: number | null
+  at_hour: number | null
+  at_minute: number | null
+}
+
+export interface Note {
+  id: string
+  workspace_id: string | null
+  type: 'review' | 'minutes'
+  title: string
+  content: string
+  created_at: number
+}
+
+export type MainView = 'chat' | 'scheduled' | 'review' | 'minutes'
+
 export interface Conversation {
   id: string
   title: string

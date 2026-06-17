@@ -37,12 +37,28 @@ import {
   setProjectDir,
   deleteProject
 } from '../db/projects'
+import {
+  listTasks,
+  createTask,
+  deleteTask,
+  toggleTask,
+  type NewTask
+} from '../db/scheduledTasks'
+import { listNotes, createNote, deleteNote, type Note } from '../db/notes'
 import { getPublicSettings, setSetting } from '../db/settings'
-import { runChat, type RunHandle } from '../agent/run'
+import { runChat, runOnce, type RunHandle } from '../agent/run'
+import { runTaskById } from '../scheduler'
 import { PROVIDERS } from '../agent/providers'
 
 /** In-flight streaming runs, keyed by conversation id, so we can cancel. */
 const activeRuns = new Map<string, RunHandle>()
+
+/** "每日回顾 · 2026-06-17 10:30" style title. */
+function dateTitle(prefix: string): string {
+  const d = new Date()
+  const p = (n: number): string => String(n).padStart(2, '0')
+  return `${prefix} · ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
 
 export function registerIpc(): void {
   // ---- settings: -------------------------------------------------------
@@ -155,6 +171,56 @@ export function registerIpc(): void {
     return res.canceled ? null : res.filePaths[0]
   })
   ipcMain.handle('app:openExternal', (_e, url: string) => shell.openExternal(url))
+
+  // ---- scheduledTasks: (定时任务) -------------------------------------
+  ipcMain.handle('scheduledTasks:list', (_e, ws: string) => listTasks(ws))
+  ipcMain.handle('scheduledTasks:create', (_e, ws: string, t: NewTask) => createTask(ws, t))
+  ipcMain.handle('scheduledTasks:delete', (_e, id: string) => deleteTask(id))
+  ipcMain.handle('scheduledTasks:toggle', (_e, id: string, enabled: boolean) =>
+    toggleTask(id, enabled)
+  )
+  ipcMain.handle('scheduledTasks:runNow', (_e, id: string) => runTaskById(id))
+
+  // ---- notes: (每日回顾 / 会议纪要) -----------------------------------
+  ipcMain.handle('notes:list', (_e, ws: string, type: Note['type']) => listNotes(ws, type))
+  ipcMain.handle('notes:delete', (_e, id: string) => deleteNote(id))
+
+  // 每日回顾 — summarize today's conversations into a review note.
+  ipcMain.handle('review:generate', async (_e, ws: string) => {
+    const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).getTime()
+    const today = listConversations(ws).filter((c) => c.updated_at >= startOfToday)
+    if (today.length === 0) {
+      return createNote(ws, 'review', dateTitle('每日回顾'), '今天还没有对话记录。')
+    }
+    let digest = ''
+    for (const c of today.slice(0, 20)) {
+      digest += `\n## ${c.title}\n`
+      for (const m of getMessages(c.id).slice(0, 12)) {
+        digest += `${m.role === 'user' ? '我' : 'AI'}：${m.content.slice(0, 400)}\n`
+      }
+    }
+    const prompt =
+      '以下是我今天的对话记录。请生成一份「每日回顾」，用 markdown 输出：\n' +
+      '1) 今天主要做了什么（要点）\n2) 关键决策/结论\n3) 待办与下一步\n4) 值得记住的点\n' +
+      '简洁、结构化。\n\n' +
+      digest
+    const content = await runOnce([
+      { id: 't', conversation_id: 't', role: 'user', content: prompt, created_at: Date.now() }
+    ])
+    return createNote(ws, 'review', dateTitle('每日回顾'), content)
+  })
+
+  // 会议纪要 — turn a pasted transcript / notes into structured minutes.
+  ipcMain.handle('minutes:generate', async (_e, ws: string, transcript: string) => {
+    const prompt =
+      '以下是一段会议记录/转写。请整理成「会议纪要」，用 markdown 输出：\n' +
+      '1) 一句话摘要\n2) 讨论要点\n3) 形成的决策\n4) 行动项（负责人/时间，如能识别）\n\n会议记录：\n' +
+      transcript
+    const content = await runOnce([
+      { id: 't', conversation_id: 't', role: 'user', content: prompt, created_at: Date.now() }
+    ])
+    return createNote(ws, 'minutes', dateTitle('会议纪要'), content)
+  })
 
   // ---- export: (card preview → PNG / PDF / clipboard) -----------------
   // Native region capture — no external deps; the renderer passes the card's

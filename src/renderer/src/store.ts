@@ -7,7 +7,8 @@ import type {
   Chunk,
   StreamingState,
   ProviderInfo,
-  FileEntry
+  FileEntry,
+  MainView
 } from './types'
 
 let booted = false
@@ -38,9 +39,11 @@ interface AppState {
   rightPanel: 'card' | 'files' | 'browser' | null
   files: FileEntry[]
   theme: string
+  view: MainView
 
   init: () => Promise<void>
   setTheme: (theme: string) => Promise<void>
+  setView: (v: MainView) => void
   refreshAll: () => Promise<void>
   refreshConversations: () => Promise<void>
 
@@ -89,6 +92,9 @@ export const useStore = create<AppState>((set, get) => ({
   rightPanel: null,
   files: [],
   theme: 'light',
+  view: 'chat',
+
+  setView: (v) => set({ view: v }),
 
   setTheme: async (theme) => {
     applyTheme(theme)
@@ -189,6 +195,7 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({
       activeId: id,
       streaming: null,
+      view: 'chat',
       openTabs: s.openTabs.includes(id) ? s.openTabs : [...s.openTabs, id]
     }))
     set({ messages: await window.api.conversations.messages(id) })
@@ -215,6 +222,7 @@ export const useStore = create<AppState>((set, get) => ({
       activeId: conv.id,
       messages: [],
       streaming: null,
+      view: 'chat',
       openTabs: [...s.openTabs, conv.id]
     }))
   },
@@ -299,4 +307,10 @@ export const useStore = create<AppState>((set, get) => ({
 
 window.api.agent.onChunk((conversationId, chunk) => {
   useStore.getState()._onChunk(conversationId, chunk)
+})
+
+// Background features (e.g. a scheduled task firing) signal a data change —
+// refresh the conversation list so new results appear without a manual reload.
+window.api.app.onDataChanged(() => {
+  useStore.getState().refreshConversations()
 })

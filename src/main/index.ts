@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { initDb } from './db'
 import { registerIpc } from './ipc'
+import { startScheduler } from './scheduler'
 
 // Opt-in dev remote-debugging port (off by default). Enable for CDP-driven QA:
 //   CLAUDE_DESK_CDP=9223 npm run dev
@@ -67,6 +68,7 @@ app.whenReady().then(() => {
   // Initialize local storage and register all IPC handlers before the window loads.
   initDb()
   registerIpc()
+  startScheduler()
 
   createWindow()
 

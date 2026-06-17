@@ -6,6 +6,7 @@ import {
   Globe,
   Puzzle,
   BarChart3,
+  ClipboardList,
   Settings,
   MoreHorizontal,
   ChevronRight,
@@ -34,13 +35,15 @@ interface Props {
   onOpenSettings: () => void
 }
 
-const NAV: { icon: LucideIcon; label: string; action: 'new' | 'search' | null }[] = [
+type NavAction = 'new' | 'search' | 'scheduled' | 'review' | 'minutes' | null
+const NAV: { icon: LucideIcon; label: string; action: NavAction }[] = [
   { icon: PencilLine, label: '新建对话', action: 'new' },
   { icon: Search, label: '搜索', action: 'search' },
-  { icon: Clock, label: '定时任务', action: null },
+  { icon: Clock, label: '定时任务', action: 'scheduled' },
+  { icon: BarChart3, label: '每日回顾', action: 'review' },
+  { icon: ClipboardList, label: '会议纪要', action: 'minutes' },
   { icon: Globe, label: '浏览器', action: null },
-  { icon: Puzzle, label: 'Skill 管理', action: null },
-  { icon: BarChart3, label: '每日回顾', action: null }
+  { icon: Puzzle, label: 'Skill 管理', action: null }
 ]
 
 export function Sidebar({ onOpenSettings }: Props): JSX.Element {
@@ -52,6 +55,8 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
   const create = useStore((s) => s.newConversation)
   const newProject = useStore((s) => s.newProject)
   const ws = useStore((s) => s.activeWorkspaceId)
+  const view = useStore((s) => s.view)
+  const setView = useStore((s) => s.setView)
 
   const [searchOpen, setSearchOpen] = useState(false)
   const [results, setResults] = useState<Conversation[] | null>(null)
@@ -87,9 +92,15 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
             title={item.action === null ? '即将上线' : undefined}
             onClick={() => {
               if (item.action === 'new') create(null)
-              if (item.action === 'search') setSearchOpen((v) => !v)
+              else if (item.action === 'search') setSearchOpen((v) => !v)
+              else if (item.action) setView(item.action)
             }}
-            className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+            className={cn(
+              'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] transition-colors disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-muted-foreground',
+              item.action !== null && item.action === view
+                ? 'bg-accent text-foreground'
+                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+            )}
           >
             <item.icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
             <span>{item.label}</span>

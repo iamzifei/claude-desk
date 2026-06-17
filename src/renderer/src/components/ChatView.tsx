@@ -7,8 +7,29 @@ import { Composer } from './Composer'
 import { WorkspaceTabs } from './WorkspaceTabs'
 import { TabBar } from './TabBar'
 import { RightDock, RightPanel } from './RightPanel'
+import { ScheduledView } from './ScheduledView'
+import { NotesView } from './NotesView'
 
 export function ChatView(): JSX.Element {
+  const view = useStore((s) => s.view)
+
+  return (
+    <div className="flex min-h-0 min-w-0 flex-col rounded-tl-xl border-l border-t border-border bg-background">
+      <WorkspaceTabs />
+      {view === 'scheduled' ? (
+        <ScheduledView />
+      ) : view === 'review' ? (
+        <NotesView type="review" />
+      ) : view === 'minutes' ? (
+        <NotesView type="minutes" />
+      ) : (
+        <ChatArea />
+      )}
+    </div>
+  )
+}
+
+function ChatArea(): JSX.Element {
   const messages = useStore((s) => s.messages)
   const streaming = useStore((s) => s.streaming)
   const hasApiKey = useStore((s) => s.hasApiKey)
@@ -20,8 +41,7 @@ export function ChatView(): JSX.Element {
   }, [messages, streaming])
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-col rounded-tl-xl border-l border-t border-border bg-background">
-      <WorkspaceTabs />
+    <>
       <TabBar />
       <div className="flex min-h-0 flex-1">
         <main className="flex min-w-0 flex-1 flex-col">
@@ -61,6 +81,6 @@ export function ChatView(): JSX.Element {
         <RightPanel />
         <RightDock />
       </div>
-    </div>
+    </>
   )
 }

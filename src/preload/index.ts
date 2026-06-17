@@ -58,10 +58,30 @@ const api = {
     getProviders: () => ipcRenderer.invoke('settings:getProviders'),
     set: (patch: Record<string, string>) => ipcRenderer.invoke('settings:set', patch)
   },
+  scheduledTasks: {
+    list: (ws: string) => ipcRenderer.invoke('scheduledTasks:list', ws),
+    create: (ws: string, t: unknown) => ipcRenderer.invoke('scheduledTasks:create', ws, t),
+    delete: (id: string) => ipcRenderer.invoke('scheduledTasks:delete', id),
+    toggle: (id: string, enabled: boolean) =>
+      ipcRenderer.invoke('scheduledTasks:toggle', id, enabled),
+    runNow: (id: string) => ipcRenderer.invoke('scheduledTasks:runNow', id)
+  },
+  notes: {
+    list: (ws: string, type: string) => ipcRenderer.invoke('notes:list', ws, type),
+    delete: (id: string) => ipcRenderer.invoke('notes:delete', id),
+    generateReview: (ws: string) => ipcRenderer.invoke('review:generate', ws),
+    generateMinutes: (ws: string, transcript: string) =>
+      ipcRenderer.invoke('minutes:generate', ws, transcript)
+  },
   app: {
     getDefaultWorkspace: () => ipcRenderer.invoke('app:getDefaultWorkspace'),
     openFolder: () => ipcRenderer.invoke('dialog:openFolder'),
-    openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url)
+    openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
+    onDataChanged: (cb: () => void) => {
+      const listener = (): void => cb()
+      ipcRenderer.on('data:changed', listener)
+      return () => ipcRenderer.removeListener('data:changed', listener)
+    }
   },
   files: {
     listDir: (dir: string) => ipcRenderer.invoke('files:listDir', dir)

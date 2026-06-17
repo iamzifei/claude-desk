@@ -96,3 +96,23 @@ export function runChat(
 
   return { cancel: () => controller.abort() }
 }
+
+/**
+ * Run a prompt to completion and resolve with the full assistant text.
+ * Used by background features (scheduled tasks, daily review, meeting minutes)
+ * that need a one-shot result rather than a streamed UI.
+ */
+export function runOnce(history: Message[], modelOverride?: string | null): Promise<string> {
+  return new Promise((resolve) => {
+    let out = ''
+    runChat(
+      history,
+      (c) => {
+        if (c.type === 'text') out += c.text
+        else if (c.type === 'done') resolve(out)
+        else if (c.type === 'error') resolve(`[错误] ${c.message}`)
+      },
+      modelOverride
+    )
+  })
+}

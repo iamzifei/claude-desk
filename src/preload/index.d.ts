@@ -23,6 +23,35 @@ export interface FileEntry {
   isDir: boolean
 }
 
+export interface ScheduledTask {
+  id: string
+  workspace_id: string | null
+  name: string
+  prompt: string
+  schedule_kind: 'interval' | 'daily'
+  interval_min: number | null
+  at_hour: number | null
+  at_minute: number | null
+  enabled: number
+  last_run: number | null
+  next_run: number | null
+  created_at: number
+}
+
+export type NewScheduledTask = Pick<
+  ScheduledTask,
+  'name' | 'prompt' | 'schedule_kind' | 'interval_min' | 'at_hour' | 'at_minute'
+>
+
+export interface Note {
+  id: string
+  workspace_id: string | null
+  type: 'review' | 'minutes'
+  title: string
+  content: string
+  created_at: number
+}
+
 export interface Conversation {
   id: string
   title: string
@@ -108,10 +137,24 @@ export interface Api {
       }>
     ) => Promise<PublicSettings>
   }
+  scheduledTasks: {
+    list: (ws: string) => Promise<ScheduledTask[]>
+    create: (ws: string, t: NewScheduledTask) => Promise<ScheduledTask>
+    delete: (id: string) => Promise<void>
+    toggle: (id: string, enabled: boolean) => Promise<void>
+    runNow: (id: string) => Promise<string | null>
+  }
+  notes: {
+    list: (ws: string, type: Note['type']) => Promise<Note[]>
+    delete: (id: string) => Promise<void>
+    generateReview: (ws: string) => Promise<Note>
+    generateMinutes: (ws: string, transcript: string) => Promise<Note>
+  }
   app: {
     getDefaultWorkspace: () => Promise<string>
     openFolder: () => Promise<string | null>
     openExternal: (url: string) => Promise<void>
+    onDataChanged: (cb: () => void) => () => void
   }
   files: {
     listDir: (dir: string) => Promise<FileEntry[]>

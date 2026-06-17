@@ -106,6 +106,32 @@ function migrate(d: Database.Database): void {
     CREATE INDEX idx_conv_ws ON conversations(workspace_id, archived, updated_at);
     CREATE INDEX idx_conv_proj ON conversations(project_id);
     CREATE INDEX idx_proj_ws ON projects(workspace_id, sort);
+    `,
+    // 0004 — scheduled tasks + notes (定时任务 / 每日回顾 / 会议纪要)
+    `
+    CREATE TABLE scheduled_tasks (
+      id            TEXT PRIMARY KEY,
+      workspace_id  TEXT,
+      name          TEXT NOT NULL,
+      prompt        TEXT NOT NULL,
+      schedule_kind TEXT NOT NULL,        -- 'interval' | 'daily'
+      interval_min  INTEGER,              -- for 'interval'
+      at_hour       INTEGER,              -- for 'daily'
+      at_minute     INTEGER,              -- for 'daily'
+      enabled       INTEGER NOT NULL DEFAULT 1,
+      last_run      INTEGER,
+      next_run      INTEGER,
+      created_at    INTEGER NOT NULL
+    );
+    CREATE TABLE notes (
+      id            TEXT PRIMARY KEY,
+      workspace_id  TEXT,
+      type          TEXT NOT NULL,        -- 'review' | 'minutes'
+      title         TEXT NOT NULL,
+      content       TEXT NOT NULL,
+      created_at    INTEGER NOT NULL
+    );
+    CREATE INDEX idx_notes_ws_type ON notes(workspace_id, type, created_at);
     `
   ]
 
