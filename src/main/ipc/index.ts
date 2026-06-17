@@ -1,6 +1,14 @@
-import { ipcMain, dialog, shell, app, BrowserWindow } from 'electron'
-import { readdirSync } from 'fs'
+import { ipcMain, dialog, shell, app, BrowserWindow, clipboard, nativeImage } from 'electron'
+import { readdirSync, writeFileSync, unlinkSync } from 'fs'
+import { tmpdir } from 'os'
 import { join } from 'path'
+
+interface Rect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
 import {
   listConversations,
   listArchived,
@@ -147,6 +155,64 @@ export function registerIpc(): void {
     return res.canceled ? null : res.filePaths[0]
   })
   ipcMain.handle('app:openExternal', (_e, url: string) => shell.openExternal(url))
+
+  // ---- export: (card preview → PNG / PDF / clipboard) -----------------
+  // Native region capture — no external deps; the renderer passes the card's
+  // bounding rect (CSS px) and we capture it at the display's scale factor.
+  ipcMain.handle('export:capture', async (e, rect: Rect) => {
+    const wc = e.sender
+    const r = {
+      x: Math.round(rect.x),
+      y: Math.round(rect.y),
+      width: Math.round(rect.width),
+      height: Math.round(rect.height)
+    }
+    const img = await wc.capturePage(r)
+    return img.toDataURL()
+  })
+
+  // PNG → single-page PDF via an offscreen window with a CSS-sized @page.
+  ipcMain.handle('export:pdfFromImage', async (_e, dataUrl: string, w: number, h: number) => {
+    const base64 = dataUrl.split(',')[1]
+    const stamp = Date.now()
+    const pngPath = join(tmpdir(), `card-${stamp}.png`)
+    const htmlPath = join(tmpdir(), `card-${stamp}.html`)
+    writeFileSync(pngPath, Buffer.from(base64, 'base64'))
+    writeFileSync(
+      htmlPath,
+      `<!doctype html><html><head><style>@page{size:${w}px ${h}px;margin:0}html,body{margin:0;padding:0}img{display:block;width:${w}px;height:${h}px}</style></head><body><img src="file://${pngPath}"></body></html>`
+    )
+    const win = new BrowserWindow({ show: false, width: w, height: h })
+    try {
+      await win.loadFile(htmlPath)
+      await new Promise((r) => setTimeout(r, 120)) // let the image decode
+      const pdf = await win.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true })
+      return pdf.toString('base64')
+    } finally {
+      win.destroy()
+      try {
+        unlinkSync(pngPath)
+        unlinkSync(htmlPath)
+      } catch {
+        /* ignore */
+      }
+    }
+  })
+
+  ipcMain.handle('export:saveBinary', async (_e, defaultName: string, base64: string) => {
+    const win = BrowserWindow.getFocusedWindow()
+    const opts = { defaultPath: join(app.getPath('downloads'), defaultName) }
+    const res = win
+      ? await dialog.showSaveDialog(win, opts)
+      : await dialog.showSaveDialog(opts)
+    if (res.canceled || !res.filePath) return null
+    writeFileSync(res.filePath, Buffer.from(base64, 'base64'))
+    return res.filePath
+  })
+  ipcMain.handle('export:copyImage', (_e, dataUrl: string) => {
+    clipboard.writeImage(nativeImage.createFromDataURL(dataUrl))
+    return true
+  })
 
   // ---- files: (project / workspace folder listing for the 文件 panel) ---
   ipcMain.handle('files:listDir', (_e, dir: string) => {

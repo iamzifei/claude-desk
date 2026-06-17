@@ -65,6 +65,15 @@ const api = {
   },
   files: {
     listDir: (dir: string) => ipcRenderer.invoke('files:listDir', dir)
+  },
+  exporter: {
+    capture: (rect: { x: number; y: number; width: number; height: number }) =>
+      ipcRenderer.invoke('export:capture', rect),
+    pdfFromImage: (dataUrl: string, w: number, h: number) =>
+      ipcRenderer.invoke('export:pdfFromImage', dataUrl, w, h),
+    saveBinary: (defaultName: string, base64: string) =>
+      ipcRenderer.invoke('export:saveBinary', defaultName, base64),
+    copyImage: (dataUrl: string) => ipcRenderer.invoke('export:copyImage', dataUrl)
   }
 }
 

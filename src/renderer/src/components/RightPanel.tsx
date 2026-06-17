@@ -3,6 +3,7 @@ import { Image, Folder, FolderOpen, FileText, File, Globe, X, type LucideIcon } 
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
 import { Tip } from './ui/tooltip'
+import { CardPanel } from './CardPanel'
 
 type PanelKey = 'card' | 'files' | 'browser'
 const TITLES: Record<PanelKey, string> = { card: '卡片预览', files: '文件', browser: '浏览器' }
@@ -24,7 +25,7 @@ export function RightPanel(): JSX.Element | null {
         </button>
       </div>
       <div className="flex min-h-0 flex-1 flex-col">
-        {panel === 'files' ? <FilesList /> : <Stub panel={panel} />}
+        {panel === 'files' ? <FilesList /> : panel === 'card' ? <CardPanel /> : <Stub panel={panel} />}
       </div>
     </section>
   )
@@ -96,6 +97,7 @@ export function RightDock(): JSX.Element {
       {items.map((it) => (
         <Tip key={it.key} label={it.label} side="left">
           <button
+            data-dock={it.key}
             onClick={() => setPanel(it.key)}
             className={cn(
               'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',

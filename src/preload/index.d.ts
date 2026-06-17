@@ -116,6 +116,12 @@ export interface Api {
   files: {
     listDir: (dir: string) => Promise<FileEntry[]>
   }
+  exporter: {
+    capture: (rect: { x: number; y: number; width: number; height: number }) => Promise<string>
+    pdfFromImage: (dataUrl: string, w: number, h: number) => Promise<string>
+    saveBinary: (defaultName: string, base64: string) => Promise<string | null>
+    copyImage: (dataUrl: string) => Promise<boolean>
+  }
 }
 
 declare global {
