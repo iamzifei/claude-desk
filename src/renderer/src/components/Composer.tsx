@@ -11,6 +11,17 @@ import {
   DropdownMenuItem
 } from './ui/dropdown-menu'
 
+/** A chat target the composer drives — the primary session or a split pane. */
+export interface ChatSession {
+  model: string
+  models: string[]
+  setModel: (m: string) => void
+  streaming: boolean
+  empty: boolean
+  send: (text: string, web: boolean) => void
+  cancel: () => void
+}
+
 const CHIPS: { label: string; prompt: string }[] = [
   {
     label: '小红书',
@@ -31,14 +42,8 @@ const CHIPS: { label: string; prompt: string }[] = [
   { label: '评论回复', prompt: '帮我写几条高情商的评论区回复：\n' }
 ]
 
+/** The composer used by the primary view — reads the global chat session. */
 export function Composer(): JSX.Element {
-  const [text, setText] = useState('')
-  const [web, setWeb] = useState(false)
-  const taRef = useRef<HTMLTextAreaElement>(null)
-  const { recording, transcribing, toggle: toggleMic } = useVoiceInput((t) => {
-    setText((prev) => (prev ? prev + ' ' : '') + t)
-    taRef.current?.focus()
-  })
   const streaming = useStore((s) => s.streaming)
   const messages = useStore((s) => s.messages)
   const send = useStore((s) => s.send)
@@ -48,14 +53,38 @@ export function Composer(): JSX.Element {
   const conversations = useStore((s) => s.conversations)
   const activeId = useStore((s) => s.activeId)
   const setActiveModel = useStore((s) => s.setActiveModel)
-  const isStreaming = streaming !== null
 
   const activeConv = conversations.find((c) => c.id === activeId)
-  const currentModel = activeConv?.model || globalModel
-  const allModels = Array.from(new Set(providers.flatMap((p) => p.models)))
-  const showChips = messages.length === 0 && !isStreaming
+  const session: ChatSession = {
+    model: activeConv?.model || globalModel,
+    models: Array.from(new Set(providers.flatMap((p) => p.models))),
+    setModel: setActiveModel,
+    streaming: streaming !== null,
+    empty: messages.length === 0 && streaming === null,
+    send,
+    cancel
+  }
+  return <ComposerUI session={session} />
+}
 
-  // Auto-grow the textarea.
+/** Presentational composer driven by a ChatSession. Reused by the split pane. */
+export function ComposerUI({
+  session,
+  compact = false
+}: {
+  session: ChatSession
+  compact?: boolean
+}): JSX.Element {
+  const [text, setText] = useState('')
+  const [web, setWeb] = useState(false)
+  const taRef = useRef<HTMLTextAreaElement>(null)
+  const { recording, transcribing, toggle: toggleMic } = useVoiceInput((t) => {
+    setText((prev) => (prev ? prev + ' ' : '') + t)
+    taRef.current?.focus()
+  })
+
+  const shortModel = session.model.replace(/^claude-/, '').replace(/-\d{8}$/, '')
+
   useEffect(() => {
     const el = taRef.current
     if (!el) return
@@ -65,8 +94,8 @@ export function Composer(): JSX.Element {
 
   const submit = (): void => {
     const trimmed = text.trim()
-    if (!trimmed || isStreaming) return
-    send(trimmed, web)
+    if (!trimmed || session.streaming) return
+    session.send(trimmed, web)
     setText('')
   }
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -75,10 +104,9 @@ export function Composer(): JSX.Element {
       submit()
     }
   }
-  const shortModel = currentModel.replace(/^claude-/, '').replace(/-\d{8}$/, '')
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 pb-5 pt-2">
+    <div className={cn('mx-auto w-full max-w-3xl', compact ? 'px-4 pb-4 pt-1' : 'px-6 pb-5 pt-2')}>
       <div className="rounded-2xl border border-border bg-card p-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.04)] transition-colors focus-within:border-ring/60">
         <textarea
           ref={taRef}
@@ -116,8 +144,8 @@ export function Composer(): JSX.Element {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {allModels.map((m) => (
-                  <DropdownMenuItem key={m} onSelect={() => setActiveModel(m)}>
+                {session.models.map((m) => (
+                  <DropdownMenuItem key={m} onSelect={() => session.setModel(m)}>
                     {m}
                   </DropdownMenuItem>
                 ))}
@@ -143,9 +171,9 @@ export function Composer(): JSX.Element {
                 )}
               </button>
             </Tip>
-            {isStreaming ? (
+            {session.streaming ? (
               <button
-                onClick={cancel}
+                onClick={session.cancel}
                 title="停止"
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-muted-foreground text-background"
               >
@@ -165,7 +193,7 @@ export function Composer(): JSX.Element {
         </div>
       </div>
 
-      {showChips ? (
+      {session.empty && !compact ? (
         <div className="mt-3.5 flex flex-wrap justify-center gap-2">
           {CHIPS.map((c) => (
             <button

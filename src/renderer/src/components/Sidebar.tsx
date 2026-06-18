@@ -296,6 +296,7 @@ function ConvItem({ conv }: { conv: Conversation }): JSX.Element {
 
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(conv.title)
+  const [menuOpen, setMenuOpen] = useState(false)
   const active = conv.id === activeId
 
   const commit = (): void => {
@@ -344,8 +345,17 @@ function ConvItem({ conv }: { conv: Conversation }): JSX.Element {
         <Pin className="h-3 w-3 shrink-0 text-muted-foreground/50 group-hover:hidden" />
       ) : null}
 
-      {/* Hover actions: open-in-split + the overflow menu. */}
-      <div className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
+      {/* Hover actions: open-in-split + the overflow menu. Use opacity (not
+          `hidden`) so the menu trigger stays in layout — otherwise Radix loses
+          its anchor when the cursor leaves the row and the menu jumps to 0,0. */}
+      <div
+        className={cn(
+          'flex shrink-0 items-center gap-0.5 transition-opacity',
+          menuOpen
+            ? 'opacity-100'
+            : 'opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100'
+        )}
+      >
         <Tip label="在分屏中打开">
           <button
             onClick={(e) => {
@@ -357,7 +367,7 @@ function ConvItem({ conv }: { conv: Conversation }): JSX.Element {
             <SplitSquareHorizontal className="h-3.5 w-3.5" />
           </button>
         </Tip>
-        <DropdownMenu>
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
             <button
               onClick={(e) => e.stopPropagation()}

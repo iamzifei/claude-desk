@@ -57,6 +57,7 @@ interface AppState {
   switchWorkspace: (id: string) => Promise<void>
   newWorkspace: () => Promise<void>
   renameWorkspace: (id: string, name: string) => Promise<void>
+  removeWorkspace: (id: string) => Promise<void>
   closeWorkspace: () => Promise<void>
 
   // project
@@ -213,15 +214,20 @@ export const useStore = create<AppState>((set, get) => ({
     set({ workspaces: await window.api.workspaces.list() })
   },
 
-  // Delete the active workspace (and its conversations). Never delete the last
-  // one. Switches to a sibling afterwards.
-  closeWorkspace: async () => {
-    const { activeWorkspaceId, workspaces } = get()
-    if (!activeWorkspaceId || workspaces.length <= 1) return
-    await window.api.workspaces.delete(activeWorkspaceId)
+  // Delete a workspace (and its conversations). Never delete the last one;
+  // switch to a sibling if the deleted one was active.
+  removeWorkspace: async (id) => {
+    const { workspaces, activeWorkspaceId } = get()
+    if (workspaces.length <= 1) return
+    await window.api.workspaces.delete(id)
     const next = await window.api.workspaces.list()
     set({ workspaces: next })
-    await get().switchWorkspace(next[0].id)
+    if (activeWorkspaceId === id) await get().switchWorkspace(next[0].id)
+  },
+
+  closeWorkspace: async () => {
+    const id = get().activeWorkspaceId
+    if (id) await get().removeWorkspace(id)
   },
 
   newProject: async () => {
@@ -266,9 +272,14 @@ export const useStore = create<AppState>((set, get) => ({
       if (s.activeId === id) activeId = openTabs[openTabs.length - 1] ?? null
       return { openTabs, activeId }
     })
+    // If a split was showing the closed conversation, drop the split too.
+    const sp = get().split
+    if (sp?.kind === 'chat' && sp.id === id) set({ split: null })
     const next = get().activeId
     if (next) get().openConversation(next)
-    else get().newConversation()
+    // Closing the last tab → show the empty greeting (a new conversation is
+    // created lazily on first send), instead of spawning an empty 新对话.
+    else set({ messages: [], streaming: null, view: 'chat' })
   },
 
   newConversation: async (projectId = null) => {
@@ -323,8 +334,15 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   send: async (text, web) => {
-    const id = get().activeId
-    if (!id || get().streaming) return
+    if (get().streaming) return
+    // Lazily create a conversation if none is active (e.g. after closing the
+    // last tab) — so empty 新对话 entries never pile up in the list.
+    let id = get().activeId
+    if (!id) {
+      await get().newConversation()
+      id = get().activeId
+    }
+    if (!id) return
     const optimistic: Message = {
       id: `tmp-${Date.now()}`,
       conversation_id: id,

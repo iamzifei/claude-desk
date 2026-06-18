@@ -1,5 +1,5 @@
 import { JSX, useState } from 'react'
-import { Folder, Plus, SplitSquareHorizontal } from 'lucide-react'
+import { Folder, Plus, SplitSquareHorizontal, X } from 'lucide-react'
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
 import { Button } from './ui/button'
@@ -13,6 +13,7 @@ export function WorkspaceTabs(): JSX.Element {
   const switchWs = useStore((s) => s.switchWorkspace)
   const newWs = useStore((s) => s.newWorkspace)
   const renameWs = useStore((s) => s.renameWorkspace)
+  const removeWs = useStore((s) => s.removeWorkspace)
   const newWsKey = useStore((s) => s.shortcuts['new-workspace'])
   const split = useStore((s) => s.split)
   const toggleSplit = useStore((s) => s.toggleSplit)
@@ -47,21 +48,36 @@ export function WorkspaceTabs(): JSX.Element {
             className="h-7 w-[140px] rounded-lg border border-ring bg-background px-2.5 text-[13px] outline-none"
           />
         ) : (
-          <button
+          <div
             key={w.id}
             onClick={() => switchWs(w.id)}
             onDoubleClick={() => beginEdit(w.id, w.name)}
             title={`${w.name}（双击重命名）`}
             className={cn(
-              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] transition-colors',
+              'group/ws flex cursor-pointer items-center gap-1.5 rounded-lg py-1.5 pl-3 pr-1.5 text-[13px] transition-colors',
               w.id === activeId
                 ? 'bg-accent font-medium text-foreground'
                 : 'text-muted-foreground hover:bg-accent/60'
             )}
           >
-            <Folder className="h-3.5 w-3.5" />
+            <Folder className="h-3.5 w-3.5 shrink-0" />
             <span className="max-w-[140px] truncate">{w.name}</span>
-          </button>
+            {workspaces.length > 1 ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (window.confirm(`关闭工作区「${w.name}」？它下面的对话会一并删除。`))
+                    removeWs(w.id)
+                }}
+                title="关闭工作区"
+                className="rounded p-0.5 text-muted-foreground/60 opacity-0 transition hover:bg-background/60 hover:text-foreground group-hover/ws:opacity-100"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            ) : (
+              <span className="w-3.5" />
+            )}
+          </div>
         )
       )}
       <Tip label={`新建工作区 ${formatAccelerator(newWsKey)}`}>
