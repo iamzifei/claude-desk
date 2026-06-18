@@ -66,6 +66,7 @@ import {
   type NewMaterial
 } from '../db/materials'
 import { extractReadable } from '../db/materials-extract'
+import { safeFetch } from '../net/url-guard'
 import { runRewrite } from '../agent/rewrite'
 import {
   getPublicSettings,
@@ -273,14 +274,10 @@ export function registerIpc(): void {
   )
   ipcMain.handle('materials:delete', (_e, id: string) => deleteMaterial(id))
   // Fetch a URL and reduce it to title + readable text for a pre-filled material.
+  // safeFetch enforces http(s), blocks private/loopback targets (SSRF), and
+  // re-validates every redirect hop.
   ipcMain.handle('materials:fetchUrl', async (_e, url: string) => {
-    if (!/^https?:\/\//i.test(url)) throw new Error('请输入有效的 http(s) 链接')
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (InkNest material fetcher)' },
-      signal: AbortSignal.timeout(15000)
-    })
-    if (!res.ok) throw new Error(`抓取失败:HTTP ${res.status}`)
-    const html = await res.text()
+    const html = await safeFetch(url)
     return { ...extractReadable(html), url }
   })
   // Pick an image from disk, copy it into the material store, return the path.

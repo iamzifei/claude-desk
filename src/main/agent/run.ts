@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getProvider, DEFAULT_MODEL } from './providers'
 import { getSetting, resolveApiKey } from '../db/settings'
 import { buildSkillsSystemPrompt } from '../db/skills'
-import { buildMaterialsSystemPrompt } from '../db/materials'
+import { buildMaterialsSystemPrompt, listContextImages } from '../db/materials'
 import type { Message } from '../db/conversations'
 
 /**
@@ -64,6 +64,33 @@ export function runChat(
       systemOverride ??
       [buildSkillsSystemPrompt(), buildMaterialsSystemPrompt()].filter(Boolean).join('\n\n')
 
+    // Build the message list, folding any in-context image materials into the
+    // first user turn as real vision blocks (system prompts can't carry images).
+    const messages: Anthropic.MessageParam[] = history.map((m) => ({
+      role: m.role,
+      content: m.content
+    }))
+    const images = listContextImages()
+    if (images.length) {
+      const firstUser = messages.findIndex((m) => m.role === 'user')
+      if (firstUser >= 0) {
+        const text = messages[firstUser].content as string
+        messages[firstUser] = {
+          role: 'user',
+          content: [
+            ...images.map(
+              (im) =>
+                ({
+                  type: 'image',
+                  source: { type: 'base64', media_type: im.media_type, data: im.data }
+                }) as const
+            ),
+            { type: 'text', text }
+          ]
+        }
+      }
+    }
+
     try {
       const stream = client.messages.stream(
         {
@@ -72,7 +99,7 @@ export function runChat(
           // Adaptive thinking, with a readable summary streamed to the UI.
           thinking: { type: 'adaptive', display: 'summarized' },
           ...(system ? { system } : {}),
-          messages: history.map((m) => ({ role: m.role, content: m.content }))
+          messages
         },
         { signal: controller.signal }
       )

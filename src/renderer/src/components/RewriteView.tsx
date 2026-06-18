@@ -1,5 +1,5 @@
 import { JSX, useState } from 'react'
-import { Repeat2, Sparkles, Copy, Check, Loader2 } from 'lucide-react'
+import { Repeat2, Sparkles, Copy, Check, Loader2, Save } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { Button } from './ui/button'
 import { Header } from './ScheduledView'
@@ -101,10 +101,22 @@ function ResultSkeleton({ platform }: { platform: string }): JSX.Element {
 
 function ResultCard({ result }: { result: RewriteResult }): JSX.Element {
   const [copied, setCopied] = useState(false)
+  const [saved, setSaved] = useState(false)
   const copy = (): void => {
     navigator.clipboard.writeText(result.text)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
+  }
+  const save = async (): Promise<void> => {
+    if (saved) return
+    await window.api.materials.create({
+      title: `${labelForPlatform(result.platform)}改写稿`,
+      content: result.text,
+      platform: result.platform,
+      kind: 'text'
+    })
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1500)
   }
   return (
     <div className="rounded-xl border border-border bg-card p-4">
@@ -112,9 +124,14 @@ function ResultCard({ result }: { result: RewriteResult }): JSX.Element {
         <span className="text-[13px] font-medium text-foreground">
           {labelForPlatform(result.platform)}
         </span>
-        <Button size="icon-sm" variant="ghost" title="复制" onClick={copy}>
-          {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
-        </Button>
+        <div className="flex items-center gap-0.5">
+          <Button size="icon-sm" variant="ghost" title="存为素材" onClick={save}>
+            {saved ? <Check className="h-4 w-4 text-primary" /> : <Save className="h-4 w-4" />}
+          </Button>
+          <Button size="icon-sm" variant="ghost" title="复制" onClick={copy}>
+            {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+          </Button>
+        </div>
       </div>
       <div className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-foreground/90">
         {result.text}

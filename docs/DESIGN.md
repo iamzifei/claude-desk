@@ -62,8 +62,20 @@
 端到端验证:带平台标签创建、平台过滤、`platforms()`、链接抓取(example.com)、真实模型多平台改写(小红书成品)、
 图片路径越权读取返回 null。
 
-## 六、待办 / 可继续
-- 图片素材的真·vision:改写/创作时把图片作为 content block 传给模型。
-- 素材库:同一内容一键改写后「存回素材库 / 直接发布」。
+## 六、图片 vision + 安全加固(已实现 2026-06-18)
+- **图片真·vision**:入上下文的图片素材会作为真正的 image content block 注入到聊天/改写的
+  首条用户消息(system prompt 不能带图),模型能直接「看」图。上限 4 张防止请求膨胀。
+  端到端验证:对一张「红底中央黄方块」测试图,模型回复「红色背景中央有一个黄色的正方形」。
+- **改写存回素材库**:多平台改写每条结果可一键「存为素材」(带平台标签)。
+- **安全加固**(后台安全审查发现并修复):
+  - 路径穿越:`imageDataUrl` / `deleteMaterial` / `listContextImages` / `createMaterial` 全部改用
+    `realpathSync` 规范化后校验是否在 `materials/` 目录内(`startsWith` 可被 `..` 绕过);
+    渲染进程提供的 `image_path` 不在库内则置空。
+  - SSRF:`从链接抓取` 改走 `url-guard.ts` —— 解析 + 仅 http(s) + DNS 解析后拒绝
+    环回/私网/链路本地(含 169.254 云元数据)+ 逐跳校验重定向 + 响应大小上限。
+  - 新增测试:`url-guard.test.ts`(私网 IP 分类)、`image-util.test.ts`(媒体类型映射)。共 11 文件 51 用例。
+
+## 七、待办 / 可继续
+- 素材库:从剪贴板直接粘贴图片;同一内容一键改写后「直接发布」到各平台。
 - 名字 / 配色若需调整:`Sidebar.tsx` 品牌 + `assets/main.css` 的 `--primary` 一处即可改。
 - 打包分发:electron-builder + 原生模块(better-sqlite3 / sherpa-onnx-node)asar unpack。

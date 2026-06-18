@@ -1,9 +1,10 @@
 import { randomUUID } from 'crypto'
-import { copyFileSync, mkdirSync, existsSync, readFileSync, unlinkSync } from 'fs'
-import { extname, join } from 'path'
+import { copyFileSync, mkdirSync, existsSync, readFileSync, unlinkSync, realpathSync } from 'fs'
+import { extname, join, resolve, sep } from 'path'
 import { app } from 'electron'
 import { getDb } from './index'
 import { formatMaterialsPrompt } from './skill-parse'
+import { mediaTypeForPath, type ImageMediaType } from './image-util'
 
 export type MaterialKind = 'text' | 'image' | 'link'
 
@@ -37,6 +38,23 @@ function imageDir(): string {
   return dir
 }
 
+/**
+ * Resolve a renderer-supplied path and require it to live *inside* the image
+ * store after symlink/`..` canonicalization. `startsWith` alone is bypassable
+ * (e.g. `.../materials/../../etc/passwd`), so we realpath both sides. Returns
+ * the real path if contained, else null. The file must exist.
+ */
+function pathInStore(path: unknown): string | null {
+  if (typeof path !== 'string' || !path) return null
+  try {
+    const base = realpathSync(imageDir())
+    const real = realpathSync(resolve(path))
+    return real === base || real.startsWith(base + sep) ? real : null
+  } catch {
+    return null
+  }
+}
+
 /** Copy a picked image into the app's material store; returns the stored path. */
 export function saveImageFile(srcPath: string): string {
   const ext = (extname(srcPath) || '.png').toLowerCase()
@@ -47,11 +65,12 @@ export function saveImageFile(srcPath: string): string {
 
 /** Read a stored image back as a data URL for display in the renderer. */
 export function imageDataUrl(path: string): string | null {
+  const real = pathInStore(path)
+  if (!real) return null
   try {
-    if (!path.startsWith(imageDir())) return null // confine reads to our store
-    const ext = extname(path).slice(1).toLowerCase() || 'png'
+    const ext = extname(real).slice(1).toLowerCase() || 'png'
     const mime = ext === 'jpg' ? 'jpeg' : ext
-    return `data:image/${mime};base64,${readFileSync(path).toString('base64')}`
+    return `data:image/${mime};base64,${readFileSync(real).toString('base64')}`
   } catch {
     return null
   }
@@ -87,6 +106,9 @@ export function listMaterialPlatforms(): string[] {
 }
 
 export function createMaterial(m: NewMaterial): Material {
+  // Only accept an image path that actually lives in our store — never trust a
+  // renderer-supplied absolute path (it later feeds fs reads/unlink).
+  const safeImagePath = m.image_path ? pathInStore(m.image_path) : null
   const mat: Material = {
     id: randomUUID(),
     title: m.title.trim() || '未命名素材',
@@ -94,7 +116,7 @@ export function createMaterial(m: NewMaterial): Material {
     url: m.url?.trim() || null,
     tags: m.tags?.trim() || null,
     kind: m.kind ?? 'text',
-    image_path: m.image_path ?? null,
+    image_path: safeImagePath,
     platform: m.platform?.trim() || null,
     in_context: 0,
     created_at: Date.now()
@@ -133,13 +155,47 @@ export function deleteMaterial(id: string): void {
     | { image_path: string | null }
     | undefined
   if (row?.image_path) {
-    try {
-      if (row.image_path.startsWith(imageDir())) unlinkSync(row.image_path)
-    } catch {
-      // best-effort; ignore if already gone
+    const real = pathInStore(row.image_path)
+    if (real) {
+      try {
+        unlinkSync(real)
+      } catch {
+        // best-effort; ignore if already gone
+      }
     }
   }
   getDb().prepare('DELETE FROM materials WHERE id = ?').run(id)
+}
+
+export interface ContextImage {
+  media_type: ImageMediaType
+  data: string // base64
+}
+
+/**
+ * In-context image materials as base64 blocks for the vision model. Capped so a
+ * runaway library can't bloat every request; reads are confined to our store.
+ */
+export function listContextImages(limit = 4): ContextImage[] {
+  const rows = getDb()
+    .prepare(
+      "SELECT image_path FROM materials WHERE in_context = 1 AND kind = 'image' AND image_path IS NOT NULL ORDER BY created_at"
+    )
+    .all() as { image_path: string }[]
+  const out: ContextImage[] = []
+  for (const r of rows) {
+    if (out.length >= limit) break
+    const media_type = mediaTypeForPath(r.image_path)
+    if (!media_type) continue
+    const real = pathInStore(r.image_path)
+    if (!real) continue
+    try {
+      out.push({ media_type, data: readFileSync(real).toString('base64') })
+    } catch {
+      // skip unreadable files
+    }
+  }
+  return out
 }
 
 /** Concatenate in-context materials into a system-prompt fragment (empty if none). */
