@@ -80,6 +80,7 @@ import {
 } from '../db/publications'
 import { runSuggestTopics } from '../agent/suggest-topics'
 import { runSaveTemplate } from '../agent/extract-template'
+import { seedSample } from '../db/seed'
 import { safeFetch } from '../net/url-guard'
 import { runRewrite } from '../agent/rewrite'
 import {
@@ -380,6 +381,9 @@ export function registerIpc(): void {
   ipcMain.handle('publications:delete', (_e, id: string) => deletePublication(id))
   ipcMain.handle('publications:suggestTopics', (_e, ws: string) => runSuggestTopics(ws))
   ipcMain.handle('publications:saveTemplate', (_e, id: string) => runSaveTemplate(id))
+
+  // ---- app: sample data (first-run onboarding) -----------------------
+  ipcMain.handle('app:seedSample', (_e, ws: string) => seedSample(ws))
 
   // ---- diagnose: (五维内容诊断 / 去 AI 味) ----------------------------
   ipcMain.handle('diagnose:run', (_e, draft: string) => runDiagnose(draft))

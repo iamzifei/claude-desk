@@ -365,6 +365,7 @@ export interface Api {
     getDefaultWorkspace: () => Promise<string>
     openFolder: () => Promise<string | null>
     openExternal: (url: string) => Promise<void>
+    seedSample: (ws: string) => Promise<{ materials: number; atoms: number; topics: number; publications: number }>
     onDataChanged: (cb: () => void) => () => void
   }
   files: {

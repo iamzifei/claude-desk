@@ -79,6 +79,7 @@ const api = {
     getDefaultWorkspace: () => ipcRenderer.invoke('app:getDefaultWorkspace'),
     openFolder: () => ipcRenderer.invoke('dialog:openFolder'),
     openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
+    seedSample: (ws: string) => ipcRenderer.invoke('app:seedSample', ws),
     onDataChanged: (cb: () => void) => {
       const listener = (): void => cb()
       ipcRenderer.on('data:changed', listener)

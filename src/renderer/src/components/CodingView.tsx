@@ -87,7 +87,7 @@ export function CodingView(): JSX.Element {
       <Header
         icon={Code2}
         title="编程"
-        desc="真·编程 agent（Claude Code 引擎）：在你选的目录里读写文件、运行命令。"
+        desc="真·编程 agent（Claude Code 引擎）：在你选的目录里读写文件、运行命令。注:打包版本中此功能依赖本机已安装 Claude Code,可能不可用;核心创作功能不受影响。"
         action={
           <Button size="sm" variant="secondary" onClick={pickFolder}>
             <FolderOpen className="h-4 w-4" /> {cwd ? '更换目录' : '选择目录'}

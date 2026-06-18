@@ -20,6 +20,7 @@ import { TopicsView } from './TopicsView'
 import { TagsView } from './TagsView'
 import { GraphView } from './GraphView'
 import { PublishView } from './PublishView'
+import { OnboardingCard } from './OnboardingCard'
 import { RewriteView } from './RewriteView'
 
 /** Render a view by id. Chat is the fallback (uses the global session state). */
@@ -163,6 +164,7 @@ function ChatArea(): JSX.Element {
         <main className="flex min-w-0 flex-1 flex-col">
           {empty ? (
             <div className="flex flex-1 flex-col items-center justify-center px-6">
+              <OnboardingCard />
               <div className="mb-6 text-[26px] font-semibold tracking-tight">{greeting()}</div>
               {!hasApiKey ? (
                 <p className="-mt-2 mb-4 text-[13px] text-muted-foreground">
