@@ -1,9 +1,10 @@
 import { runOnce } from './run'
 import { getTopic } from '../db/topics'
-import { searchAll } from '../db/search'
+import { searchAll, type SearchHit } from '../db/search'
 import { getMaterial, buildMaterialsSystemPrompt } from '../db/materials'
 import { getAtom, buildAtomsSystemPrompt } from '../db/atoms'
 import { buildAssemblyPrompt, formatAssemblyContext, type AssemblyItem } from './assembly-presets'
+import { buildRetrievalTerms, rankByTermMatches } from './assembly-retrieval'
 
 export interface AssemblyResult {
   draft: string
@@ -19,13 +20,25 @@ export async function runAssembly(topicId: string): Promise<AssemblyResult> {
   const topic = getTopic(topicId)
   if (!topic) throw new Error('选题不存在')
 
-  // Retrieve by the topic title (one phrase matches assets far better than a
-  // title+angle string). In-context assets are added below as a safety net.
-  const hits = searchAll(topic.workspace_id, topic.title, 10).filter(
-    (h) => h.kind === 'material' || h.kind === 'atom'
-  )
+  // Retrieve the creator's relevant assets. A whole-title LIKE finds nothing in
+  // Chinese (no word boundaries), so expand the title+angle into overlapping
+  // terms, search each, and keep the assets that match the most distinct terms.
+  const terms = buildRetrievalTerms(topic.title, topic.angle)
+  const keyOf = (h: SearchHit): string => `${h.kind}:${h.id}`
+  const hitByKey = new Map<string, SearchHit>()
+  const hitsPerTerm = terms.map((t) => {
+    const hits = searchAll(topic.workspace_id, t, 8).filter(
+      (h) => h.kind === 'material' || h.kind === 'atom'
+    )
+    for (const h of hits) hitByKey.set(keyOf(h), h)
+    return hits
+  })
+  const ranked = rankByTermMatches(hitsPerTerm, keyOf).slice(0, 6)
+
   const items: AssemblyItem[] = []
-  for (const h of hits) {
+  for (const { key } of ranked) {
+    const h = hitByKey.get(key)
+    if (!h) continue
     if (h.kind === 'material') {
       const m = getMaterial(h.id)
       if (m) items.push({ kind: '素材', title: m.title, content: m.content })
