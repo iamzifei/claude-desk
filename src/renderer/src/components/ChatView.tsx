@@ -13,6 +13,7 @@ import { BrowserView } from './BrowserView'
 import { SkillsView } from './SkillsView'
 import { CodingView } from './CodingView'
 import { MaterialsView } from './MaterialsView'
+import { AtomsView } from './AtomsView'
 import { RewriteView } from './RewriteView'
 
 export function ChatView(): JSX.Element {
@@ -35,6 +36,8 @@ export function ChatView(): JSX.Element {
         <CodingView />
       ) : view === 'materials' ? (
         <MaterialsView />
+      ) : view === 'atoms' ? (
+        <AtomsView />
       ) : view === 'rewrite' ? (
         <RewriteView />
       ) : (

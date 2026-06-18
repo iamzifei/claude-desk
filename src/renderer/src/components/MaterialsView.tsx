@@ -1,5 +1,5 @@
 import { JSX, useEffect, useState } from 'react'
-import { Library, Plus, Trash2, Link2, Tag, Pencil, ImagePlus, Download, Loader2 } from 'lucide-react'
+import { Library, Plus, Trash2, Link2, Tag, Pencil, ImagePlus, Download, Loader2, Atom } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -287,6 +287,21 @@ function MaterialRow({
   onChange: () => void
 }): JSX.Element {
   const [open, setOpen] = useState(false)
+  const [extracting, setExtracting] = useState(false)
+  const [extracted, setExtracted] = useState<number | null>(null)
+
+  const splitAtoms = async (): Promise<void> => {
+    if (extracting) return
+    setExtracting(true)
+    try {
+      const atoms = await window.api.atoms.extractFromMaterial(m.id)
+      setExtracted(atoms.length)
+      setTimeout(() => setExtracted(null), 2500)
+    } finally {
+      setExtracting(false)
+    }
+  }
+
   return (
     <div
       className={cn(
@@ -337,6 +352,19 @@ function MaterialRow({
             />
           </span>
         </label>
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          title={extracted !== null ? `已拆出 ${extracted} 个原子` : '拆成知识原子'}
+          onClick={splitAtoms}
+          disabled={extracting}
+        >
+          {extracting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Atom className={cn('h-4 w-4', extracted !== null && 'text-primary')} />
+          )}
+        </Button>
         <Button size="icon-sm" variant="ghost" title="编辑" onClick={onEdit}>
           <Pencil className="h-4 w-4" />
         </Button>

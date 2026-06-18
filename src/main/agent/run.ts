@@ -3,6 +3,7 @@ import { getProvider, DEFAULT_MODEL } from './providers'
 import { getSetting, resolveApiKey } from '../db/settings'
 import { buildSkillsSystemPrompt } from '../db/skills'
 import { buildMaterialsSystemPrompt, listContextImages } from '../db/materials'
+import { buildAtomsSystemPrompt } from '../db/atoms'
 import { buildRequestTools } from './tools'
 import type { Message } from '../db/conversations'
 
@@ -64,7 +65,9 @@ export function runChat(
     // enabled skills + in-context materials shape the assistant.
     const system =
       systemOverride ??
-      [buildSkillsSystemPrompt(), buildMaterialsSystemPrompt()].filter(Boolean).join('\n\n')
+      [buildSkillsSystemPrompt(), buildMaterialsSystemPrompt(), buildAtomsSystemPrompt()]
+        .filter(Boolean)
+        .join('\n\n')
 
     // Build the message list, folding any in-context image materials into the
     // first user turn as real vision blocks (system prompts can't carry images).

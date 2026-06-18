@@ -117,6 +117,19 @@ export interface RewriteResult {
   text: string
 }
 
+export type AtomType = '观点' | '金句' | '数据' | '案例' | '钩子' | '方法'
+
+export interface Atom {
+  id: string
+  content: string
+  type: AtomType
+  source_kind: string | null
+  source_id: string | null
+  tags: string | null
+  in_context: number
+  created_at: number
+}
+
 export type MainView =
   | 'chat'
   | 'scheduled'
@@ -126,6 +139,7 @@ export type MainView =
   | 'skills'
   | 'coding'
   | 'materials'
+  | 'atoms'
   | 'rewrite'
 
 export interface Conversation {

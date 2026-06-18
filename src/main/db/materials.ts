@@ -76,6 +76,10 @@ export function imageDataUrl(path: string): string | null {
   }
 }
 
+export function getMaterial(id: string): Material | undefined {
+  return getDb().prepare('SELECT * FROM materials WHERE id = ?').get(id) as Material | undefined
+}
+
 export function listMaterials(platform?: string): Material[] {
   if (platform && platform !== 'all') {
     return getDb()

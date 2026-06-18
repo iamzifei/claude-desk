@@ -141,6 +141,27 @@ export interface FetchedUrl {
   url: string
 }
 
+export type AtomType = '观点' | '金句' | '数据' | '案例' | '钩子' | '方法'
+
+export interface Atom {
+  id: string
+  content: string
+  type: AtomType
+  source_kind: string | null
+  source_id: string | null
+  tags: string | null
+  in_context: number
+  created_at: number
+}
+
+export interface NewAtom {
+  content: string
+  type?: AtomType
+  source_kind?: string | null
+  source_id?: string | null
+  tags?: string | null
+}
+
 export interface RewriteResult {
   platform: string
   text: string
@@ -277,6 +298,17 @@ export interface Api {
   }
   rewrite: {
     run: (source: string, platforms: string[]) => Promise<RewriteResult[]>
+  }
+  atoms: {
+    list: (type?: string) => Promise<Atom[]>
+    search: (q: string) => Promise<Atom[]>
+    types: () => Promise<string[]>
+    create: (a: NewAtom) => Promise<Atom>
+    update: (id: string, a: NewAtom) => Promise<void>
+    toggleContext: (id: string, on: boolean) => Promise<void>
+    delete: (id: string) => Promise<void>
+    extractFromMaterial: (materialId: string) => Promise<Atom[]>
+    extractFromText: (text: string, sourceKind?: string, sourceId?: string) => Promise<Atom[]>
   }
   browser: {
     decide: (

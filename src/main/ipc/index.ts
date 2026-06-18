@@ -69,6 +69,19 @@ import { extractReadable } from '../db/materials-extract'
 import { safeFetch } from '../net/url-guard'
 import { runRewrite } from '../agent/rewrite'
 import {
+  listAtoms,
+  searchAtoms,
+  listAtomTypes,
+  createAtom,
+  createAtoms,
+  updateAtom,
+  toggleAtomContext,
+  deleteAtom,
+  type NewAtom
+} from '../db/atoms'
+import { extractAtoms } from '../agent/extract-atoms'
+import { getMaterial } from '../db/materials'
+import {
   getPublicSettings,
   setSetting,
   getSetting,
@@ -297,6 +310,30 @@ export function registerIpc(): void {
   // ---- rewrite: (一键多平台改写) --------------------------------------
   ipcMain.handle('rewrite:run', (_e, source: string, platforms: string[]) =>
     runRewrite(source, platforms)
+  )
+
+  // ---- atoms: (知识原子 / 内容单元) -----------------------------------
+  ipcMain.handle('atoms:list', (_e, type?: string) => listAtoms(type))
+  ipcMain.handle('atoms:search', (_e, q: string) => searchAtoms(q))
+  ipcMain.handle('atoms:types', () => listAtomTypes())
+  ipcMain.handle('atoms:create', (_e, a: NewAtom) => createAtom(a))
+  ipcMain.handle('atoms:update', (_e, id: string, a: NewAtom) => updateAtom(id, a))
+  ipcMain.handle('atoms:toggleContext', (_e, id: string, on: boolean) => toggleAtomContext(id, on))
+  ipcMain.handle('atoms:delete', (_e, id: string) => deleteAtom(id))
+  // Split a material into atoms via the model, persist them, return the new rows.
+  ipcMain.handle('atoms:extractFromMaterial', async (_e, materialId: string) => {
+    const m = getMaterial(materialId)
+    if (!m) throw new Error('素材不存在')
+    const extracted = await extractAtoms(m.content)
+    return createAtoms(extracted, { kind: 'material', id: materialId })
+  })
+  // Split arbitrary text (e.g. an AI reply) into atoms and persist them.
+  ipcMain.handle(
+    'atoms:extractFromText',
+    async (_e, text: string, sourceKind?: string, sourceId?: string) => {
+      const extracted = await extractAtoms(text)
+      return createAtoms(extracted, { kind: sourceKind ?? 'conversation', id: sourceId ?? null })
+    }
   )
 
   // ---- coding: (真·编程 agent — Claude Code engine) -------------------

@@ -123,6 +123,19 @@ const api = {
     run: (source: string, platforms: string[]) =>
       ipcRenderer.invoke('rewrite:run', source, platforms)
   },
+  atoms: {
+    list: (type?: string) => ipcRenderer.invoke('atoms:list', type),
+    search: (q: string) => ipcRenderer.invoke('atoms:search', q),
+    types: () => ipcRenderer.invoke('atoms:types'),
+    create: (a: unknown) => ipcRenderer.invoke('atoms:create', a),
+    update: (id: string, a: unknown) => ipcRenderer.invoke('atoms:update', id, a),
+    toggleContext: (id: string, on: boolean) => ipcRenderer.invoke('atoms:toggleContext', id, on),
+    delete: (id: string) => ipcRenderer.invoke('atoms:delete', id),
+    extractFromMaterial: (materialId: string) =>
+      ipcRenderer.invoke('atoms:extractFromMaterial', materialId),
+    extractFromText: (text: string, sourceKind?: string, sourceId?: string) =>
+      ipcRenderer.invoke('atoms:extractFromText', text, sourceKind, sourceId)
+  },
   browser: {
     decide: (
       task: string,

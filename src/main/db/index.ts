@@ -166,6 +166,23 @@ function migrate(d: Database.Database): void {
     ALTER TABLE materials ADD COLUMN image_path TEXT;
     ALTER TABLE materials ADD COLUMN platform TEXT;
     CREATE INDEX idx_materials_platform ON materials(platform, created_at);
+    `,
+    // 0008 — 知识原子 (atoms / content units). Reusable units extracted from
+    // materials or conversations — the "复用货币" for topic assembly & creation.
+    // in_context=1 atoms inject into the creation system prompt like materials.
+    `
+    CREATE TABLE atoms (
+      id          TEXT PRIMARY KEY,
+      content     TEXT NOT NULL,
+      type        TEXT NOT NULL DEFAULT '观点',  -- 观点/金句/数据/案例/钩子/方法
+      source_kind TEXT,                          -- 'material' | 'conversation' | 'manual'
+      source_id   TEXT,
+      tags        TEXT,
+      in_context  INTEGER NOT NULL DEFAULT 0,
+      created_at  INTEGER NOT NULL
+    );
+    CREATE INDEX idx_atoms_created ON atoms(created_at);
+    CREATE INDEX idx_atoms_type ON atoms(type, created_at);
     `
   ]
 
