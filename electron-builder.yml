@@ -1,4 +1,4 @@
-appId: com.electron.app
+appId: com.inknest.app
 productName: InkNest
 directories:
   buildResources: build
@@ -9,8 +9,20 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!{tests,docs}/*'
+  - '!{vitest.config.ts,electron-builder.yml}'
+# Native (N-API) modules must live outside the asar so their .node / .dylib
+# files can be dlopen'd at runtime.
 asarUnpack:
   - resources/**
+  - '**/node_modules/better-sqlite3/**'
+  - '**/node_modules/sherpa-onnx-node/**'
+  - '**/node_modules/sherpa-onnx-darwin-*/**'
+  - '**/node_modules/sherpa-onnx-linux-*/**'
+  - '**/node_modules/sherpa-onnx-win-*/**'
+  # Claude Code engine (真·编程 agent) — spawns a subprocess, must be on disk.
+  - '**/node_modules/@anthropic-ai/claude-agent-sdk/**'
+  - '**/*.node'
 win:
   executableName: claude-desk
 nsis:
@@ -19,15 +31,23 @@ nsis:
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
 mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: arm64
+    - target: zip
+      arch: arm64
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+    - NSMicrophoneUsageDescription: InkNest 需要麦克风用于语音输入转写。
+    - NSDocumentsFolderUsageDescription: InkNest 需要访问文稿以读写你选择的素材与文件。
+    - NSDownloadsFolderUsageDescription: InkNest 需要访问下载目录以导入素材。
   notarize: false
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${productName}-${version}-${arch}.${ext}
 linux:
   target:
     - AppImage
