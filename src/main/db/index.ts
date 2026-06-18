@@ -158,6 +158,14 @@ function migrate(d: Database.Database): void {
       created_at  INTEGER NOT NULL
     );
     CREATE INDEX idx_materials_created ON materials(created_at);
+    `,
+    // 0007 — material kinds (text / image / link) + platform grouping.
+    // image_path points at a file copied into userData/materials/.
+    `
+    ALTER TABLE materials ADD COLUMN kind TEXT NOT NULL DEFAULT 'text';
+    ALTER TABLE materials ADD COLUMN image_path TEXT;
+    ALTER TABLE materials ADD COLUMN platform TEXT;
+    CREATE INDEX idx_materials_platform ON materials(platform, created_at);
     `
   ]
 

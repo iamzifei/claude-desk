@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Code2,
   Library,
+  Repeat2,
   Settings,
   MoreHorizontal,
   ChevronRight,
@@ -47,11 +48,13 @@ type NavAction =
   | 'skills'
   | 'coding'
   | 'materials'
+  | 'rewrite'
   | null
 const NAV: { icon: LucideIcon; label: string; action: NavAction }[] = [
   { icon: PencilLine, label: '新建创作', action: 'new' },
   { icon: Search, label: '搜索', action: 'search' },
   { icon: Library, label: '素材库', action: 'materials' },
+  { icon: Repeat2, label: '多平台改写', action: 'rewrite' },
   { icon: Puzzle, label: '技能', action: 'skills' },
   { icon: Code2, label: '编程', action: 'coding' },
   { icon: Globe, label: '浏览器', action: 'browser' },

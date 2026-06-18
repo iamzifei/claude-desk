@@ -107,13 +107,21 @@ const api = {
     import: () => ipcRenderer.invoke('skills:import')
   },
   materials: {
-    list: () => ipcRenderer.invoke('materials:list'),
+    list: (platform?: string) => ipcRenderer.invoke('materials:list', platform),
     search: (q: string) => ipcRenderer.invoke('materials:search', q),
+    platforms: () => ipcRenderer.invoke('materials:platforms'),
     create: (m: unknown) => ipcRenderer.invoke('materials:create', m),
     update: (id: string, m: unknown) => ipcRenderer.invoke('materials:update', id, m),
     toggleContext: (id: string, on: boolean) =>
       ipcRenderer.invoke('materials:toggleContext', id, on),
-    delete: (id: string) => ipcRenderer.invoke('materials:delete', id)
+    delete: (id: string) => ipcRenderer.invoke('materials:delete', id),
+    fetchUrl: (url: string) => ipcRenderer.invoke('materials:fetchUrl', url),
+    importImage: () => ipcRenderer.invoke('materials:importImage'),
+    imageData: (path: string) => ipcRenderer.invoke('materials:imageData', path)
+  },
+  rewrite: {
+    run: (source: string, platforms: string[]) =>
+      ipcRenderer.invoke('rewrite:run', source, platforms)
   },
   browser: {
     decide: (

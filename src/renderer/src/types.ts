@@ -87,14 +87,34 @@ export type CodingEvent =
   | { type: 'error'; message: string }
   | { type: 'done' }
 
+export type MaterialKind = 'text' | 'image' | 'link'
+
 export interface Material {
   id: string
   title: string
   content: string
   url: string | null
   tags: string | null
+  kind: MaterialKind
+  image_path: string | null
+  platform: string | null
   in_context: number
   created_at: number
+}
+
+export interface NewMaterial {
+  title: string
+  content: string
+  url?: string
+  tags?: string
+  kind?: MaterialKind
+  image_path?: string | null
+  platform?: string | null
+}
+
+export interface RewriteResult {
+  platform: string
+  text: string
 }
 
 export type MainView =
@@ -106,6 +126,7 @@ export type MainView =
   | 'skills'
   | 'coding'
   | 'materials'
+  | 'rewrite'
 
 export interface Conversation {
   id: string

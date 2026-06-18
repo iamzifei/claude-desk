@@ -109,12 +109,17 @@ export interface NewSkill {
   source?: string
 }
 
+export type MaterialKind = 'text' | 'image' | 'link'
+
 export interface Material {
   id: string
   title: string
   content: string
   url: string | null
   tags: string | null
+  kind: MaterialKind
+  image_path: string | null
+  platform: string | null
   in_context: number
   created_at: number
 }
@@ -124,6 +129,20 @@ export interface NewMaterial {
   content: string
   url?: string
   tags?: string
+  kind?: MaterialKind
+  image_path?: string | null
+  platform?: string | null
+}
+
+export interface FetchedUrl {
+  title: string
+  content: string
+  url: string
+}
+
+export interface RewriteResult {
+  platform: string
+  text: string
 }
 
 export interface PageElement {
@@ -243,12 +262,19 @@ export interface Api {
     import: () => Promise<Skill | null>
   }
   materials: {
-    list: () => Promise<Material[]>
+    list: (platform?: string) => Promise<Material[]>
     search: (q: string) => Promise<Material[]>
+    platforms: () => Promise<string[]>
     create: (m: NewMaterial) => Promise<Material>
     update: (id: string, m: NewMaterial) => Promise<void>
     toggleContext: (id: string, on: boolean) => Promise<void>
     delete: (id: string) => Promise<void>
+    fetchUrl: (url: string) => Promise<FetchedUrl>
+    importImage: () => Promise<string | null>
+    imageData: (path: string) => Promise<string | null>
+  }
+  rewrite: {
+    run: (source: string, platforms: string[]) => Promise<RewriteResult[]>
   }
   browser: {
     decide: (

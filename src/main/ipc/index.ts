@@ -56,12 +56,17 @@ import {
 import {
   listMaterials,
   searchMaterials,
+  listMaterialPlatforms,
   createMaterial,
   updateMaterial,
   toggleMaterialContext,
   deleteMaterial,
+  saveImageFile,
+  imageDataUrl,
   type NewMaterial
 } from '../db/materials'
+import { extractReadable } from '../db/materials-extract'
+import { runRewrite } from '../agent/rewrite'
 import {
   getPublicSettings,
   setSetting,
@@ -258,14 +263,41 @@ export function registerIpc(): void {
   })
 
   // ---- materials: (素材库) --------------------------------------------
-  ipcMain.handle('materials:list', () => listMaterials())
+  ipcMain.handle('materials:list', (_e, platform?: string) => listMaterials(platform))
   ipcMain.handle('materials:search', (_e, q: string) => searchMaterials(q))
+  ipcMain.handle('materials:platforms', () => listMaterialPlatforms())
   ipcMain.handle('materials:create', (_e, m: NewMaterial) => createMaterial(m))
   ipcMain.handle('materials:update', (_e, id: string, m: NewMaterial) => updateMaterial(id, m))
   ipcMain.handle('materials:toggleContext', (_e, id: string, on: boolean) =>
     toggleMaterialContext(id, on)
   )
   ipcMain.handle('materials:delete', (_e, id: string) => deleteMaterial(id))
+  // Fetch a URL and reduce it to title + readable text for a pre-filled material.
+  ipcMain.handle('materials:fetchUrl', async (_e, url: string) => {
+    if (!/^https?:\/\//i.test(url)) throw new Error('请输入有效的 http(s) 链接')
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (InkNest material fetcher)' },
+      signal: AbortSignal.timeout(15000)
+    })
+    if (!res.ok) throw new Error(`抓取失败:HTTP ${res.status}`)
+    const html = await res.text()
+    return { ...extractReadable(html), url }
+  })
+  // Pick an image from disk, copy it into the material store, return the path.
+  ipcMain.handle('materials:importImage', async () => {
+    const r = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [{ name: '图片', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }]
+    })
+    if (r.canceled || !r.filePaths[0]) return null
+    return saveImageFile(r.filePaths[0])
+  })
+  ipcMain.handle('materials:imageData', (_e, path: string) => imageDataUrl(path))
+
+  // ---- rewrite: (一键多平台改写) --------------------------------------
+  ipcMain.handle('rewrite:run', (_e, source: string, platforms: string[]) =>
+    runRewrite(source, platforms)
+  )
 
   // ---- coding: (真·编程 agent — Claude Code engine) -------------------
   ipcMain.handle('coding:run', (e, runId: string, task: string, cwd: string) => {

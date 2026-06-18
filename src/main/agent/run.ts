@@ -37,7 +37,8 @@ export interface RunHandle {
 export function runChat(
   history: Message[],
   onChunk: (c: Chunk) => void,
-  modelOverride?: string | null
+  modelOverride?: string | null,
+  systemOverride?: string
 ): RunHandle {
   const controller = new AbortController()
 
@@ -57,10 +58,11 @@ export function runChat(
     const model = modelOverride || getSetting('model') || DEFAULT_MODEL
 
     const client = new Anthropic({ apiKey, baseURL: provider.baseURL })
-    // Enabled skills + in-context materials shape the assistant.
-    const system = [buildSkillsSystemPrompt(), buildMaterialsSystemPrompt()]
-      .filter(Boolean)
-      .join('\n\n')
+    // A caller-supplied system (e.g. platform rewrite) wins; otherwise the
+    // enabled skills + in-context materials shape the assistant.
+    const system =
+      systemOverride ??
+      [buildSkillsSystemPrompt(), buildMaterialsSystemPrompt()].filter(Boolean).join('\n\n')
 
     try {
       const stream = client.messages.stream(
@@ -109,7 +111,11 @@ export function runChat(
  * Used by background features (scheduled tasks, daily review, meeting minutes)
  * that need a one-shot result rather than a streamed UI.
  */
-export function runOnce(history: Message[], modelOverride?: string | null): Promise<string> {
+export function runOnce(
+  history: Message[],
+  modelOverride?: string | null,
+  systemOverride?: string
+): Promise<string> {
   return new Promise((resolve) => {
     let out = ''
     runChat(
@@ -119,7 +125,8 @@ export function runOnce(history: Message[], modelOverride?: string | null): Prom
         else if (c.type === 'done') resolve(out)
         else if (c.type === 'error') resolve(`[错误] ${c.message}`)
       },
-      modelOverride
+      modelOverride,
+      systemOverride
     )
   })
 }
