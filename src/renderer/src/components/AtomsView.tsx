@@ -4,6 +4,8 @@ import { cn } from '../lib/utils'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Header, Empty } from './ScheduledView'
+import { WikiText, Backlinks } from './WikiText'
+import { useFocusHighlight } from '../useFocusHighlight'
 import type { Atom, AtomType } from '../types'
 
 const ATOM_TYPES: AtomType[] = ['观点', '金句', '数据', '案例', '钩子', '方法']
@@ -116,6 +118,7 @@ function TypeChip({
 function AtomRow({ a, onChange }: { a: Atom; onChange: () => void }): JSX.Element {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(a.content)
+  const { ref, focused } = useFocusHighlight(a.id)
 
   const save = async (): Promise<void> => {
     await window.api.atoms.update(a.id, { content: draft, type: a.type, tags: a.tags ?? undefined })
@@ -125,9 +128,10 @@ function AtomRow({ a, onChange }: { a: Atom; onChange: () => void }): JSX.Elemen
 
   return (
     <div
+      ref={ref}
       className={cn(
-        'rounded-xl border bg-card px-4 py-3',
-        a.in_context ? 'border-primary/40' : 'border-border'
+        'rounded-xl border bg-card px-4 py-3 transition-shadow',
+        focused ? 'border-primary ring-2 ring-primary/30' : a.in_context ? 'border-primary/40' : 'border-border'
       )}
     >
       <div className="flex items-start gap-3">
@@ -145,15 +149,16 @@ function AtomRow({ a, onChange }: { a: Atom; onChange: () => void }): JSX.Elemen
               className="w-full resize-none rounded-md border border-ring bg-background px-2.5 py-1.5 text-[13.5px] outline-none"
             />
           ) : (
-            <button className="block w-full text-left text-[13.5px] leading-relaxed" onClick={() => setEditing(true)}>
-              {a.content}
-            </button>
+            <div className="text-[13.5px] leading-relaxed">
+              <WikiText content={a.content} />
+            </div>
           )}
           {a.tags ? (
             <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground/70">
               <Tag className="h-3 w-3" /> {a.tags}
             </div>
           ) : null}
+          <Backlinks kind="atom" id={a.id} />
         </div>
 
         <label className="flex shrink-0 cursor-pointer items-center" title={a.in_context ? '已入上下文' : '加入创作上下文'}>

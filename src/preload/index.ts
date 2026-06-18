@@ -131,7 +131,8 @@ const api = {
   },
   links: {
     backlinks: (kind: string, id: string) => ipcRenderer.invoke('links:backlinks', kind, id),
-    resolve: (title: string) => ipcRenderer.invoke('links:resolve', title)
+    resolve: (title: string) => ipcRenderer.invoke('links:resolve', title),
+    titles: () => ipcRenderer.invoke('links:titles')
   },
   tags: {
     groups: () => ipcRenderer.invoke('tags:groups'),

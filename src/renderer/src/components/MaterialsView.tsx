@@ -5,6 +5,8 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Header, Empty } from './ScheduledView'
 import { WikiText, Backlinks } from './WikiText'
+import { WikiTextarea } from './WikiTextarea'
+import { useFocusHighlight } from '../useFocusHighlight'
 import { PLATFORM_OPTIONS, labelForPlatform } from '../platforms'
 import type { Material, MaterialKind } from '../types'
 
@@ -138,6 +140,12 @@ function MaterialForm({
   const [imagePath, setImagePath] = useState<string | null>(material?.image_path ?? null)
   const [fetching, setFetching] = useState(false)
   const [err, setErr] = useState('')
+  const [allTags, setAllTags] = useState<string[]>([])
+  useEffect(() => {
+    window.api.tags.groups().then((gs) => setAllTags(gs.flatMap((g) => g.tags.map((t) => t.tag))))
+  }, [])
+  const current = tags.split(/[,，]/).map((t) => t.trim()).filter(Boolean)
+  const addTag = (t: string): void => setTags(current.includes(t) ? tags : [...current, t].join(', '))
 
   // Pull a URL down to a pre-filled title + content.
   const fetchUrl = async (): Promise<void> => {
@@ -212,10 +220,10 @@ function MaterialForm({
 
       {imagePath ? <ImageThumb path={imagePath} large /> : null}
 
-      <textarea
-        placeholder={kind === 'image' ? '图片说明 / 用途（可选）…' : '素材内容：金句、要点、数据、风格说明…'}
+      <WikiTextarea
+        placeholder={kind === 'image' ? '图片说明 / 用途（可选）…' : '素材内容：金句、要点、数据…（输入 [[ 关联其它素材）'}
         value={content}
-        onChange={(e) => setContent(e.target.value)}
+        onChange={setContent}
         rows={4}
         className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring"
       />
@@ -238,6 +246,22 @@ function MaterialForm({
           onChange={(e) => setTags(e.target.value)}
         />
       </div>
+      {allTags.filter((t) => !current.includes(t)).length ? (
+        <div className="flex flex-wrap gap-1">
+          {allTags
+            .filter((t) => !current.includes(t))
+            .slice(0, 10)
+            .map((t) => (
+              <button
+                key={t}
+                onClick={() => addTag(t)}
+                className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-primary hover:bg-primary-soft hover:text-primary"
+              >
+                + {t}
+              </button>
+            ))}
+        </div>
+      ) : null}
       <div className="flex items-center justify-between gap-2">
         <Button size="sm" variant="ghost" onClick={pickImage}>
           <ImagePlus className="h-4 w-4" /> {imagePath ? '更换图片' : '添加图片'}
@@ -290,6 +314,10 @@ function MaterialRow({
   const [open, setOpen] = useState(false)
   const [extracting, setExtracting] = useState(false)
   const [extracted, setExtracted] = useState<number | null>(null)
+  const { ref, focused } = useFocusHighlight(m.id)
+  useEffect(() => {
+    if (focused) setOpen(true)
+  }, [focused])
 
   const splitAtoms = async (): Promise<void> => {
     if (extracting) return
@@ -305,9 +333,10 @@ function MaterialRow({
 
   return (
     <div
+      ref={ref}
       className={cn(
-        'rounded-xl border bg-card px-4 py-3',
-        m.in_context ? 'border-primary/40' : 'border-border'
+        'rounded-xl border bg-card px-4 py-3 transition-shadow',
+        focused ? 'border-primary ring-2 ring-primary/30' : m.in_context ? 'border-primary/40' : 'border-border'
       )}
     >
       <div className="flex items-center gap-3">

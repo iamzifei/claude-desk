@@ -19,6 +19,7 @@ export function QuickSwitcher(): JSX.Element | null {
   const conversations = useStore((s) => s.conversations)
   const openConversation = useStore((s) => s.openConversation)
   const setView = useStore((s) => s.setView)
+  const jumpTo = useStore((s) => s.jumpTo)
 
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<SearchHit[]>([])
@@ -59,9 +60,8 @@ export function QuickSwitcher(): JSX.Element | null {
 
   const jump = (h: SearchHit): void => {
     if (h.kind === 'conversation') openConversation(h.id)
-    else if (h.kind === 'material') setView('materials')
-    else if (h.kind === 'atom') setView('atoms')
     else if (h.kind === 'note') setView(h.noteType === 'minutes' ? 'minutes' : 'review')
+    else jumpTo({ kind: h.kind, id: h.id }) // material/atom → navigate + focus the item
     setOpen(false)
   }
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {

@@ -15,6 +15,31 @@ export interface ResolvedTarget {
   id: string
 }
 
+export interface LinkTitle {
+  title: string
+  kind: LinkKind
+}
+
+/** All distinct linkable titles (for [[ ]] autocomplete). */
+export function listLinkTitles(): LinkTitle[] {
+  const db = getDb()
+  const rows: LinkTitle[] = []
+  for (const r of db.prepare('SELECT title FROM materials').all() as { title: string }[])
+    rows.push({ title: r.title, kind: 'material' })
+  for (const r of db.prepare('SELECT title FROM topics').all() as { title: string }[])
+    rows.push({ title: r.title, kind: 'topic' })
+  for (const r of db.prepare('SELECT title FROM notes').all() as { title: string }[])
+    rows.push({ title: r.title, kind: 'note' })
+  for (const r of db.prepare('SELECT title FROM conversations WHERE archived = 0').all() as {
+    title: string
+  }[])
+    rows.push({ title: r.title, kind: 'conversation' })
+  const seen = new Set<string>()
+  const out: LinkTitle[] = []
+  for (const r of rows) if (r.title && !seen.has(r.title)) (seen.add(r.title), out.push(r))
+  return out
+}
+
 /** Resolve a [[title]] to an entity. Preference: material → topic → note → conversation. */
 export function resolveTitle(title: string): ResolvedTarget | null {
   const db = getDb()

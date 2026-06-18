@@ -408,6 +408,7 @@ export interface Api {
   links: {
     backlinks: (kind: LinkKind, id: string) => Promise<Backlink[]>
     resolve: (title: string) => Promise<ResolvedTarget | null>
+    titles: () => Promise<{ title: string; kind: LinkKind }[]>
   }
   tags: {
     groups: () => Promise<TagGroup[]>

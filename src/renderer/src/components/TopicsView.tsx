@@ -7,6 +7,8 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Header, Empty } from './ScheduledView'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
+import { Backlinks } from './WikiText'
+import { useFocusHighlight } from '../useFocusHighlight'
 import { PLATFORM_OPTIONS } from '../platforms'
 import type { Topic, TopicStatus } from '../types'
 
@@ -151,6 +153,7 @@ function TopicRow({
   onAssembled: (text: string) => void
 }): JSX.Element {
   const [assembling, setAssembling] = useState(false)
+  const { ref, focused } = useFocusHighlight(t.id)
 
   const assemble = async (): Promise<void> => {
     if (assembling) return
@@ -168,7 +171,13 @@ function TopicRow({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card px-4 py-3">
+    <div
+      ref={ref}
+      className={cn(
+        'rounded-xl border bg-card px-4 py-3 transition-shadow',
+        focused ? 'border-primary ring-2 ring-primary/30' : 'border-border'
+      )}
+    >
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium">{t.title}</div>
@@ -206,6 +215,7 @@ function TopicRow({
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
+      <Backlinks kind="topic" id={t.id} />
     </div>
   )
 }

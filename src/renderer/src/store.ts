@@ -91,8 +91,10 @@ interface AppState {
   rewriteSeed: string | null
   sendToRewrite: (text: string) => void
 
-  // jump to a wikilink / backlink target
+  // jump to a wikilink / backlink / search target; focusId tells the target
+  // view which item to scroll to + highlight (consumed once).
   jumpTo: (target: { kind: string; id: string }) => void
+  focusId: string | null
 
   setSearch: (q: string) => void
   setRightPanel: (p: AppState['rightPanel']) => void
@@ -136,6 +138,7 @@ export const useStore = create<AppState>((set, get) => ({
   rewriteSeed: null,
   sendToRewrite: (text) => set({ rewriteSeed: text, view: 'rewrite', split: null }),
 
+  focusId: null,
   jumpTo: (target) => {
     const viewByKind: Record<string, MainView> = {
       material: 'materials',
@@ -144,7 +147,7 @@ export const useStore = create<AppState>((set, get) => ({
       note: 'review'
     }
     if (target.kind === 'conversation') get().openConversation(target.id)
-    else set({ view: viewByKind[target.kind] ?? 'chat' })
+    else set({ view: viewByKind[target.kind] ?? 'chat', focusId: target.id, split: null })
   },
 
   setView: (v) => set({ view: v }),

@@ -68,7 +68,7 @@ import {
 } from '../db/materials'
 import { extractReadable } from '../db/materials-extract'
 import { searchAll } from '../db/search'
-import { getBacklinks, resolveTitle, type LinkKind } from '../db/links'
+import { getBacklinks, resolveTitle, listLinkTitles, type LinkKind } from '../db/links'
 import { tagGroups, itemsByTag } from '../db/tags'
 import { buildKnowledgeGraph } from '../db/graph'
 import {
@@ -359,6 +359,7 @@ export function registerIpc(): void {
   // ---- links: (双链 / 反链) -------------------------------------------
   ipcMain.handle('links:backlinks', (_e, kind: LinkKind, id: string) => getBacklinks(kind, id))
   ipcMain.handle('links:resolve', (_e, title: string) => resolveTitle(title))
+  ipcMain.handle('links:titles', () => listLinkTitles())
 
   // ---- tags: (层级标签浏览) -------------------------------------------
   ipcMain.handle('tags:groups', () => tagGroups())
