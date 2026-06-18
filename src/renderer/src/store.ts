@@ -36,7 +36,7 @@ interface AppState {
   search: string
   providers: ProviderInfo[]
   globalModel: string
-  rightPanel: 'card' | 'files' | 'browser' | null
+  rightPanel: 'card' | 'files' | null
   files: FileEntry[]
   theme: string
   view: MainView
@@ -68,7 +68,7 @@ interface AppState {
   setSearch: (q: string) => void
   setRightPanel: (p: AppState['rightPanel']) => void
 
-  send: (text: string) => Promise<void>
+  send: (text: string, web?: boolean) => Promise<void>
   cancel: () => void
   setActiveModel: (model: string) => Promise<void>
 
@@ -257,7 +257,7 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  send: async (text) => {
+  send: async (text, web) => {
     const id = get().activeId
     if (!id || get().streaming) return
     const optimistic: Message = {
@@ -271,7 +271,7 @@ export const useStore = create<AppState>((set, get) => ({
       messages: [...s.messages, optimistic],
       streaming: { text: '', thinking: '', error: null }
     }))
-    await window.api.agent.query(id, text)
+    await window.api.agent.query(id, text, web)
   },
 
   cancel: () => {

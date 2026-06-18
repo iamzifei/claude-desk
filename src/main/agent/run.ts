@@ -3,6 +3,7 @@ import { getProvider, DEFAULT_MODEL } from './providers'
 import { getSetting, resolveApiKey } from '../db/settings'
 import { buildSkillsSystemPrompt } from '../db/skills'
 import { buildMaterialsSystemPrompt, listContextImages } from '../db/materials'
+import { buildRequestTools } from './tools'
 import type { Message } from '../db/conversations'
 
 /**
@@ -38,7 +39,8 @@ export function runChat(
   history: Message[],
   onChunk: (c: Chunk) => void,
   modelOverride?: string | null,
-  systemOverride?: string
+  systemOverride?: string,
+  webSearch?: boolean
 ): RunHandle {
   const controller = new AbortController()
 
@@ -91,6 +93,9 @@ export function runChat(
       }
     }
 
+    // Optional hosted tools (e.g. web search) — gated by provider.
+    const tools = buildRequestTools({ webSearch, providerId: provider.id })
+
     try {
       const stream = client.messages.stream(
         {
@@ -99,6 +104,7 @@ export function runChat(
           // Adaptive thinking, with a readable summary streamed to the UI.
           thinking: { type: 'adaptive', display: 'summarized' },
           ...(system ? { system } : {}),
+          ...(tools ? { tools } : {}),
           messages
         },
         { signal: controller.signal }

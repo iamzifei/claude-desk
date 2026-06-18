@@ -1,12 +1,12 @@
 import { JSX } from 'react'
-import { Image, Folder, FolderOpen, FileText, File, Globe, X, type LucideIcon } from 'lucide-react'
+import { Image, Folder, FolderOpen, FileText, File, X, type LucideIcon } from 'lucide-react'
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
 import { Tip } from './ui/tooltip'
 import { CardPanel } from './CardPanel'
 
-type PanelKey = 'card' | 'files' | 'browser'
-const TITLES: Record<PanelKey, string> = { card: '卡片预览', files: '文件', browser: '浏览器' }
+type PanelKey = 'card' | 'files'
+const TITLES: Record<PanelKey, string> = { card: '卡片预览', files: '文件' }
 
 export function RightPanel(): JSX.Element | null {
   const panel = useStore((s) => s.rightPanel)
@@ -25,20 +25,9 @@ export function RightPanel(): JSX.Element | null {
         </button>
       </div>
       <div className="flex min-h-0 flex-1 flex-col">
-        {panel === 'files' ? <FilesList /> : panel === 'card' ? <CardPanel /> : <Stub panel={panel} />}
+        {panel === 'files' ? <FilesList /> : <CardPanel />}
       </div>
     </section>
-  )
-}
-
-function Stub({ panel }: { panel: PanelKey }): JSX.Element {
-  const Icon = panel === 'card' ? Image : Globe
-  return (
-    <div className="m-auto max-w-[240px] px-6 text-center text-muted-foreground">
-      <Icon className="mx-auto mb-3 h-9 w-9 opacity-60" strokeWidth={1.5} />
-      <p className="text-sm">「{TITLES[panel]}」面板</p>
-      <p className="mt-1 text-xs text-muted-foreground/70">此面板将在后续阶段接入。</p>
-    </div>
   )
 }
 
@@ -89,8 +78,7 @@ export function RightDock(): JSX.Element {
   const setPanel = useStore((s) => s.setRightPanel)
   const items: { key: PanelKey; icon: LucideIcon; label: string }[] = [
     { key: 'card', icon: Image, label: '卡片预览' },
-    { key: 'files', icon: FileText, label: '文件' },
-    { key: 'browser', icon: Globe, label: '浏览器' }
+    { key: 'files', icon: FileText, label: '文件' }
   ]
   return (
     <div className="flex w-12 shrink-0 flex-col items-center gap-1 border-l border-border bg-sidebar pt-2.5">

@@ -1,5 +1,5 @@
 import { JSX, useState, useRef, useEffect, KeyboardEvent } from 'react'
-import { Plus, Wrench, Globe, Mic, ArrowUp, Square, ChevronDown, Sparkles, Loader2 } from 'lucide-react'
+import { Globe, Mic, ArrowUp, Square, ChevronDown, Sparkles, Loader2 } from 'lucide-react'
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
 import { useVoiceInput } from '../useVoiceInput'
@@ -66,7 +66,7 @@ export function Composer(): JSX.Element {
   const submit = (): void => {
     const trimmed = text.trim()
     if (!trimmed || isStreaming) return
-    send(trimmed)
+    send(trimmed, web)
     setText('')
   }
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -91,34 +91,19 @@ export function Composer(): JSX.Element {
         />
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-1.5">
-            <Tip label="附件（即将上线）">
+            <Tip label={web ? '联网搜索已开启' : '开启联网搜索（实时网络信息）'}>
               <button
-                disabled
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground disabled:opacity-45"
+                onClick={() => setWeb((v) => !v)}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12.5px] transition-colors',
+                  web
+                    ? 'border-primary bg-primary-soft text-primary'
+                    : 'border-border text-muted-foreground hover:bg-accent'
+                )}
               >
-                <Plus className="h-[18px] w-[18px]" />
+                <Globe className="h-3.5 w-3.5" /> 联网
               </button>
             </Tip>
-            <Tip label="工具（即将上线）">
-              <button
-                disabled
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground disabled:opacity-45"
-              >
-                <Wrench className="h-[17px] w-[17px]" />
-              </button>
-            </Tip>
-            <button
-              onClick={() => setWeb((v) => !v)}
-              title="联网搜索（即将上线）"
-              className={cn(
-                'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12.5px] transition-colors',
-                web
-                  ? 'border-primary bg-primary-soft text-primary'
-                  : 'border-border text-muted-foreground hover:bg-accent'
-              )}
-            >
-              <Globe className="h-3.5 w-3.5" /> 联网
-            </button>
           </div>
 
           <div className="flex items-center gap-1.5">

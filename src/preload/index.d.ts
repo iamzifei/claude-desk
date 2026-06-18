@@ -175,7 +175,7 @@ export interface ProviderInfo {
 
 export interface Api {
   agent: {
-    query: (conversationId: string, text: string) => Promise<void>
+    query: (conversationId: string, text: string, web?: boolean) => Promise<void>
     cancel: (conversationId: string) => Promise<void>
     onChunk: (cb: (conversationId: string, chunk: Chunk) => void) => () => void
   }

@@ -49,7 +49,6 @@ type NavAction =
   | 'coding'
   | 'materials'
   | 'rewrite'
-  | null
 const NAV: { icon: LucideIcon; label: string; action: NavAction }[] = [
   { icon: PencilLine, label: '新建创作', action: 'new' },
   { icon: Search, label: '搜索', action: 'search' },
@@ -107,16 +106,14 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
         {NAV.map((item) => (
           <button
             key={item.label}
-            disabled={item.action === null}
-            title={item.action === null ? '即将上线' : undefined}
             onClick={() => {
               if (item.action === 'new') create(null)
               else if (item.action === 'search') setSearchOpen((v) => !v)
-              else if (item.action) setView(item.action)
+              else setView(item.action)
             }}
             className={cn(
-              'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] transition-colors disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-muted-foreground',
-              item.action !== null && item.action === view
+              'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] transition-colors',
+              item.action === view
                 ? 'bg-accent text-foreground'
                 : 'text-muted-foreground hover:bg-accent hover:text-foreground'
             )}

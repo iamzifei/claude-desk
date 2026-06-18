@@ -8,8 +8,8 @@ import { electronAPI } from '@electron-toolkit/preload'
  */
 const api = {
   agent: {
-    query: (conversationId: string, text: string) =>
-      ipcRenderer.invoke('agent:query', conversationId, text),
+    query: (conversationId: string, text: string, web?: boolean) =>
+      ipcRenderer.invoke('agent:query', conversationId, text, web),
     cancel: (conversationId: string) => ipcRenderer.invoke('agent:cancel', conversationId),
     // Subscribe to streamed chunks. Returns an unsubscribe function.
     onChunk: (cb: (conversationId: string, chunk: unknown) => void) => {

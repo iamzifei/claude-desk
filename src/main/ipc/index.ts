@@ -169,7 +169,7 @@ export function registerIpc(): void {
 
   // ---- agent: ----------------------------------------------------------
   // Send a user message and stream the assistant reply back via 'agent:chunk'.
-  ipcMain.handle('agent:query', (e, conversationId: string, text: string) => {
+  ipcMain.handle('agent:query', (e, conversationId: string, text: string, web?: boolean) => {
     const wc = e.sender
     // Persist the user's turn, then auto-title the conversation on first message.
     addMessage(conversationId, 'user', text)
@@ -192,7 +192,9 @@ export function registerIpc(): void {
         }
         if (chunk.type === 'error') activeRuns.delete(conversationId)
       },
-      model
+      model,
+      undefined, // no system override for normal chat
+      web // 联网搜索 toggle
     )
     activeRuns.set(conversationId, handle)
   })
