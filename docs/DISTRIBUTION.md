@@ -3,17 +3,14 @@
 ## 这次打的包
 - 文件:`dist/InkNest-1.0.0-arm64.dmg`(约 198 MB)
 - 平台:**仅 Apple Silicon(M 系列)macOS**(arm64)。Intel Mac 不可用。
-- 签名:Developer ID 签名(Orris Technology Pty Ltd),**未做 Apple 公证(notarize)**。
-  → 因此首次打开需要「右键 → 打开」一次,之后正常双击。
+- 签名 + 公证:Developer ID 签名 **并已通过 Apple 公证(notarized + stapled)**,dmg 本体也已签名公证。
+  → **双击直接打开,零警告、零摩擦**。Gatekeeper 校验:`accepted / Notarized Developer ID`。
 - 同时生成了 `dist/InkNest-1.0.0-arm64-mac.zip`(同一个 app,用于自动更新 / 直接解压)。
 
-## 发给测试者的安装步骤
+## 发给测试者的安装步骤(零摩擦)
 1. 把 `InkNest-1.0.0-arm64.dmg` 发给对方(AirDrop / 网盘 / 微信传文件均可)。
 2. 双击 dmg,把 **InkNest** 拖进「应用程序」。
-3. **第一次打开**:在「应用程序」里找到 InkNest,**右键 →「打开」**,弹窗里再点「打开」。
-   (因为没做 Apple 公证,直接双击会提示「无法验证开发者」;右键打开可绕过,只需一次。)
-   - 如果对方系统较新提示「已损坏 / 无法打开」,让对方在「终端」执行一次:
-     `xattr -dr com.apple.quarantine /Applications/InkNest.app`,然后再右键打开。
+3. 直接双击打开即可 —— 因为已 Apple 公证,**不会有任何「无法验证开发者」提示**。
 
 ## 必须配置:API Key(否则无法对话)
 InkNest 是 **自带 Key(BYO-key)** 的本地应用,不含任何服务器。测试者需要一个 API Key:

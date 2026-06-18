@@ -42,9 +42,24 @@ npx electron-vite build
 # config keeps it false so plain `npm run build:mac` stays fast/offline.
 npx electron-builder --mac -c.mac.notarize=true
 
-echo "✓ Done. Notarized artifacts in dist/. Verifying staple…"
-APP="dist/mac-arm64/InkNest.app"
-if [[ -d "$APP" ]]; then
-  xcrun stapler validate "$APP" || echo "(stapler validate: re-check if this failed)"
-  spctl -a -vv "$APP" || true
+# electron-builder notarizes the .app but NOT the .dmg wrapper. Apple's
+# Gatekeeper wants the dmg itself code-signed + notarized + stapled, otherwise
+# the downloaded dmg still prompts. Do that here so the dmg is zero-friction.
+DMG=$(ls -t dist/*.dmg 2>/dev/null | head -1)
+if [[ -n "$DMG" ]]; then
+  echo "→ Signing + notarizing the dmg itself: $DMG"
+  codesign --force --timestamp --sign "$CSC_NAME" "$DMG"
+  ARGS=()
+  if [[ -n "${APPLE_API_KEY:-}" ]]; then
+    ARGS=(--key "$APPLE_API_KEY" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER")
+  else
+    ARGS=(--apple-id "$APPLE_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --team-id "$APPLE_TEAM_ID")
+  fi
+  xcrun notarytool submit "$DMG" "${ARGS[@]}" --wait
+  xcrun stapler staple "$DMG"
 fi
+
+echo "✓ Done. Verifying…"
+APP="dist/mac-arm64/InkNest.app"
+[[ -d "$APP" ]] && { xcrun stapler validate "$APP" || true; spctl -a -vv -t exec "$APP" || true; }
+[[ -n "$DMG" ]] && spctl -a -vv -t open --context context:primary-signature "$DMG" || true
