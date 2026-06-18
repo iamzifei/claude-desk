@@ -81,6 +81,7 @@ import {
 } from '../db/atoms'
 import { extractAtoms } from '../agent/extract-atoms'
 import { getMaterial } from '../db/materials'
+import { runDiagnose, runDeAI } from '../agent/diagnose'
 import {
   getPublicSettings,
   setSetting,
@@ -311,6 +312,10 @@ export function registerIpc(): void {
   ipcMain.handle('rewrite:run', (_e, source: string, platforms: string[]) =>
     runRewrite(source, platforms)
   )
+
+  // ---- diagnose: (五维内容诊断 / 去 AI 味) ----------------------------
+  ipcMain.handle('diagnose:run', (_e, draft: string) => runDiagnose(draft))
+  ipcMain.handle('diagnose:deai', (_e, draft: string) => runDeAI(draft))
 
   // ---- atoms: (知识原子 / 内容单元) -----------------------------------
   ipcMain.handle('atoms:list', (_e, type?: string) => listAtoms(type))

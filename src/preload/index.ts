@@ -123,6 +123,10 @@ const api = {
     run: (source: string, platforms: string[]) =>
       ipcRenderer.invoke('rewrite:run', source, platforms)
   },
+  diagnose: {
+    run: (draft: string) => ipcRenderer.invoke('diagnose:run', draft),
+    deai: (draft: string) => ipcRenderer.invoke('diagnose:deai', draft)
+  },
   atoms: {
     list: (type?: string) => ipcRenderer.invoke('atoms:list', type),
     search: (q: string) => ipcRenderer.invoke('atoms:search', q),

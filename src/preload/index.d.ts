@@ -299,6 +299,10 @@ export interface Api {
   rewrite: {
     run: (source: string, platforms: string[]) => Promise<RewriteResult[]>
   }
+  diagnose: {
+    run: (draft: string) => Promise<string>
+    deai: (draft: string) => Promise<string>
+  }
   atoms: {
     list: (type?: string) => Promise<Atom[]>
     search: (q: string) => Promise<Atom[]>
