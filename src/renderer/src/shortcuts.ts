@@ -5,6 +5,7 @@
  * logic is unit-tested.
  */
 export type ShortcutAction =
+  | 'quick-switch'
   | 'new-chat'
   | 'close-tab'
   | 'new-tab'
@@ -14,6 +15,7 @@ export type ShortcutAction =
   | 'close-split'
 
 export const SHORTCUT_ACTIONS: ShortcutAction[] = [
+  'quick-switch',
   'new-chat',
   'new-tab',
   'close-tab',
@@ -24,6 +26,7 @@ export const SHORTCUT_ACTIONS: ShortcutAction[] = [
 ]
 
 export const ACTION_LABELS: Record<ShortcutAction, string> = {
+  'quick-switch': '快速搜索 / 跳转',
   'new-chat': '新建对话',
   'new-tab': '新建标签页',
   'close-tab': '关闭对话 / 标签页',
@@ -34,6 +37,7 @@ export const ACTION_LABELS: Record<ShortcutAction, string> = {
 }
 
 export const DEFAULT_SHORTCUTS: Record<ShortcutAction, string> = {
+  'quick-switch': 'Mod+K',
   'new-chat': 'Mod+N',
   'new-tab': 'Mod+T',
   'close-tab': 'Mod+W',

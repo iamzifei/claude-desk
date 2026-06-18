@@ -117,6 +117,17 @@ export interface RewriteResult {
   text: string
 }
 
+export type SearchKind = 'conversation' | 'material' | 'atom' | 'note'
+
+export interface SearchHit {
+  kind: SearchKind
+  id: string
+  title: string
+  snippet: string
+  meta: string | null
+  noteType?: 'review' | 'minutes' | 'daily'
+}
+
 export type AtomType = '观点' | '金句' | '数据' | '案例' | '钩子' | '方法'
 
 export interface Atom {

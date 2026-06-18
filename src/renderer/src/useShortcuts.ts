@@ -17,6 +17,9 @@ export function useShortcuts(): void {
     const dispatch = (action: ShortcutAction): void => {
       const s = useStore.getState()
       switch (action) {
+        case 'quick-switch':
+          s.setQuickOpen(true)
+          break
         case 'new-chat':
         case 'new-tab':
           s.newConversation(null)

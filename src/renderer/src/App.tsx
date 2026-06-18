@@ -6,6 +6,7 @@ import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
 import { ChatView } from './components/ChatView'
 import { SettingsModal } from './components/SettingsModal'
+import { QuickSwitcher } from './components/QuickSwitcher'
 
 function App(): JSX.Element {
   const init = useStore((s) => s.init)
@@ -25,6 +26,7 @@ function App(): JSX.Element {
           <ChatView />
         </div>
         <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
+        <QuickSwitcher />
       </div>
     </TooltipProvider>
   )

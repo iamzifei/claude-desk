@@ -29,7 +29,6 @@ import { useStore } from '../store'
 import { cn } from '../lib/utils'
 import { groupConversations } from '../group-conversations'
 import type { Conversation, Project } from '../types'
-import { Input } from './ui/input'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -74,14 +73,13 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
   const archived = useStore((s) => s.archived)
   const projects = useStore((s) => s.projects)
   const search = useStore((s) => s.search)
-  const setSearch = useStore((s) => s.setSearch)
   const create = useStore((s) => s.newConversation)
   const newProject = useStore((s) => s.newProject)
   const ws = useStore((s) => s.activeWorkspaceId)
   const view = useStore((s) => s.view)
   const setView = useStore((s) => s.setView)
+  const setQuickOpen = useStore((s) => s.setQuickOpen)
 
-  const [searchOpen, setSearchOpen] = useState(false)
   const [results, setResults] = useState<Conversation[] | null>(null)
   const [showArchived, setShowArchived] = useState(false)
 
@@ -115,7 +113,7 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
             key={item.label}
             onClick={() => {
               if (item.action === 'new') create(null)
-              else if (item.action === 'search') setSearchOpen((v) => !v)
+              else if (item.action === 'search') setQuickOpen(true)
               else setView(item.action)
             }}
             className={cn(
@@ -129,15 +127,6 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
             <span>{item.label}</span>
           </button>
         ))}
-        {searchOpen ? (
-          <Input
-            autoFocus
-            placeholder="搜索对话…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="mt-1 h-8 text-[13px]"
-          />
-        ) : null}
       </nav>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">

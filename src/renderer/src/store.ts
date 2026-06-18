@@ -83,6 +83,10 @@ interface AppState {
   closeSplit: () => void
   toggleSplit: () => void
 
+  // ⌘K quick switcher
+  quickOpen: boolean
+  setQuickOpen: (v: boolean) => void
+
   setSearch: (q: string) => void
   setRightPanel: (p: AppState['rightPanel']) => void
 
@@ -118,6 +122,9 @@ export const useStore = create<AppState>((set, get) => ({
   view: 'chat',
   shortcuts: DEFAULT_SHORTCUTS,
   split: null,
+
+  quickOpen: false,
+  setQuickOpen: (v) => set({ quickOpen: v }),
 
   setView: (v) => set({ view: v }),
   setSplit: (t) => set({ split: t }),

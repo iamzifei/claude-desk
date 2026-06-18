@@ -125,6 +125,10 @@ const api = {
     run: (source: string, platforms: string[]) =>
       ipcRenderer.invoke('rewrite:run', source, platforms)
   },
+  search: {
+    all: (workspaceId: string | null, query: string) =>
+      ipcRenderer.invoke('search:all', workspaceId, query)
+  },
   diagnose: {
     run: (draft: string) => ipcRenderer.invoke('diagnose:run', draft),
     deai: (draft: string) => ipcRenderer.invoke('diagnose:deai', draft)

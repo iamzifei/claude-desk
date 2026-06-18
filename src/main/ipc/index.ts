@@ -67,6 +67,7 @@ import {
   type NewMaterial
 } from '../db/materials'
 import { extractReadable } from '../db/materials-extract'
+import { searchAll } from '../db/search'
 import { safeFetch } from '../net/url-guard'
 import { runRewrite } from '../agent/rewrite'
 import {
@@ -315,6 +316,11 @@ export function registerIpc(): void {
   // ---- rewrite: (一键多平台改写) --------------------------------------
   ipcMain.handle('rewrite:run', (_e, source: string, platforms: string[]) =>
     runRewrite(source, platforms)
+  )
+
+  // ---- search: (全局快速切换) -----------------------------------------
+  ipcMain.handle('search:all', (_e, workspaceId: string | null, query: string) =>
+    searchAll(workspaceId, query)
   )
 
   // ---- diagnose: (五维内容诊断 / 去 AI 味) ----------------------------

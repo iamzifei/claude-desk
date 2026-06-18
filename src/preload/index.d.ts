@@ -168,6 +168,17 @@ export interface RewriteResult {
   text: string
 }
 
+export type SearchKind = 'conversation' | 'material' | 'atom' | 'note'
+
+export interface SearchHit {
+  kind: SearchKind
+  id: string
+  title: string
+  snippet: string
+  meta: string | null
+  noteType?: 'review' | 'minutes' | 'daily'
+}
+
 export interface PageElement {
   index: number
   tag: string
@@ -300,6 +311,9 @@ export interface Api {
   }
   rewrite: {
     run: (source: string, platforms: string[]) => Promise<RewriteResult[]>
+  }
+  search: {
+    all: (workspaceId: string | null, query: string) => Promise<SearchHit[]>
   }
   diagnose: {
     run: (draft: string) => Promise<string>
