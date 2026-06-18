@@ -37,6 +37,7 @@ export function SettingsModal({ open, onOpenChange }: Props): JSX.Element {
   const [hasTrKey, setHasTrKey] = useState(false)
   const [modelReady, setModelReady] = useState(false)
   const [dl, setDl] = useState<number | null>(null)
+  const [page, setPage] = useState<'general' | 'shortcuts' | 'voice'>('general')
 
   useEffect(() => {
     if (!open) return
@@ -85,150 +86,181 @@ export function SettingsModal({ open, onOpenChange }: Props): JSX.Element {
     setTimeout(() => onOpenChange(false), 450)
   }
 
+  const NAV: { id: typeof page; label: string }[] = [
+    { id: 'general', label: '常规' },
+    { id: 'shortcuts', label: '快捷键' },
+    { id: 'voice', label: '语音转写' }
+  ]
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="flex max-h-[85vh] w-[680px] flex-col overflow-hidden p-0">
+        <DialogHeader className="mb-0 border-b border-border-soft px-5 py-3.5">
           <DialogTitle>设置</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <ThemeToggle />
+        <div className="flex min-h-0 flex-1">
+          {/* 左侧子页面导航 */}
+          <nav className="flex w-[140px] shrink-0 flex-col gap-0.5 border-r border-border-soft p-2">
+            {NAV.map((n) => (
+              <button
+                key={n.id}
+                onClick={() => setPage(n.id)}
+                className={cn(
+                  'rounded-lg px-3 py-2 text-left text-[13px] transition-colors',
+                  page === n.id
+                    ? 'bg-accent font-medium text-foreground'
+                    : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
+                )}
+              >
+                {n.label}
+              </button>
+            ))}
+          </nav>
 
-          <ShortcutsSection />
+          {/* 右侧内容区，独立滚动 —— 修复设置无法滚动的问题 */}
+          <div className="min-w-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+            {page === 'general' ? (
+              <>
+                <ThemeToggle />
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">供应商</span>
+                  <select
+                    className={fieldCls}
+                    value={provider}
+                    onChange={(e) => {
+                      setProvider(e.target.value)
+                      const p = providers.find((x) => x.id === e.target.value)
+                      if (p) setModel(p.models[0])
+                    }}
+                  >
+                    {providers.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">供应商</span>
-            <select
-              className={fieldCls}
-              value={provider}
-              onChange={(e) => {
-                setProvider(e.target.value)
-                const p = providers.find((x) => x.id === e.target.value)
-                if (p) setModel(p.models[0])
-              }}
-            >
-              {providers.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          </label>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">模型</span>
+                  <input
+                    list="model-options"
+                    className={fieldCls}
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                    placeholder="claude-opus-4-8"
+                  />
+                  <datalist id="model-options">
+                    {current?.models.map((m) => <option key={m} value={m} />)}
+                  </datalist>
+                </label>
 
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">模型</span>
-            <input
-              list="model-options"
-              className={fieldCls}
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              placeholder="claude-opus-4-8"
-            />
-            <datalist id="model-options">
-              {current?.models.map((m) => <option key={m} value={m} />)}
-            </datalist>
-          </label>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    API key {hasApiKey ? '（已设置，留空保持不变）' : ''}
+                  </span>
+                  <Input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder={hasApiKey ? '••••••••' : '粘贴你的供应商 API key'}
+                  />
+                </label>
 
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">
-              API key {hasApiKey ? '（已设置，留空保持不变）' : ''}
-            </span>
-            <Input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder={hasApiKey ? '••••••••' : '粘贴你的供应商 API key'}
-            />
-          </label>
-
-          <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
-            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-            密钥经系统钥匙串（Electron safeStorage）加密存储，仅用于从本机直连供应商。
-          </p>
-
-          <div className="border-t border-border-soft pt-3.5">
-            <div className="mb-2 text-xs font-medium text-foreground">语音转写</div>
-            <div className="mb-2.5 flex gap-1 rounded-lg border border-border p-1">
-              {[
-                { v: 'cloud', label: '云端 API' },
-                { v: 'local', label: '本地离线' }
-              ].map((o) => (
-                <button
-                  key={o.v}
-                  onClick={() => setTrEngine(o.v)}
-                  className={cn(
-                    'flex-1 rounded-md py-1.5 text-[13px] transition-colors',
-                    trEngine === o.v ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
-
-            {trEngine === 'cloud' ? (
-              <div className="space-y-2.5">
-                <input
-                  className={fieldCls}
-                  value={trBase}
-                  onChange={(e) => setTrBase(e.target.value)}
-                  placeholder="转写端点，如 https://api.openai.com/v1"
-                />
-                <input
-                  className={fieldCls}
-                  value={trModel}
-                  onChange={(e) => setTrModel(e.target.value)}
-                  placeholder="转写模型，如 whisper-1"
-                />
-                <Input
-                  type="password"
-                  value={trKey}
-                  onChange={(e) => setTrKey(e.target.value)}
-                  placeholder={
-                    hasTrKey ? '••••••••（已设置，留空保持不变）' : '转写 key（兼容 OpenAI /audio/transcriptions）'
-                  }
-                />
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  OpenAI 兼容的 Whisper 端点即可；未填则回退到 ~/.env 的 OPENAI_API_KEY。也可指向 SiliconFlow 的
-                  SenseVoice（有免费额度）。
+                <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+                  <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                  密钥经系统钥匙串（Electron safeStorage）加密存储，仅用于从本机直连供应商。
                 </p>
-              </div>
+              </>
+            ) : page === 'shortcuts' ? (
+              <ShortcutsSection />
             ) : (
-              <div className="space-y-2.5">
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  本地离线识别（sherpa-onnx + SenseVoice 模型）：完全在本机运行，无需 key、无需联网。
-                  首次需下载约 230MB 模型。
-                </p>
-                {modelReady ? (
-                  <div className="flex items-center gap-2 text-[13px] text-primary">
-                    <Check className="h-4 w-4" /> 模型已就绪
-                  </div>
-                ) : dl !== null ? (
-                  <div className="space-y-1.5">
-                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full bg-primary transition-all"
-                        style={{ width: `${Math.round(dl * 100)}%` }}
-                      />
-                    </div>
-                    <div className="text-xs text-muted-foreground">下载中 {Math.round(dl * 100)}%…</div>
+              <div>
+                <div className="mb-2.5 flex gap-1 rounded-lg border border-border p-1">
+                  {[
+                    { v: 'cloud', label: '云端 API' },
+                    { v: 'local', label: '本地离线' }
+                  ].map((o) => (
+                    <button
+                      key={o.v}
+                      onClick={() => setTrEngine(o.v)}
+                      className={cn(
+                        'flex-1 rounded-md py-1.5 text-[13px] transition-colors',
+                        trEngine === o.v ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+
+                {trEngine === 'cloud' ? (
+                  <div className="space-y-2.5">
+                    <input
+                      className={fieldCls}
+                      value={trBase}
+                      onChange={(e) => setTrBase(e.target.value)}
+                      placeholder="转写端点，如 https://api.openai.com/v1"
+                    />
+                    <input
+                      className={fieldCls}
+                      value={trModel}
+                      onChange={(e) => setTrModel(e.target.value)}
+                      placeholder="转写模型，如 whisper-1"
+                    />
+                    <Input
+                      type="password"
+                      value={trKey}
+                      onChange={(e) => setTrKey(e.target.value)}
+                      placeholder={
+                        hasTrKey ? '••••••••（已设置，留空保持不变）' : '转写 key（兼容 OpenAI /audio/transcriptions）'
+                      }
+                    />
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      OpenAI 兼容的 Whisper 端点即可；未填则回退到 ~/.env 的 OPENAI_API_KEY。也可指向 SiliconFlow 的
+                      SenseVoice（有免费额度）。
+                    </p>
                   </div>
                 ) : (
-                  <Button size="sm" variant="secondary" onClick={downloadModel}>
-                    <Download className="h-4 w-4" /> 下载离线模型（约 230MB）
-                  </Button>
+                  <div className="space-y-2.5">
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      本地离线识别（sherpa-onnx + SenseVoice 模型）：完全在本机运行，无需 key、无需联网。
+                      首次需下载约 230MB 模型。
+                    </p>
+                    {modelReady ? (
+                      <div className="flex items-center gap-2 text-[13px] text-primary">
+                        <Check className="h-4 w-4" /> 模型已就绪
+                      </div>
+                    ) : dl !== null ? (
+                      <div className="space-y-1.5">
+                        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full bg-primary transition-all"
+                            style={{ width: `${Math.round(dl * 100)}%` }}
+                          />
+                        </div>
+                        <div className="text-xs text-muted-foreground">下载中 {Math.round(dl * 100)}%…</div>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="secondary" onClick={downloadModel}>
+                        <Download className="h-4 w-4" /> 下载离线模型（约 230MB）
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="mt-0 border-t border-border-soft px-5 py-3">
           <Button variant="secondary" onClick={() => onOpenChange(false)}>
-            取消
+            {page === 'shortcuts' ? '关闭' : '取消'}
           </Button>
-          <Button onClick={save}>{saved ? '已保存' : '保存'}</Button>
+          {page !== 'shortcuts' ? (
+            <Button onClick={save}>{saved ? '已保存' : '保存'}</Button>
+          ) : null}
         </DialogFooter>
       </DialogContent>
     </Dialog>

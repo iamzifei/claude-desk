@@ -1,10 +1,11 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, Menu } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { initDb } from './db'
 import { registerIpc } from './ipc'
 import { startScheduler } from './scheduler'
+import { buildAppMenu } from './menu'
 
 // Opt-in dev remote-debugging port (off by default). Enable for CDP-driven QA:
 //   CLAUDE_DESK_CDP=9223 npm run dev
@@ -65,6 +66,9 @@ app.whenReady().then(() => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
+
+  // Custom menu — frees ⌘W (and keeps Edit roles) for app shortcuts.
+  Menu.setApplicationMenu(buildAppMenu())
 
   // Initialize local storage and register all IPC handlers before the window loads.
   initDb()

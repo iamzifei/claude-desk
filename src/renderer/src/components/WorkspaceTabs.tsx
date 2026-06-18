@@ -1,5 +1,5 @@
 import { JSX, useState } from 'react'
-import { Folder, Plus } from 'lucide-react'
+import { Folder, Plus, SplitSquareHorizontal } from 'lucide-react'
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
 import { Button } from './ui/button'
@@ -14,6 +14,9 @@ export function WorkspaceTabs(): JSX.Element {
   const newWs = useStore((s) => s.newWorkspace)
   const renameWs = useStore((s) => s.renameWorkspace)
   const newWsKey = useStore((s) => s.shortcuts['new-workspace'])
+  const splitView = useStore((s) => s.splitView)
+  const toggleSplit = useStore((s) => s.toggleSplit)
+  const splitKey = useStore((s) => s.shortcuts['new-split'])
 
   const [editing, setEditing] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
@@ -64,6 +67,16 @@ export function WorkspaceTabs(): JSX.Element {
       <Tip label={`新建工作区 ${formatAccelerator(newWsKey)}`}>
         <Button variant="ghost" size="icon-sm" onClick={() => newWs()}>
           <Plus className="h-4 w-4" />
+        </Button>
+      </Tip>
+      <Tip label={`分屏 ${formatAccelerator(splitKey)}`}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => toggleSplit()}
+          className={cn('ml-auto', splitView && 'text-primary')}
+        >
+          <SplitSquareHorizontal className="h-4 w-4" />
         </Button>
       </Tip>
     </div>

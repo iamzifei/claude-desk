@@ -4,20 +4,43 @@
  * (no React / no DOM globals beyond the passed event) so the parse/match/format
  * logic is unit-tested.
  */
-export type ShortcutAction = 'new-chat' | 'new-tab' | 'new-workspace'
+export type ShortcutAction =
+  | 'new-chat'
+  | 'close-tab'
+  | 'new-tab'
+  | 'new-workspace'
+  | 'close-workspace'
+  | 'new-split'
+  | 'close-split'
 
-export const SHORTCUT_ACTIONS: ShortcutAction[] = ['new-chat', 'new-tab', 'new-workspace']
+export const SHORTCUT_ACTIONS: ShortcutAction[] = [
+  'new-chat',
+  'new-tab',
+  'close-tab',
+  'new-workspace',
+  'close-workspace',
+  'new-split',
+  'close-split'
+]
 
 export const ACTION_LABELS: Record<ShortcutAction, string> = {
   'new-chat': '新建对话',
   'new-tab': '新建标签页',
-  'new-workspace': '新建工作区'
+  'close-tab': '关闭对话 / 标签页',
+  'new-workspace': '新建工作区',
+  'close-workspace': '关闭工作区',
+  'new-split': '新建分屏',
+  'close-split': '关闭分屏'
 }
 
 export const DEFAULT_SHORTCUTS: Record<ShortcutAction, string> = {
   'new-chat': 'Mod+N',
   'new-tab': 'Mod+T',
-  'new-workspace': 'Mod+Shift+N'
+  'close-tab': 'Mod+W',
+  'new-workspace': 'Mod+Shift+N',
+  'close-workspace': 'Mod+Shift+W',
+  'new-split': 'Mod+D',
+  'close-split': 'Mod+Shift+D'
 }
 
 export const isMac =

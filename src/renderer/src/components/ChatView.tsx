@@ -1,7 +1,8 @@
 import { JSX, useEffect, useRef } from 'react'
-import { TriangleAlert } from 'lucide-react'
+import { TriangleAlert, X } from 'lucide-react'
 import { useStore } from '../store'
 import { greeting } from '../utils'
+import type { MainView } from '../types'
 import { MessageBubble } from './MessageBubble'
 import { Composer } from './Composer'
 import { WorkspaceTabs } from './WorkspaceTabs'
@@ -16,33 +17,86 @@ import { MaterialsView } from './MaterialsView'
 import { AtomsView } from './AtomsView'
 import { RewriteView } from './RewriteView'
 
+/** Render a view by id. Chat is the fallback (uses the global session state). */
+function renderView(view: MainView): JSX.Element {
+  switch (view) {
+    case 'scheduled':
+      return <ScheduledView />
+    case 'review':
+      return <NotesView type="review" />
+    case 'minutes':
+      return <NotesView type="minutes" />
+    case 'browser':
+      return <BrowserView />
+    case 'skills':
+      return <SkillsView />
+    case 'coding':
+      return <CodingView />
+    case 'materials':
+      return <MaterialsView />
+    case 'atoms':
+      return <AtomsView />
+    case 'rewrite':
+      return <RewriteView />
+    default:
+      return <ChatArea />
+  }
+}
+
+// Reference views the split pane can show (chat stays on the primary side).
+const SPLIT_VIEWS: { v: MainView; label: string }[] = [
+  { v: 'materials', label: '素材库' },
+  { v: 'atoms', label: '知识原子' },
+  { v: 'rewrite', label: '改写工坊' },
+  { v: 'skills', label: '技能' },
+  { v: 'review', label: '每日回顾' },
+  { v: 'minutes', label: '会议纪要' },
+  { v: 'scheduled', label: '定时任务' },
+  { v: 'browser', label: '浏览器' },
+  { v: 'coding', label: '编程' }
+]
+
+function SplitPanel(): JSX.Element {
+  const splitView = useStore((s) => s.splitView) as MainView
+  const setSplitView = useStore((s) => s.setSplitView)
+  return (
+    <section className="flex w-[44%] min-w-[320px] shrink-0 flex-col border-l border-border">
+      <div className="flex h-9 shrink-0 items-center justify-between border-b border-border-soft px-2.5">
+        <select
+          value={splitView}
+          onChange={(e) => setSplitView(e.target.value as MainView)}
+          className="h-7 rounded-md border border-input bg-background px-2 text-[12.5px] outline-none focus-visible:border-ring"
+        >
+          {SPLIT_VIEWS.map((o) => (
+            <option key={o.v} value={o.v}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => setSplitView(null)}
+          title="关闭分屏"
+          className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col">{renderView(splitView)}</div>
+    </section>
+  )
+}
+
 export function ChatView(): JSX.Element {
   const view = useStore((s) => s.view)
+  const splitView = useStore((s) => s.splitView)
 
   return (
     <div className="flex min-h-0 min-w-0 flex-col rounded-tl-xl border-l border-t border-border bg-background">
       <WorkspaceTabs />
-      {view === 'scheduled' ? (
-        <ScheduledView />
-      ) : view === 'review' ? (
-        <NotesView type="review" />
-      ) : view === 'minutes' ? (
-        <NotesView type="minutes" />
-      ) : view === 'browser' ? (
-        <BrowserView />
-      ) : view === 'skills' ? (
-        <SkillsView />
-      ) : view === 'coding' ? (
-        <CodingView />
-      ) : view === 'materials' ? (
-        <MaterialsView />
-      ) : view === 'atoms' ? (
-        <AtomsView />
-      ) : view === 'rewrite' ? (
-        <RewriteView />
-      ) : (
-        <ChatArea />
-      )}
+      <div className="flex min-h-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-col">{renderView(view)}</div>
+        {splitView ? <SplitPanel /> : null}
+      </div>
     </div>
   )
 }

@@ -12,13 +12,31 @@ export function suspendShortcuts(v: boolean): void {
 /** Global keyboard-shortcut dispatcher. Mount once at the app root. */
 export function useShortcuts(): void {
   const shortcuts = useStore((s) => s.shortcuts)
-  const newConversation = useStore((s) => s.newConversation)
-  const newWorkspace = useStore((s) => s.newWorkspace)
 
   useEffect(() => {
     const dispatch = (action: ShortcutAction): void => {
-      if (action === 'new-workspace') newWorkspace()
-      else newConversation(null) // new-chat & new-tab both open a fresh chat tab
+      const s = useStore.getState()
+      switch (action) {
+        case 'new-chat':
+        case 'new-tab':
+          s.newConversation(null)
+          break
+        case 'close-tab':
+          if (s.activeId) s.closeTab(s.activeId)
+          break
+        case 'new-workspace':
+          s.newWorkspace()
+          break
+        case 'close-workspace':
+          s.closeWorkspace()
+          break
+        case 'new-split':
+          if (!s.splitView) s.setSplitView('materials')
+          break
+        case 'close-split':
+          s.setSplitView(null)
+          break
+      }
     }
     const onKey = (e: KeyboardEvent): void => {
       if (suspended) return
@@ -32,5 +50,5 @@ export function useShortcuts(): void {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [shortcuts, newConversation, newWorkspace])
+  }, [shortcuts])
 }

@@ -56,6 +56,7 @@ interface AppState {
   switchWorkspace: (id: string) => Promise<void>
   newWorkspace: () => Promise<void>
   renameWorkspace: (id: string, name: string) => Promise<void>
+  closeWorkspace: () => Promise<void>
 
   // project
   newProject: () => Promise<void>
@@ -70,6 +71,11 @@ interface AppState {
   deleteConversation: (id: string) => Promise<void>
   archiveConversation: (id: string) => Promise<void>
   renameConversation: (id: string, title: string) => Promise<void>
+
+  // split-screen: a secondary reference pane beside the primary view
+  splitView: MainView | null
+  setSplitView: (v: MainView | null) => void
+  toggleSplit: () => void
 
   setSearch: (q: string) => void
   setRightPanel: (p: AppState['rightPanel']) => void
@@ -105,8 +111,12 @@ export const useStore = create<AppState>((set, get) => ({
   theme: 'light',
   view: 'chat',
   shortcuts: DEFAULT_SHORTCUTS,
+  splitView: null,
 
   setView: (v) => set({ view: v }),
+  setSplitView: (v) => set({ splitView: v }),
+  // Open the split with a useful default (素材库) or close it if already open.
+  toggleSplit: () => set((s) => ({ splitView: s.splitView ? null : 'materials' })),
 
   setTheme: async (theme) => {
     applyTheme(theme)
@@ -188,6 +198,17 @@ export const useStore = create<AppState>((set, get) => ({
     if (!trimmed) return
     await window.api.workspaces.rename(id, trimmed)
     set({ workspaces: await window.api.workspaces.list() })
+  },
+
+  // Delete the active workspace (and its conversations). Never delete the last
+  // one. Switches to a sibling afterwards.
+  closeWorkspace: async () => {
+    const { activeWorkspaceId, workspaces } = get()
+    if (!activeWorkspaceId || workspaces.length <= 1) return
+    await window.api.workspaces.delete(activeWorkspaceId)
+    const next = await window.api.workspaces.list()
+    set({ workspaces: next })
+    await get().switchWorkspace(next[0].id)
   },
 
   newProject: async () => {
