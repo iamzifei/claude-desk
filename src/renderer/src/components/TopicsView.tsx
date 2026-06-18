@@ -9,6 +9,7 @@ import { Header, Empty } from './ScheduledView'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { Backlinks } from './WikiText'
 import { useFocusHighlight } from '../useFocusHighlight'
+import { recommendFormat } from '../format-match'
 import { PLATFORM_OPTIONS } from '../platforms'
 import type { Topic, TopicStatus } from '../types'
 
@@ -186,6 +187,17 @@ function TopicRow({
             {t.platform ? (
               <span className="rounded bg-accent px-1.5 py-0.5 text-[10.5px]">{labelFor(t.platform)}</span>
             ) : null}
+            {(() => {
+              const rec = recommendFormat(t.title, t.angle)
+              return (
+                <span
+                  title={rec.reason}
+                  className="rounded bg-primary-soft px-1.5 py-0.5 text-[10.5px] text-primary"
+                >
+                  建议 {rec.format} · {rec.platform}
+                </span>
+              )
+            })()}
           </div>
         </div>
         <select

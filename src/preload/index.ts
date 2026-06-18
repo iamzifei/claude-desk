@@ -146,7 +146,8 @@ const api = {
     create: (ws: string, p: unknown) => ipcRenderer.invoke('publications:create', ws, p),
     update: (id: string, p: unknown) => ipcRenderer.invoke('publications:update', id, p),
     delete: (id: string) => ipcRenderer.invoke('publications:delete', id),
-    suggestTopics: (ws: string) => ipcRenderer.invoke('publications:suggestTopics', ws)
+    suggestTopics: (ws: string) => ipcRenderer.invoke('publications:suggestTopics', ws),
+    saveTemplate: (id: string) => ipcRenderer.invoke('publications:saveTemplate', id)
   },
   topics: {
     list: (workspaceId: string) => ipcRenderer.invoke('topics:list', workspaceId),

@@ -423,6 +423,7 @@ export interface Api {
     update: (id: string, p: NewPublication) => Promise<void>
     delete: (id: string) => Promise<void>
     suggestTopics: (ws: string) => Promise<Topic[]>
+    saveTemplate: (id: string) => Promise<Skill>
   }
   topics: {
     list: (workspaceId: string) => Promise<Topic[]>

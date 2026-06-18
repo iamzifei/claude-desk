@@ -28,6 +28,10 @@ export interface NewPublication {
   saves?: number
 }
 
+export function getPublication(id: string): Publication | undefined {
+  return getDb().prepare('SELECT * FROM publications WHERE id = ?').get(id) as Publication | undefined
+}
+
 export function listPublications(workspaceId: string): Publication[] {
   return getDb()
     .prepare('SELECT * FROM publications WHERE workspace_id = ? ORDER BY created_at DESC')

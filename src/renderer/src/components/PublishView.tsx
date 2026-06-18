@@ -1,5 +1,5 @@
 import { JSX, useEffect, useState } from 'react'
-import { BarChart3, Plus, Trash2, Pencil, Sparkles, Loader2, Link2 } from 'lucide-react'
+import { BarChart3, Plus, Trash2, Pencil, Sparkles, Loader2, Link2, Star, Check } from 'lucide-react'
 import { useStore } from '../store'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -38,6 +38,22 @@ export function PublishView(): JSX.Element {
     (a, p) => ({ v: a.v + p.views, l: a.l + p.likes, s: a.s + p.saves }),
     { v: 0, l: 0, s: 0 }
   )
+  // Per-platform breakdown (best avg-engagement platform surfaces first).
+  const byPlatform = Object.values(
+    pubs.reduce<Record<string, { platform: string; n: number; views: number; likes: number; saves: number }>>(
+      (acc, p) => {
+        const key = p.platform ?? '未分'
+        const g = acc[key] ?? { platform: key, n: 0, views: 0, likes: 0, saves: 0 }
+        g.n++
+        g.views += p.views
+        g.likes += p.likes
+        g.saves += p.saves
+        acc[key] = g
+        return acc
+      },
+      {}
+    )
+  ).sort((a, b) => b.saves + b.likes - (a.saves + a.likes))
 
   return (
     <div className="mx-auto flex h-full w-full max-w-2xl flex-col px-8 py-7">
@@ -76,6 +92,25 @@ export function PublishView(): JSX.Element {
         </div>
       ) : null}
 
+      {byPlatform.length > 1 ? (
+        <div className="mt-2 rounded-xl border border-border-soft bg-card/60 px-4 py-2.5">
+          <div className="mb-1.5 text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground/60">
+            按平台
+          </div>
+          <div className="space-y-1">
+            {byPlatform.map((g) => (
+              <div key={g.platform} className="flex items-center gap-3 text-[12.5px]">
+                <span className="w-16 shrink-0 text-foreground">{labelForPlatform(g.platform)}</span>
+                <span className="text-muted-foreground">{g.n} 条</span>
+                <span className="ml-auto text-muted-foreground">
+                  播放 {g.views.toLocaleString()} · 赞 {g.likes} · 藏 {g.saves}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {editing ? (
         <PubForm
           pub={editing === 'new' ? null : editing}
@@ -107,6 +142,19 @@ function Stat({ label, value }: { label: string; value: number }): JSX.Element {
 }
 
 function PubRow({ p, onEdit, onChange }: { p: Publication; onEdit: () => void; onChange: () => void }): JSX.Element {
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const saveTemplate = async (): Promise<void> => {
+    if (saving) return
+    setSaving(true)
+    try {
+      await window.api.publications.saveTemplate(p.id)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } finally {
+      setSaving(false)
+    }
+  }
   return (
     <div className="rounded-xl border border-border bg-card px-4 py-3">
       <div className="flex items-center gap-3">
@@ -127,6 +175,21 @@ function PubRow({ p, onEdit, onChange }: { p: Publication; onEdit: () => void; o
             <span>藏 {p.saves}</span>
           </div>
         </div>
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          title={saved ? '已存为爆款模板（在「技能」里）' : '把这条的结构存为爆款模板'}
+          onClick={saveTemplate}
+          disabled={saving}
+        >
+          {saving ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : saved ? (
+            <Check className="h-4 w-4 text-primary" />
+          ) : (
+            <Star className="h-4 w-4" />
+          )}
+        </Button>
         <Button size="icon-sm" variant="ghost" title="编辑数据" onClick={onEdit}>
           <Pencil className="h-4 w-4" />
         </Button>
