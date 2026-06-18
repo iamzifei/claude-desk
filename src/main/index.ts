@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, Menu } from 'electron'
+import { app, shell, BrowserWindow, Menu, nativeImage } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -69,6 +69,13 @@ app.whenReady().then(() => {
 
   // Custom menu — frees ⌘W (and keeps Edit roles) for app shortcuts.
   Menu.setApplicationMenu(buildAppMenu())
+
+  // macOS dock icon — unify the running app's dock with the brand logo (the
+  // packaged .app uses build/icon.icns; this covers the dev/run experience).
+  if (process.platform === 'darwin' && app.dock) {
+    const img = nativeImage.createFromPath(icon)
+    if (!img.isEmpty()) app.dock.setIcon(img)
+  }
 
   // Initialize local storage and register all IPC handlers before the window loads.
   initDb()

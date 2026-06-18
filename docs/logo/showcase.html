@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>墨栖 InkNest · Logo 方案</title>
+    <style>
+      :root {
+        --bg: #0e0e14;
+        --card: #16161f;
+        --line: #26263300;
+        --fg: #ecebfa;
+        --muted: #8b8ba3;
+        --violet: #8174ff;
+        --grad-a: #6d5dfb;
+        --grad-b: #a06dfb;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, "PingFang SC", "Segoe UI", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        -webkit-font-smoothing: antialiased;
+      }
+      /* Display serif paired with the sans body for typographic hierarchy. */
+      .display { font-family: Georgia, "Songti SC", "Noto Serif SC", "Times New Roman", serif; }
+      .wrap { max-width: 1080px; margin: 0 auto; padding: 56px 28px 80px; }
+      header { margin-bottom: 40px; }
+      h1 {
+        font-family: Georgia, "Songti SC", "Noto Serif SC", "Times New Roman", serif;
+        font-size: 27px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 8px;
+      }
+      .sub { color: var(--muted); font-size: 14px; line-height: 1.7; max-width: 640px; }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+      @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+      .card {
+        background: var(--card);
+        border: 1px solid #ffffff0d;
+        border-radius: 18px;
+        padding: 22px;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+      }
+      .card:hover { transform: translateY(-3px); border-color: #ffffff1f; }
+      .logo {
+        height: 96px; display: grid; place-items: center; margin-bottom: 16px;
+      }
+      .logo svg { width: 64px; height: 64px; color: var(--violet); transition: color 0.2s; }
+      .card:hover .logo svg { color: #fff; }
+      .tag {
+        display: inline-block; font-size: 11px; color: var(--violet);
+        background: #8174ff1a; border-radius: 999px; padding: 3px 9px; margin-bottom: 8px;
+      }
+      .name { font-size: 14.5px; font-weight: 600; margin: 0 0 5px; }
+      .why { font-size: 12.5px; color: var(--muted); line-height: 1.65; margin: 0; }
+      .rec { border-color: #8174ff66; box-shadow: 0 0 0 1px #8174ff33; }
+      .rec .tag { color: #fff; background: linear-gradient(120deg, var(--grad-a), var(--grad-b)); }
+      .applied {
+        margin-top: 44px; padding: 28px; border-radius: 18px;
+        background: linear-gradient(120deg, #6d5dfb14, #a06dfb14);
+        border: 1px solid #8174ff26; display: flex; align-items: center; gap: 22px;
+      }
+      .chip {
+        width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center;
+        background: linear-gradient(135deg, var(--grad-a), var(--grad-b));
+        box-shadow: 0 6px 20px #6d5dfb40;
+      }
+      .chip svg { width: 30px; height: 30px; color: #fff; }
+      .applied .t { font-size: 13.5px; color: var(--muted); line-height: 1.6; }
+      .applied .t b { color: var(--fg); font-weight: 600; }
+      .brandrow { display: flex; align-items: center; gap: 10px; }
+      .brandrow .txt { font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
+      .brandrow .txt span { color: var(--muted); font-weight: 500; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>墨栖 · InkNest — Logo 方案</h1>
+        <p class="sub">
+          概念锚点：<b>墨</b>（内容创作）+ <b>栖</b>（素材栖息地，创作者的资产在这里聚集、复用、增值）。
+          6 个方向，统一靛紫（#6d5dfb→#a06dfb）。鼠标悬停看反白效果（应用到深色/品牌底时的样子）。
+        </p>
+      </header>
+
+      <div class="grid">
+        <div class="card rec">
+          <div class="logo">
+            <svg viewBox="0 0 100 100" fill="none">
+              <path d="M28 58 Q50 78 72 58" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+              <path d="M50 28 C59 42 61 51 50 60 C39 51 41 42 50 28 Z" fill="currentColor" />
+            </svg>
+          </div>
+          <span class="tag">推荐 · 已应用</span>
+          <p class="name">墨落于栖 / Ink in Nest</p>
+          <p class="why">一滴墨稳稳落进托起的巢。最直白地说出「墨 + 栖」，单焦点、极简、缩到 16px 仍清晰。</p>
+        </div>
+
+        <div class="card">
+          <div class="logo">
+            <svg viewBox="0 0 100 100" fill="none">
+              <path d="M26 54 Q50 76 74 54" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+              <circle cx="44" cy="44" r="7" fill="currentColor" />
+              <circle cx="59" cy="39" r="4.5" fill="currentColor" />
+              <circle cx="55" cy="52" r="3" fill="currentColor" />
+            </svg>
+          </div>
+          <span class="tag">资产</span>
+          <p class="name">巢中之核 / Nest of Atoms</p>
+          <p class="why">巢里聚着大小不一的「知识原子」。直指产品内核：素材/原子在栖息地聚集复用。</p>
+        </div>
+
+        <div class="card">
+          <div class="logo">
+            <svg viewBox="0 0 100 100" fill="none">
+              <circle cx="46" cy="50" r="7" fill="currentColor" />
+              <path d="M58 36 A18 18 0 0 1 58 64" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" />
+              <path d="M68 28 A30 30 0 0 1 68 72" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" />
+            </svg>
+          </div>
+          <span class="tag">复利</span>
+          <p class="name">由核生长 / Compounding</p>
+          <p class="why">一个墨核，向外扩散的弧。呼应「越用越值钱」的内容资产复利。</p>
+        </div>
+
+        <div class="card">
+          <div class="logo">
+            <svg viewBox="0 0 100 100" fill="none">
+              <path d="M30 70 V34 L50 54 L70 34 V70" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="50" cy="62" r="4" fill="currentColor" />
+            </svg>
+          </div>
+          <span class="tag">字母</span>
+          <p class="name">字母 M / Monogram</p>
+          <p class="why">墨栖的「M」，谷底一滴墨。几何、稳重、识别度高，适合做纯字母标。</p>
+        </div>
+
+        <div class="card">
+          <div class="logo">
+            <svg viewBox="0 0 100 100" fill="none">
+              <line x1="28" y1="60" x2="72" y2="60" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+              <path d="M52 30 C61 44 63 53 52 61 C41 53 43 44 52 30 Z" fill="currentColor" />
+              <circle cx="34" cy="52" r="3.5" fill="currentColor" />
+            </svg>
+          </div>
+          <span class="tag">栖</span>
+          <p class="name">栖木 / Perch</p>
+          <p class="why">一根栖木，墨滴停驻，旁有一粒原子。「栖」的字面意——停靠、安放。</p>
+        </div>
+
+        <div class="card">
+          <div class="logo">
+            <svg viewBox="0 0 100 100" fill="none">
+              <path d="M50 26 L72 39 L72 65 L50 78 L28 65 L28 39 Z" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" />
+              <path d="M50 40 C57 49 58 55 50 60 C42 55 43 49 50 40 Z" fill="currentColor" />
+            </svg>
+          </div>
+          <span class="tag">工程</span>
+          <p class="name">单元巢 / Hex Cell</p>
+          <p class="why">六边形「资产单元」托着墨滴。偏「内容资产工程」的结构感与硬度。</p>
+        </div>
+      </div>
+
+      <div class="applied">
+        <div class="chip">
+          <svg viewBox="0 0 100 100" fill="none">
+            <path d="M28 58 Q50 78 72 58" stroke="currentColor" stroke-width="5" stroke-linecap="round" />
+            <path d="M50 26 C60 41 62 51 50 61 C38 51 40 41 50 26 Z" fill="currentColor" />
+          </svg>
+        </div>
+        <div>
+          <div class="brandrow"><span class="txt">墨栖 <span>InkNest</span></span></div>
+          <p class="t" style="margin:6px 0 0">
+            <b>已应用方案一</b>（墨落于栖）到 App 的侧栏品牌标与窗口标题。白色 logo + 靛紫渐变圆角块，
+            和 App 图标气质一致。想换成其它方向,告诉我编号即可。
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
