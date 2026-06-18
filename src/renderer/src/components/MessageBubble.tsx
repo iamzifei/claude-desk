@@ -1,6 +1,6 @@
-import { JSX } from 'react'
+import { JSX, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { Bot, User } from 'lucide-react'
+import { Bot, User, Save, Atom, Check, Loader2 } from 'lucide-react'
 
 interface Props {
   role: 'user' | 'assistant'
@@ -11,7 +11,7 @@ interface Props {
 export function MessageBubble({ role, content, thinking }: Props): JSX.Element {
   const isUser = role === 'user'
   return (
-    <div className="mx-auto flex max-w-3xl gap-3.5 px-6 py-3.5">
+    <div className="group/msg mx-auto flex max-w-3xl gap-3.5 px-6 py-3.5">
       <div
         className={
           isUser
@@ -35,11 +35,70 @@ export function MessageBubble({ role, content, thinking }: Props): JSX.Element {
         {isUser ? (
           <div className="whitespace-pre-wrap break-words">{content}</div>
         ) : (
-          <div className="markdown">
-            <ReactMarkdown>{content}</ReactMarkdown>
-          </div>
+          <>
+            <div className="markdown">
+              <ReactMarkdown>{content}</ReactMarkdown>
+            </div>
+            {content.trim() ? <AssistantActions content={content} /> : null}
+          </>
         )}
       </div>
+    </div>
+  )
+}
+
+/** Harvest an AI reply back into the asset library (素材 / 原子) — closes the loop. */
+function AssistantActions({ content }: { content: string }): JSX.Element {
+  const [saved, setSaved] = useState(false)
+  const [atoms, setAtoms] = useState<number | null>(null)
+  const [splitting, setSplitting] = useState(false)
+
+  const saveMaterial = async (): Promise<void> => {
+    if (saved) return
+    await window.api.materials.create({
+      title: content.replace(/\n/g, ' ').slice(0, 24) || '对话沉淀',
+      content,
+      kind: 'text'
+    })
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1800)
+  }
+  const splitAtoms = async (): Promise<void> => {
+    if (splitting) return
+    setSplitting(true)
+    try {
+      const a = await window.api.atoms.extractFromText(content, 'conversation')
+      setAtoms(a.length)
+      setTimeout(() => setAtoms(null), 2500)
+    } finally {
+      setSplitting(false)
+    }
+  }
+
+  return (
+    <div className="mt-1.5 flex items-center gap-1 opacity-0 transition-opacity group-hover/msg:opacity-100">
+      <button
+        onClick={saveMaterial}
+        title="存为素材"
+        className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[11.5px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        {saved ? <Check className="h-3.5 w-3.5 text-primary" /> : <Save className="h-3.5 w-3.5" />}
+        存为素材
+      </button>
+      <button
+        onClick={splitAtoms}
+        title="拆为知识原子"
+        className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[11.5px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        {splitting ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : atoms !== null ? (
+          <Check className="h-3.5 w-3.5 text-primary" />
+        ) : (
+          <Atom className="h-3.5 w-3.5" />
+        )}
+        {atoms !== null ? `已拆 ${atoms} 个原子` : '拆为原子'}
+      </button>
     </div>
   )
 }
