@@ -164,6 +164,7 @@ export interface PublicSettings {
   transcriptionBaseUrl: string
   transcriptionModel: string
   hasTranscriptionKey: boolean
+  shortcuts: string | null
 }
 
 export interface ProviderInfo {

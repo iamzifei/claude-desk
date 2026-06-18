@@ -1,5 +1,6 @@
 import { JSX, useEffect, useState } from 'react'
 import { useStore } from './store'
+import { useShortcuts } from './useShortcuts'
 import { TooltipProvider } from './components/ui/tooltip'
 import { TitleBar } from './components/TitleBar'
 import { Sidebar } from './components/Sidebar'
@@ -9,6 +10,7 @@ import { SettingsModal } from './components/SettingsModal'
 function App(): JSX.Element {
   const init = useStore((s) => s.init)
   const [showSettings, setShowSettings] = useState(false)
+  useShortcuts()
 
   useEffect(() => {
     init()

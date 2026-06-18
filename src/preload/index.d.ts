@@ -88,6 +88,7 @@ export interface PublicSettings {
   transcriptionBaseUrl: string
   transcriptionModel: string
   hasTranscriptionKey: boolean
+  shortcuts: string | null
 }
 
 export type TranscribeResult = { text: string } | { error: string }
@@ -219,6 +220,7 @@ export interface Api {
         transcriptionBaseUrl: string
         transcriptionModel: string
         transcriptionKey: string
+        shortcuts: string
       }>
     ) => Promise<PublicSettings>
   }

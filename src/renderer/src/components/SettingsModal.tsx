@@ -1,11 +1,19 @@
 import { JSX, useEffect, useState } from 'react'
-import { ShieldCheck, Sun, Moon, Download, Check } from 'lucide-react'
+import { ShieldCheck, Sun, Moon, Download, Check, Keyboard, RotateCcw } from 'lucide-react'
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
 import type { ProviderInfo } from '../types'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
+import {
+  SHORTCUT_ACTIONS,
+  ACTION_LABELS,
+  eventToAccelerator,
+  formatAccelerator,
+  type ShortcutAction
+} from '../shortcuts'
+import { suspendShortcuts } from '../useShortcuts'
 
 interface Props {
   open: boolean
@@ -86,6 +94,8 @@ export function SettingsModal({ open, onOpenChange }: Props): JSX.Element {
 
         <div className="space-y-4">
           <ThemeToggle />
+
+          <ShortcutsSection />
 
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground">供应商</span>
@@ -251,6 +261,84 @@ function ThemeToggle(): JSX.Element {
           </button>
         ))}
       </div>
+    </div>
+  )
+}
+
+const MODIFIER_TOKENS = ['Mod', 'Alt', 'Shift', 'Control', 'Meta']
+
+function ShortcutsSection(): JSX.Element {
+  const shortcuts = useStore((s) => s.shortcuts)
+  const setShortcut = useStore((s) => s.setShortcut)
+  const resetShortcuts = useStore((s) => s.resetShortcuts)
+  const [recording, setRecording] = useState<ShortcutAction | null>(null)
+
+  // While recording, capture the next real chord and bind it.
+  useEffect(() => {
+    if (!recording) return
+    suspendShortcuts(true)
+    const onKey = (e: KeyboardEvent): void => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.key === 'Escape') {
+        setRecording(null)
+        return
+      }
+      const acc = eventToAccelerator(e)
+      const last = acc.split('+').pop() as string
+      // Need a real key plus at least one modifier (so it can't hijack typing).
+      if (MODIFIER_TOKENS.includes(last)) return
+      if (!acc.includes('Mod') && !acc.includes('Alt')) return
+      setShortcut(recording, acc)
+      setRecording(null)
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => {
+      window.removeEventListener('keydown', onKey, true)
+      suspendShortcuts(false)
+    }
+  }, [recording, setShortcut])
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <Keyboard className="h-3.5 w-3.5" /> 快捷键
+        </span>
+        <button
+          onClick={() => resetShortcuts()}
+          className="flex items-center gap-1 text-[11.5px] text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <RotateCcw className="h-3 w-3" /> 恢复默认
+        </button>
+      </div>
+      <div className="rounded-lg border border-border">
+        {SHORTCUT_ACTIONS.map((action, i) => (
+          <div
+            key={action}
+            className={cn(
+              'flex items-center justify-between px-3 py-2',
+              i > 0 && 'border-t border-border-soft'
+            )}
+          >
+            <span className="text-[13px]">{ACTION_LABELS[action]}</span>
+            <button
+              onClick={() => setRecording((r) => (r === action ? null : action))}
+              className={cn(
+                'min-w-[84px] rounded-md border px-2.5 py-1 text-center text-[12.5px] transition-colors',
+                recording === action
+                  ? 'animate-pulse border-primary bg-primary-soft text-primary'
+                  : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground'
+              )}
+            >
+              {recording === action ? '按下快捷键…' : formatAccelerator(shortcuts[action])}
+            </button>
+          </div>
+        ))}
+      </div>
+      <p className="text-[11px] text-muted-foreground/70">
+        点按右侧按钮再按下组合键即可重绑（需含 ⌘ 或 ⌥）。⌘W、⌘R 等系统组合保留。
+      </p>
     </div>
   )
 }

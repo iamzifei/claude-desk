@@ -95,6 +95,7 @@ export interface AppSettings {
   transcriptionBaseUrl: string
   transcriptionModel: string
   hasTranscriptionKey: boolean
+  shortcuts: string | null // JSON map of action → accelerator (null = defaults)
 }
 
 /** Settings safe to send to the renderer (never includes the raw key). */
@@ -107,6 +108,7 @@ export function getPublicSettings(): AppSettings {
     hasApiKey: !!resolveApiKey(),
     activeWorkspace: getSetting('activeWorkspace'),
     theme: getSetting('theme') ?? 'light',
+    shortcuts: getSetting('shortcuts'),
     transcriptionEngine: getSetting('transcriptionEngine') ?? 'cloud',
     transcriptionBaseUrl: getSetting('transcriptionBaseUrl') ?? DEFAULT_TRANSCRIBE_URL,
     transcriptionModel: getSetting('transcriptionModel') ?? DEFAULT_TRANSCRIBE_MODEL,

@@ -10,6 +10,11 @@ import type {
   FileEntry,
   MainView
 } from './types'
+import {
+  DEFAULT_SHORTCUTS,
+  mergeShortcuts,
+  type ShortcutAction
+} from './shortcuts'
 
 let booted = false
 
@@ -50,6 +55,7 @@ interface AppState {
   // workspace
   switchWorkspace: (id: string) => Promise<void>
   newWorkspace: () => Promise<void>
+  renameWorkspace: (id: string, name: string) => Promise<void>
 
   // project
   newProject: () => Promise<void>
@@ -72,6 +78,11 @@ interface AppState {
   cancel: () => void
   setActiveModel: (model: string) => Promise<void>
 
+  // keyboard shortcuts (configurable)
+  shortcuts: Record<ShortcutAction, string>
+  setShortcut: (action: ShortcutAction, accelerator: string) => Promise<void>
+  resetShortcuts: () => Promise<void>
+
   _onChunk: (conversationId: string, chunk: Chunk) => void
 }
 
@@ -93,6 +104,7 @@ export const useStore = create<AppState>((set, get) => ({
   files: [],
   theme: 'light',
   view: 'chat',
+  shortcuts: DEFAULT_SHORTCUTS,
 
   setView: (v) => set({ view: v }),
 
@@ -115,11 +127,18 @@ export const useStore = create<AppState>((set, get) => ({
       (settings.activeWorkspace && workspaces.some((w) => w.id === settings.activeWorkspace)
         ? settings.activeWorkspace
         : workspaces[0]?.id) ?? null
+    let storedShortcuts: Record<string, string> | null = null
+    try {
+      storedShortcuts = settings.shortcuts ? JSON.parse(settings.shortcuts) : null
+    } catch {
+      storedShortcuts = null
+    }
     set({
       hasApiKey: settings.hasApiKey,
       providers,
       globalModel: settings.model,
       theme: settings.theme,
+      shortcuts: mergeShortcuts(storedShortcuts),
       workspaces,
       activeWorkspaceId
     })
@@ -156,20 +175,25 @@ export const useStore = create<AppState>((set, get) => ({
     else await get().newConversation()
   },
 
+  // Instant create with a default name (no blocking prompt) → switch to it.
+  // Rename happens inline afterwards (double-click the workspace tab).
   newWorkspace: async () => {
-    const name = window.prompt('新工作区名称', '新工作区')
-    if (!name) return
-    const ws = await window.api.workspaces.create(name)
+    const ws = await window.api.workspaces.create('新工作区')
     set({ workspaces: await window.api.workspaces.list() })
     await get().switchWorkspace(ws.id)
+  },
+
+  renameWorkspace: async (id, name) => {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    await window.api.workspaces.rename(id, trimmed)
+    set({ workspaces: await window.api.workspaces.list() })
   },
 
   newProject: async () => {
     const ws = get().activeWorkspaceId
     if (!ws) return
-    const name = window.prompt('新项目名称', '新项目')
-    if (!name) return
-    await window.api.projects.create(ws, name)
+    await window.api.projects.create(ws, '新项目')
     await get().refreshAll()
   },
 
@@ -217,7 +241,8 @@ export const useStore = create<AppState>((set, get) => ({
     const ws = get().activeWorkspaceId
     if (!ws) return
     const conv = await window.api.conversations.create(ws, projectId)
-    await get().refreshConversations()
+    // Open the tab immediately for a snappy feel; refresh the list in the
+    // background so the sidebar catches up without blocking the UI.
     set((s) => ({
       activeId: conv.id,
       messages: [],
@@ -225,6 +250,7 @@ export const useStore = create<AppState>((set, get) => ({
       view: 'chat',
       openTabs: [...s.openTabs, conv.id]
     }))
+    get().refreshConversations()
   },
 
   deleteConversation: async (id) => {
@@ -277,6 +303,17 @@ export const useStore = create<AppState>((set, get) => ({
   cancel: () => {
     const id = get().activeId
     if (id) window.api.agent.cancel(id)
+  },
+
+  setShortcut: async (action, accelerator) => {
+    const shortcuts = { ...get().shortcuts, [action]: accelerator }
+    set({ shortcuts })
+    await window.api.settings.set({ shortcuts: JSON.stringify(shortcuts) })
+  },
+
+  resetShortcuts: async () => {
+    set({ shortcuts: { ...DEFAULT_SHORTCUTS } })
+    await window.api.settings.set({ shortcuts: JSON.stringify(DEFAULT_SHORTCUTS) })
   },
 
   setActiveModel: async (model) => {

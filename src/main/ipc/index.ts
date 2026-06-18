@@ -110,6 +110,7 @@ export function registerIpc(): void {
       setSetting('transcriptionBaseUrl', patch.transcriptionBaseUrl)
     if (typeof patch.transcriptionModel === 'string')
       setSetting('transcriptionModel', patch.transcriptionModel)
+    if (typeof patch.shortcuts === 'string') setSetting('shortcuts', patch.shortcuts)
     // Secrets → encrypted at rest via safeStorage.
     if (typeof patch.apiKey === 'string' && patch.apiKey) setSetting('apiKey', patch.apiKey, true)
     if (typeof patch.transcriptionKey === 'string' && patch.transcriptionKey)

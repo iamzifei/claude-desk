@@ -1,7 +1,9 @@
 import { JSX } from 'react'
-import { X } from 'lucide-react'
+import { X, Plus } from 'lucide-react'
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
+import { Tip } from './ui/tooltip'
+import { formatAccelerator } from '../shortcuts'
 
 /** Open conversations as tabs in the main area (牛马AI's ConversationTab). */
 export function TabBar(): JSX.Element | null {
@@ -10,6 +12,8 @@ export function TabBar(): JSX.Element | null {
   const activeId = useStore((s) => s.activeId)
   const open = useStore((s) => s.openConversation)
   const close = useStore((s) => s.closeTab)
+  const newTab = useStore((s) => s.newConversation)
+  const newTabKey = useStore((s) => s.shortcuts['new-tab'])
 
   if (openTabs.length === 0) return null
   const titleOf = (id: string): string => conversations.find((c) => c.id === id)?.title ?? '新对话'
@@ -40,6 +44,14 @@ export function TabBar(): JSX.Element | null {
           </button>
         </div>
       ))}
+      <Tip label={`新建标签页 ${formatAccelerator(newTabKey)}`}>
+        <button
+          onClick={() => newTab(null)}
+          className="mb-0.5 ml-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+      </Tip>
     </div>
   )
 }
