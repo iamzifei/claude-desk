@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 import { getDb } from './index'
+import { resolvePending, purgeLinks } from './links'
 
 export interface Conversation {
   id: string
@@ -83,12 +84,15 @@ export function createConversation(
 
 export function deleteConversation(id: string): void {
   getDb().prepare('DELETE FROM conversations WHERE id = ?').run(id)
+  purgeLinks('conversation', id)
 }
 
 export function renameConversation(id: string, title: string): void {
   getDb()
     .prepare('UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?')
     .run(title, Date.now(), id)
+  // A meaningful title may resolve [[links]] written before the chat was named.
+  resolvePending(title, 'conversation', id)
 }
 
 export function setArchived(id: string, archived: boolean): void {

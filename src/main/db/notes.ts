@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 import { getDb } from './index'
+import { rebuildLinks, resolvePending, purgeLinks } from './links'
 
 export interface Note {
   id: string
@@ -35,9 +36,12 @@ export function createNote(
       'INSERT INTO notes (id, workspace_id, type, title, content, created_at) VALUES (@id, @workspace_id, @type, @title, @content, @created_at)'
     )
     .run(note)
+  rebuildLinks('note', note.id, note.content)
+  resolvePending(note.title, 'note', note.id)
   return note
 }
 
 export function deleteNote(id: string): void {
   getDb().prepare('DELETE FROM notes WHERE id = ?').run(id)
+  purgeLinks('note', id)
 }

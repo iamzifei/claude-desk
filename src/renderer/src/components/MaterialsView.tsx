@@ -4,6 +4,7 @@ import { cn } from '../lib/utils'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Header, Empty } from './ScheduledView'
+import { WikiText, Backlinks } from './WikiText'
 import { PLATFORM_OPTIONS, labelForPlatform } from '../platforms'
 import type { Material, MaterialKind } from '../types'
 
@@ -381,13 +382,14 @@ function MaterialRow({
         <div className="mt-2 space-y-2">
           {m.kind === 'image' && m.image_path ? <ImageThumb path={m.image_path} large /> : null}
           {m.content ? (
-            <div className="whitespace-pre-wrap rounded-lg bg-muted/60 p-3 text-[12.5px] text-muted-foreground">
-              {m.content}
+            <div className="rounded-lg bg-muted/60 p-3 text-[12.5px] text-muted-foreground">
+              <WikiText content={m.content} />
               {m.url ? <div className="mt-1.5 truncate text-primary">{m.url}</div> : null}
             </div>
           ) : m.url ? (
             <div className="truncate rounded-lg bg-muted/60 p-3 text-[12.5px] text-primary">{m.url}</div>
           ) : null}
+          <Backlinks kind="material" id={m.id} />
         </div>
       ) : null}
     </div>

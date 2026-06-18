@@ -129,6 +129,10 @@ const api = {
     all: (workspaceId: string | null, query: string) =>
       ipcRenderer.invoke('search:all', workspaceId, query)
   },
+  links: {
+    backlinks: (kind: string, id: string) => ipcRenderer.invoke('links:backlinks', kind, id),
+    resolve: (title: string) => ipcRenderer.invoke('links:resolve', title)
+  },
   topics: {
     list: (workspaceId: string) => ipcRenderer.invoke('topics:list', workspaceId),
     create: (workspaceId: string, t: unknown) => ipcRenderer.invoke('topics:create', workspaceId, t),

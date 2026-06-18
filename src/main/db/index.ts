@@ -201,6 +201,21 @@ function migrate(d: Database.Database): void {
       updated_at   INTEGER NOT NULL
     );
     CREATE INDEX idx_topics_ws ON topics(workspace_id, status, updated_at);
+    `,
+    // 0011 — 双链 (wikilinks). [[标题]] in any entity's content resolves to a
+    // target entity; backlinks are the reverse lookup (Obsidian-style).
+    `
+    CREATE TABLE links (
+      id         TEXT PRIMARY KEY,
+      from_kind  TEXT NOT NULL,   -- 'material' | 'atom' | 'note' | 'topic'
+      from_id    TEXT NOT NULL,
+      to_title   TEXT NOT NULL,   -- the raw [[title]] text
+      to_kind    TEXT,            -- resolved target kind (null if unresolved)
+      to_id      TEXT,            -- resolved target id (null if unresolved)
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX idx_links_from ON links(from_kind, from_id);
+    CREATE INDEX idx_links_to ON links(to_kind, to_id);
     `
   ]
 

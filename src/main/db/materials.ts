@@ -5,6 +5,7 @@ import { app } from 'electron'
 import { getDb } from './index'
 import { formatMaterialsPrompt } from './skill-parse'
 import { mediaTypeForPath, type ImageMediaType } from './image-util'
+import { rebuildLinks, resolvePending, purgeLinks } from './links'
 
 export type MaterialKind = 'text' | 'image' | 'link'
 
@@ -131,6 +132,8 @@ export function createMaterial(m: NewMaterial): Material {
        VALUES (@id, @title, @content, @url, @tags, @kind, @image_path, @platform, @in_context, @created_at)`
     )
     .run(mat)
+  rebuildLinks('material', mat.id, mat.content)
+  resolvePending(mat.title, 'material', mat.id)
   return mat
 }
 
@@ -147,6 +150,8 @@ export function updateMaterial(id: string, m: NewMaterial): void {
       m.platform?.trim() || null,
       id
     )
+  rebuildLinks('material', id, m.content)
+  resolvePending(m.title.trim() || '未命名素材', 'material', id)
 }
 
 export function toggleMaterialContext(id: string, on: boolean): void {
@@ -169,6 +174,7 @@ export function deleteMaterial(id: string): void {
     }
   }
   getDb().prepare('DELETE FROM materials WHERE id = ?').run(id)
+  purgeLinks('material', id)
 }
 
 export interface ContextImage {

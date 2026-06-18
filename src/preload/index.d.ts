@@ -193,6 +193,19 @@ export interface RewriteResult {
   text: string
 }
 
+export type LinkKind = 'material' | 'atom' | 'note' | 'topic' | 'conversation'
+
+export interface Backlink {
+  from_kind: LinkKind
+  from_id: string
+  title: string
+}
+
+export interface ResolvedTarget {
+  kind: LinkKind
+  id: string
+}
+
 export type SearchKind = 'conversation' | 'material' | 'atom' | 'note'
 
 export interface SearchHit {
@@ -339,6 +352,10 @@ export interface Api {
   }
   search: {
     all: (workspaceId: string | null, query: string) => Promise<SearchHit[]>
+  }
+  links: {
+    backlinks: (kind: LinkKind, id: string) => Promise<Backlink[]>
+    resolve: (title: string) => Promise<ResolvedTarget | null>
   }
   topics: {
     list: (workspaceId: string) => Promise<Topic[]>

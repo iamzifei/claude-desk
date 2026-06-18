@@ -117,6 +117,19 @@ export interface RewriteResult {
   text: string
 }
 
+export type LinkKind = 'material' | 'atom' | 'note' | 'topic' | 'conversation'
+
+export interface Backlink {
+  from_kind: LinkKind
+  from_id: string
+  title: string
+}
+
+export interface ResolvedTarget {
+  kind: LinkKind
+  id: string
+}
+
 export type SearchKind = 'conversation' | 'material' | 'atom' | 'note'
 
 export interface SearchHit {

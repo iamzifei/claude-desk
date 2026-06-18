@@ -91,6 +91,9 @@ interface AppState {
   rewriteSeed: string | null
   sendToRewrite: (text: string) => void
 
+  // jump to a wikilink / backlink target
+  jumpTo: (target: { kind: string; id: string }) => void
+
   setSearch: (q: string) => void
   setRightPanel: (p: AppState['rightPanel']) => void
 
@@ -132,6 +135,17 @@ export const useStore = create<AppState>((set, get) => ({
 
   rewriteSeed: null,
   sendToRewrite: (text) => set({ rewriteSeed: text, view: 'rewrite', split: null }),
+
+  jumpTo: (target) => {
+    const viewByKind: Record<string, MainView> = {
+      material: 'materials',
+      atom: 'atoms',
+      topic: 'topics',
+      note: 'review'
+    }
+    if (target.kind === 'conversation') get().openConversation(target.id)
+    else set({ view: viewByKind[target.kind] ?? 'chat' })
+  },
 
   setView: (v) => set({ view: v }),
   setSplit: (t) => set({ split: t }),

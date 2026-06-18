@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 import { getDb } from './index'
+import { rebuildLinks, purgeLinks } from './links'
 import type { AtomType, ExtractedAtom } from './atom-extract'
 
 export interface Atom {
@@ -67,6 +68,7 @@ export function createAtom(a: NewAtom): Atom {
        VALUES (@id, @content, @type, @source_kind, @source_id, @tags, @in_context, @created_at)`
     )
     .run(atom)
+  rebuildLinks('atom', atom.id, atom.content)
   return atom
 }
 
@@ -91,6 +93,7 @@ export function createAtoms(
     created_at: now + i // preserve order
   }))
   getDb().transaction(() => rows.forEach((r) => insert.run(r)))()
+  rows.forEach((r) => rebuildLinks('atom', r.id, r.content))
   return rows
 }
 
@@ -98,6 +101,7 @@ export function updateAtom(id: string, a: NewAtom): void {
   getDb()
     .prepare('UPDATE atoms SET content = ?, type = ?, tags = ? WHERE id = ?')
     .run(a.content.trim(), a.type ?? '观点', a.tags?.trim() || null, id)
+  rebuildLinks('atom', id, a.content)
 }
 
 export function toggleAtomContext(id: string, on: boolean): void {
@@ -106,6 +110,7 @@ export function toggleAtomContext(id: string, on: boolean): void {
 
 export function deleteAtom(id: string): void {
   getDb().prepare('DELETE FROM atoms WHERE id = ?').run(id)
+  purgeLinks('atom', id)
 }
 
 /** Concatenate in-context atoms into a system-prompt fragment (empty if none). */

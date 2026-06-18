@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 import { getDb } from './index'
+import { resolvePending, purgeLinks } from './links'
 
 export type TopicStatus = '灵感' | '待写' | '进行' | '已发'
 export const TOPIC_STATUSES: TopicStatus[] = ['灵感', '待写', '进行', '已发']
@@ -50,6 +51,7 @@ export function createTopic(workspaceId: string, t: NewTopic): Topic {
        VALUES (@id, @workspace_id, @title, @angle, @status, @platform, @created_at, @updated_at)`
     )
     .run(topic)
+  resolvePending(topic.title, 'topic', topic.id)
   return topic
 }
 
@@ -67,4 +69,5 @@ export function setTopicStatus(id: string, status: TopicStatus): void {
 
 export function deleteTopic(id: string): void {
   getDb().prepare('DELETE FROM topics WHERE id = ?').run(id)
+  purgeLinks('topic', id)
 }
