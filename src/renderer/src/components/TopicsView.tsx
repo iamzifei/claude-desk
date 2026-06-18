@@ -1,0 +1,264 @@
+import { JSX, useEffect, useState } from 'react'
+import { Lightbulb, Plus, Trash2, Pencil, Sparkles, Loader2, Copy, Check, Save, Repeat2 } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import { cn } from '../lib/utils'
+import { useStore } from '../store'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Header, Empty } from './ScheduledView'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
+import { PLATFORM_OPTIONS } from '../platforms'
+import type { Topic, TopicStatus } from '../types'
+
+const STATUSES: TopicStatus[] = ['灵感', '待写', '进行', '已发']
+
+export function TopicsView(): JSX.Element {
+  const ws = useStore((s) => s.activeWorkspaceId)
+  const [topics, setTopics] = useState<Topic[]>([])
+  const [filter, setFilter] = useState<'all' | TopicStatus>('all')
+  const [editing, setEditing] = useState<Topic | 'new' | null>(null)
+  const [draft, setDraft] = useState<{ topic: Topic; text: string } | null>(null)
+
+  const refresh = async (): Promise<void> => {
+    if (ws) setTopics(await window.api.topics.list(ws))
+  }
+  useEffect(() => {
+    refresh()
+  }, [ws])
+
+  const visible = topics.filter((t) => (filter === 'all' ? true : t.status === filter))
+
+  return (
+    <div className="mx-auto flex h-full w-full max-w-2xl flex-col px-8 py-7">
+      <Header
+        icon={Lightbulb}
+        title="选题库"
+        desc="把选题沉淀下来,一键从你的素材库 / 知识原子里「装配」成初稿——稿子从资产里长出来,不从零写。"
+        action={
+          <Button size="sm" onClick={() => setEditing('new')}>
+            <Plus className="h-4 w-4" /> 新建选题
+          </Button>
+        }
+      />
+
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        <FilterChip label="全部" active={filter === 'all'} onClick={() => setFilter('all')} />
+        {STATUSES.map((s) => (
+          <FilterChip key={s} label={s} active={filter === s} onClick={() => setFilter(s)} />
+        ))}
+      </div>
+
+      {editing ? (
+        <TopicForm
+          topic={editing === 'new' ? null : editing}
+          onDone={() => {
+            setEditing(null)
+            refresh()
+          }}
+        />
+      ) : null}
+
+      <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto">
+        {visible.length === 0 ? (
+          <Empty>还没有选题。把灵感记下来,再一键装配成稿。</Empty>
+        ) : (
+          visible.map((t) => (
+            <TopicRow
+              key={t.id}
+              t={t}
+              onEdit={() => setEditing(t)}
+              onChange={refresh}
+              onAssembled={(text) => setDraft({ topic: t, text })}
+            />
+          ))
+        )}
+      </div>
+
+      {draft ? <DraftDialog topic={draft.topic} text={draft.text} onClose={() => setDraft(null)} /> : null}
+    </div>
+  )
+}
+
+function FilterChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }): JSX.Element {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'rounded-full border px-2.5 py-1 text-[12px] transition-colors',
+        active
+          ? 'border-primary bg-primary-soft text-primary'
+          : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground'
+      )}
+    >
+      {label}
+    </button>
+  )
+}
+
+function TopicForm({ topic, onDone }: { topic: Topic | null; onDone: () => void }): JSX.Element {
+  const ws = useStore((s) => s.activeWorkspaceId)
+  const [title, setTitle] = useState(topic?.title ?? '')
+  const [angle, setAngle] = useState(topic?.angle ?? '')
+  const [platform, setPlatform] = useState(topic?.platform ?? '')
+
+  const submit = async (): Promise<void> => {
+    if (!title.trim() || !ws) return
+    const payload = { title: title.trim(), angle: angle.trim() || null, platform: platform.trim() || null }
+    if (topic) await window.api.topics.update(topic.id, payload)
+    else await window.api.topics.create(ws, payload)
+    onDone()
+  }
+
+  return (
+    <div className="mt-3 space-y-2.5 rounded-xl border border-border bg-card p-4">
+      <Input placeholder="选题标题，如「副业最大的坑」" value={title} onChange={(e) => setTitle(e.target.value)} />
+      <Input placeholder="切入角度（可选），如「反常识 / 个人经历」" value={angle} onChange={(e) => setAngle(e.target.value)} />
+      <div className="flex items-center justify-between gap-2">
+        <select
+          value={platform}
+          onChange={(e) => setPlatform(e.target.value)}
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:border-ring"
+        >
+          <option value="">不分平台</option>
+          {PLATFORM_OPTIONS.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+        <div className="flex gap-2">
+          <Button size="sm" variant="secondary" onClick={onDone}>
+            取消
+          </Button>
+          <Button size="sm" onClick={submit} disabled={!title.trim()}>
+            {topic ? '保存' : '添加'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TopicRow({
+  t,
+  onEdit,
+  onChange,
+  onAssembled
+}: {
+  t: Topic
+  onEdit: () => void
+  onChange: () => void
+  onAssembled: (text: string) => void
+}): JSX.Element {
+  const [assembling, setAssembling] = useState(false)
+
+  const assemble = async (): Promise<void> => {
+    if (assembling) return
+    setAssembling(true)
+    try {
+      const r = await window.api.topics.assemble(t.id)
+      onAssembled(r.draft)
+      if (t.status === '灵感') {
+        await window.api.topics.setStatus(t.id, '进行')
+        onChange()
+      }
+    } finally {
+      setAssembling(false)
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card px-4 py-3">
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-medium">{t.title}</div>
+          <div className="mt-0.5 flex items-center gap-2 text-[12px] text-muted-foreground">
+            {t.angle ? <span className="truncate">{t.angle}</span> : null}
+            {t.platform ? (
+              <span className="rounded bg-accent px-1.5 py-0.5 text-[10.5px]">{labelFor(t.platform)}</span>
+            ) : null}
+          </div>
+        </div>
+        <select
+          value={t.status}
+          onChange={(e) => window.api.topics.setStatus(t.id, e.target.value as TopicStatus).then(onChange)}
+          className="h-7 rounded-md border border-input bg-background px-1.5 text-[12px] outline-none focus-visible:border-ring"
+        >
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <Button size="sm" onClick={assemble} disabled={assembling}>
+          {assembling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          {assembling ? '装配中…' : '装配成稿'}
+        </Button>
+        <Button size="icon-sm" variant="ghost" title="编辑" onClick={onEdit}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          title="删除"
+          onClick={() => window.api.topics.delete(t.id).then(onChange)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function DraftDialog({ topic, text, onClose }: { topic: Topic; text: string; onClose: () => void }): JSX.Element {
+  const sendToRewrite = useStore((s) => s.sendToRewrite)
+  const [copied, setCopied] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="flex max-h-[85vh] w-[680px] flex-col overflow-hidden p-0">
+        <DialogHeader className="mb-0 border-b border-border-soft px-5 py-3.5">
+          <DialogTitle>装配初稿 · {topic.title}</DialogTitle>
+        </DialogHeader>
+        <div className="markdown min-h-0 flex-1 overflow-y-auto px-5 py-4 text-[13.5px] leading-relaxed">
+          <ReactMarkdown>{text}</ReactMarkdown>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-border-soft px-5 py-3">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              navigator.clipboard.writeText(text)
+              setCopied(true)
+              setTimeout(() => setCopied(false), 1500)
+            }}
+          >
+            {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />} 复制
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={async () => {
+              await window.api.materials.create({ title: `${topic.title} 初稿`, content: text, kind: 'text' })
+              setSaved(true)
+              setTimeout(() => setSaved(false), 1500)
+            }}
+          >
+            {saved ? <Check className="h-4 w-4 text-primary" /> : <Save className="h-4 w-4" />} 存为素材
+          </Button>
+          <Button
+            onClick={() => {
+              sendToRewrite(text)
+              onClose()
+            }}
+          >
+            <Repeat2 className="h-4 w-4" /> 去改写
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function labelFor(id: string): string {
+  return PLATFORM_OPTIONS.find((p) => p.id === id)?.label ?? id
+}

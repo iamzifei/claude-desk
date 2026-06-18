@@ -187,6 +187,20 @@ function migrate(d: Database.Database): void {
     // 0009 — pin conversations to the top of the sidebar (Arc-style pinned tabs).
     `
     ALTER TABLE conversations ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;
+    `,
+    // 0010 — 选题库 (topics). The dontbesilent pipeline: 选题 → 装配 → 成稿.
+    `
+    CREATE TABLE topics (
+      id           TEXT PRIMARY KEY,
+      workspace_id TEXT,
+      title        TEXT NOT NULL,
+      angle        TEXT,                       -- 切入角度
+      status       TEXT NOT NULL DEFAULT '灵感', -- 灵感 / 待写 / 进行 / 已发
+      platform     TEXT,
+      created_at   INTEGER NOT NULL,
+      updated_at   INTEGER NOT NULL
+    );
+    CREATE INDEX idx_topics_ws ON topics(workspace_id, status, updated_at);
     `
   ]
 

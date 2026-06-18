@@ -10,6 +10,7 @@ import {
   Code2,
   Library,
   Atom,
+  Lightbulb,
   Repeat2,
   Settings,
   MoreHorizontal,
@@ -53,12 +54,14 @@ type NavAction =
   | 'coding'
   | 'materials'
   | 'atoms'
+  | 'topics'
   | 'rewrite'
 const NAV: { icon: LucideIcon; label: string; action: NavAction }[] = [
   { icon: PencilLine, label: '新建创作', action: 'new' },
   { icon: Search, label: '搜索', action: 'search' },
   { icon: Library, label: '素材库', action: 'materials' },
   { icon: Atom, label: '知识原子', action: 'atoms' },
+  { icon: Lightbulb, label: '选题库', action: 'topics' },
   { icon: Repeat2, label: '多平台改写', action: 'rewrite' },
   { icon: Puzzle, label: '技能', action: 'skills' },
   { icon: Code2, label: '编程', action: 'coding' },

@@ -85,6 +85,16 @@ import { extractAtoms } from '../agent/extract-atoms'
 import { getMaterial } from '../db/materials'
 import { runDiagnose, runDeAI } from '../agent/diagnose'
 import {
+  listTopics,
+  createTopic,
+  updateTopic,
+  setTopicStatus,
+  deleteTopic,
+  type NewTopic,
+  type TopicStatus
+} from '../db/topics'
+import { runAssembly } from '../agent/assembly'
+import {
   getPublicSettings,
   setSetting,
   getSetting,
@@ -317,6 +327,18 @@ export function registerIpc(): void {
   ipcMain.handle('rewrite:run', (_e, source: string, platforms: string[]) =>
     runRewrite(source, platforms)
   )
+
+  // ---- topics: (选题库 + 选题装配) ------------------------------------
+  ipcMain.handle('topics:list', (_e, workspaceId: string) => listTopics(workspaceId))
+  ipcMain.handle('topics:create', (_e, workspaceId: string, t: NewTopic) =>
+    createTopic(workspaceId, t)
+  )
+  ipcMain.handle('topics:update', (_e, id: string, t: NewTopic) => updateTopic(id, t))
+  ipcMain.handle('topics:setStatus', (_e, id: string, status: TopicStatus) =>
+    setTopicStatus(id, status)
+  )
+  ipcMain.handle('topics:delete', (_e, id: string) => deleteTopic(id))
+  ipcMain.handle('topics:assemble', (_e, id: string) => runAssembly(id))
 
   // ---- search: (全局快速切换) -----------------------------------------
   ipcMain.handle('search:all', (_e, workspaceId: string | null, query: string) =>

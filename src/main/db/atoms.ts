@@ -21,6 +21,10 @@ export interface NewAtom {
   tags?: string | null
 }
 
+export function getAtom(id: string): Atom | undefined {
+  return getDb().prepare('SELECT * FROM atoms WHERE id = ?').get(id) as Atom | undefined
+}
+
 export function listAtoms(type?: string): Atom[] {
   if (type && type !== 'all') {
     return getDb()

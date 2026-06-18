@@ -128,6 +128,24 @@ export interface SearchHit {
   noteType?: 'review' | 'minutes' | 'daily'
 }
 
+export type TopicStatus = '灵感' | '待写' | '进行' | '已发'
+
+export interface Topic {
+  id: string
+  workspace_id: string | null
+  title: string
+  angle: string | null
+  status: TopicStatus
+  platform: string | null
+  created_at: number
+  updated_at: number
+}
+
+export interface AssemblyResult {
+  draft: string
+  used: number
+}
+
 export type AtomType = '观点' | '金句' | '数据' | '案例' | '钩子' | '方法'
 
 export interface Atom {
@@ -154,6 +172,7 @@ export type MainView =
   | 'coding'
   | 'materials'
   | 'atoms'
+  | 'topics'
   | 'rewrite'
 
 export interface Conversation {

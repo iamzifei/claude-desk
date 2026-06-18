@@ -1,7 +1,8 @@
-import { JSX, useState } from 'react'
+import { JSX, useState, useEffect } from 'react'
 import { Repeat2, Sparkles, Copy, Check, Loader2, Save, Stethoscope, Wand2 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { cn } from '../lib/utils'
+import { useStore } from '../store'
 import { Button } from './ui/button'
 import { Header } from './ScheduledView'
 import { PLATFORM_OPTIONS, labelForPlatform } from '../platforms'
@@ -9,6 +10,14 @@ import type { RewriteResult } from '../types'
 
 export function RewriteView(): JSX.Element {
   const [source, setSource] = useState('')
+  const seed = useStore((s) => s.rewriteSeed)
+  // Consume a draft handed over from 选题装配.
+  useEffect(() => {
+    if (seed) {
+      setSource(seed)
+      useStore.setState({ rewriteSeed: null })
+    }
+  }, [seed])
   const [selected, setSelected] = useState<string[]>(['xiaohongshu', 'gongzhonghao', 'douyin'])
   const [results, setResults] = useState<RewriteResult[]>([])
   const [running, setRunning] = useState(false)

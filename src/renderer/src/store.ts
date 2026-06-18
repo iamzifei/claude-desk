@@ -87,6 +87,10 @@ interface AppState {
   quickOpen: boolean
   setQuickOpen: (v: boolean) => void
 
+  // hand a draft from 选题装配 over to the 改写工坊
+  rewriteSeed: string | null
+  sendToRewrite: (text: string) => void
+
   setSearch: (q: string) => void
   setRightPanel: (p: AppState['rightPanel']) => void
 
@@ -125,6 +129,9 @@ export const useStore = create<AppState>((set, get) => ({
 
   quickOpen: false,
   setQuickOpen: (v) => set({ quickOpen: v }),
+
+  rewriteSeed: null,
+  sendToRewrite: (text) => set({ rewriteSeed: text, view: 'rewrite', split: null }),
 
   setView: (v) => set({ view: v }),
   setSplit: (t) => set({ split: t }),

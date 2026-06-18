@@ -129,6 +129,14 @@ const api = {
     all: (workspaceId: string | null, query: string) =>
       ipcRenderer.invoke('search:all', workspaceId, query)
   },
+  topics: {
+    list: (workspaceId: string) => ipcRenderer.invoke('topics:list', workspaceId),
+    create: (workspaceId: string, t: unknown) => ipcRenderer.invoke('topics:create', workspaceId, t),
+    update: (id: string, t: unknown) => ipcRenderer.invoke('topics:update', id, t),
+    setStatus: (id: string, status: string) => ipcRenderer.invoke('topics:setStatus', id, status),
+    delete: (id: string) => ipcRenderer.invoke('topics:delete', id),
+    assemble: (id: string) => ipcRenderer.invoke('topics:assemble', id)
+  },
   diagnose: {
     run: (draft: string) => ipcRenderer.invoke('diagnose:run', draft),
     deai: (draft: string) => ipcRenderer.invoke('diagnose:deai', draft)

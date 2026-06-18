@@ -16,6 +16,7 @@ import { SkillsView } from './SkillsView'
 import { CodingView } from './CodingView'
 import { MaterialsView } from './MaterialsView'
 import { AtomsView } from './AtomsView'
+import { TopicsView } from './TopicsView'
 import { RewriteView } from './RewriteView'
 
 /** Render a view by id. Chat is the fallback (uses the global session state). */
@@ -37,6 +38,8 @@ function renderView(view: MainView): JSX.Element {
       return <MaterialsView />
     case 'atoms':
       return <AtomsView />
+    case 'topics':
+      return <TopicsView />
     case 'rewrite':
       return <RewriteView />
     default:
@@ -48,6 +51,7 @@ function renderView(view: MainView): JSX.Element {
 const SPLIT_VIEWS: { v: MainView; label: string }[] = [
   { v: 'materials', label: '素材库' },
   { v: 'atoms', label: '知识原子' },
+  { v: 'topics', label: '选题库' },
   { v: 'rewrite', label: '改写工坊' },
   { v: 'skills', label: '技能' },
   { v: 'review', label: '每日回顾' },
