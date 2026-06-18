@@ -137,6 +137,9 @@ const api = {
     groups: () => ipcRenderer.invoke('tags:groups'),
     byTag: (tag: string) => ipcRenderer.invoke('tags:byTag', tag)
   },
+  graph: {
+    build: (workspaceId: string) => ipcRenderer.invoke('graph:build', workspaceId)
+  },
   topics: {
     list: (workspaceId: string) => ipcRenderer.invoke('topics:list', workspaceId),
     create: (workspaceId: string, t: unknown) => ipcRenderer.invoke('topics:create', workspaceId, t),

@@ -70,6 +70,7 @@ import { extractReadable } from '../db/materials-extract'
 import { searchAll } from '../db/search'
 import { getBacklinks, resolveTitle, type LinkKind } from '../db/links'
 import { tagGroups, itemsByTag } from '../db/tags'
+import { buildKnowledgeGraph } from '../db/graph'
 import { safeFetch } from '../net/url-guard'
 import { runRewrite } from '../agent/rewrite'
 import {
@@ -354,6 +355,9 @@ export function registerIpc(): void {
   // ---- tags: (层级标签浏览) -------------------------------------------
   ipcMain.handle('tags:groups', () => tagGroups())
   ipcMain.handle('tags:byTag', (_e, tag: string) => itemsByTag(tag))
+
+  // ---- graph: (知识图谱) ----------------------------------------------
+  ipcMain.handle('graph:build', (_e, workspaceId: string) => buildKnowledgeGraph(workspaceId))
 
   // ---- diagnose: (五维内容诊断 / 去 AI 味) ----------------------------
   ipcMain.handle('diagnose:run', (_e, draft: string) => runDiagnose(draft))

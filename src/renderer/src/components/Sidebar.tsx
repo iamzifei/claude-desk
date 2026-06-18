@@ -12,6 +12,7 @@ import {
   Atom,
   Lightbulb,
   Tags,
+  Network,
   Repeat2,
   Settings,
   MoreHorizontal,
@@ -58,6 +59,7 @@ type NavAction =
   | 'atoms'
   | 'topics'
   | 'tags'
+  | 'graph'
   | 'rewrite'
 const NAV: { icon: LucideIcon; label: string; action: NavAction }[] = [
   { icon: PencilLine, label: '新建创作', action: 'new' },
@@ -65,6 +67,7 @@ const NAV: { icon: LucideIcon; label: string; action: NavAction }[] = [
   { icon: Library, label: '素材库', action: 'materials' },
   { icon: Atom, label: '知识原子', action: 'atoms' },
   { icon: Tags, label: '标签', action: 'tags' },
+  { icon: Network, label: '知识图谱', action: 'graph' },
   { icon: Lightbulb, label: '选题库', action: 'topics' },
   { icon: Repeat2, label: '多平台改写', action: 'rewrite' },
   { icon: Puzzle, label: '技能', action: 'skills' },

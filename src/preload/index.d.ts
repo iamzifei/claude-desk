@@ -208,6 +208,17 @@ export interface TaggedItem {
   tags: string | null
 }
 
+export interface GraphNode {
+  id: string
+  kind: string
+  label: string
+}
+export interface GraphEdge {
+  source: string
+  target: string
+  type: 'link' | 'tag'
+}
+
 export type LinkKind = 'material' | 'atom' | 'note' | 'topic' | 'conversation'
 
 export interface Backlink {
@@ -375,6 +386,9 @@ export interface Api {
   tags: {
     groups: () => Promise<TagGroup[]>
     byTag: (tag: string) => Promise<TaggedItem[]>
+  }
+  graph: {
+    build: (workspaceId: string) => Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }>
   }
   topics: {
     list: (workspaceId: string) => Promise<Topic[]>
