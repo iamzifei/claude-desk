@@ -142,15 +142,29 @@ export function runChat(
   return { cancel: () => controller.abort() }
 }
 
+// Errors worth a retry: timeouts, connection drops, rate-limits, 5xx, overload.
+const TRANSIENT_ERROR =
+  /timed out|timeout|ETIMEDOUT|ECONNRESET|ENOTFOUND|network|fetch failed|connection error|overloaded|rate.?limit|\b(429|500|502|503|529)\b/i
+
 /**
- * Run a prompt to completion and resolve with the full assistant text.
- * Used by background features (scheduled tasks, daily review, meeting minutes)
- * that need a one-shot result rather than a streamed UI.
+ * Run a prompt to completion and resolve with the full assistant text. Used by
+ * the one-shot engines (装配 / 诊断 / 去AI味 / 拆原子 / 出选题 / 模板). Retries
+ * transient failures (timeouts/5xx) a couple of times before giving up — these
+ * have no interactive "resend", so silent retry is the right call.
  */
 export function runOnce(
   history: Message[],
   modelOverride?: string | null,
   systemOverride?: string
+): Promise<string> {
+  return attempt(history, modelOverride, systemOverride, 2)
+}
+
+function attempt(
+  history: Message[],
+  modelOverride: string | null | undefined,
+  systemOverride: string | undefined,
+  retries: number
 ): Promise<string> {
   return new Promise((resolve) => {
     let out = ''
@@ -159,7 +173,14 @@ export function runOnce(
       (c) => {
         if (c.type === 'text') out += c.text
         else if (c.type === 'done') resolve(out)
-        else if (c.type === 'error') resolve(`[错误] ${c.message}`)
+        else if (c.type === 'error') {
+          // Only retry when nothing was streamed yet and the error looks transient.
+          if (retries > 0 && !out.trim() && TRANSIENT_ERROR.test(c.message)) {
+            setTimeout(() => resolve(attempt(history, modelOverride, systemOverride, retries - 1)), 800)
+          } else {
+            resolve(out.trim() ? out : `[错误] ${c.message}`)
+          }
+        }
       },
       modelOverride,
       systemOverride
