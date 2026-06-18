@@ -132,6 +132,21 @@ export interface TaggedItem {
   tags: string | null
 }
 
+export interface Publication {
+  id: string
+  workspace_id: string | null
+  topic_id: string | null
+  title: string
+  platform: string | null
+  url: string | null
+  published_at: number | null
+  views: number
+  likes: number
+  comments: number
+  saves: number
+  created_at: number
+}
+
 export interface GraphNode {
   id: string
   kind: string
@@ -214,6 +229,7 @@ export type MainView =
   | 'topics'
   | 'tags'
   | 'graph'
+  | 'publish'
   | 'rewrite'
 
 export interface Conversation {

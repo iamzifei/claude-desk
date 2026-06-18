@@ -216,6 +216,25 @@ function migrate(d: Database.Database): void {
     );
     CREATE INDEX idx_links_from ON links(from_kind, from_id);
     CREATE INDEX idx_links_to ON links(to_kind, to_id);
+    `,
+    // 0012 — 发布记录 (publications). The data-feedback half of the flywheel:
+    // record what shipped + its metrics, then let data drive the next 选题.
+    `
+    CREATE TABLE publications (
+      id           TEXT PRIMARY KEY,
+      workspace_id TEXT,
+      topic_id     TEXT,
+      title        TEXT NOT NULL,
+      platform     TEXT,
+      url          TEXT,
+      published_at INTEGER,
+      views        INTEGER NOT NULL DEFAULT 0,
+      likes        INTEGER NOT NULL DEFAULT 0,
+      comments     INTEGER NOT NULL DEFAULT 0,
+      saves        INTEGER NOT NULL DEFAULT 0,
+      created_at   INTEGER NOT NULL
+    );
+    CREATE INDEX idx_pub_ws ON publications(workspace_id, created_at);
     `
   ]
 

@@ -208,6 +208,32 @@ export interface TaggedItem {
   tags: string | null
 }
 
+export interface Publication {
+  id: string
+  workspace_id: string | null
+  topic_id: string | null
+  title: string
+  platform: string | null
+  url: string | null
+  published_at: number | null
+  views: number
+  likes: number
+  comments: number
+  saves: number
+  created_at: number
+}
+export interface NewPublication {
+  title: string
+  platform?: string | null
+  url?: string | null
+  topic_id?: string | null
+  published_at?: number | null
+  views?: number
+  likes?: number
+  comments?: number
+  saves?: number
+}
+
 export interface GraphNode {
   id: string
   kind: string
@@ -389,6 +415,13 @@ export interface Api {
   }
   graph: {
     build: (workspaceId: string) => Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }>
+  }
+  publications: {
+    list: (ws: string) => Promise<Publication[]>
+    create: (ws: string, p: NewPublication) => Promise<Publication>
+    update: (id: string, p: NewPublication) => Promise<void>
+    delete: (id: string) => Promise<void>
+    suggestTopics: (ws: string) => Promise<Topic[]>
   }
   topics: {
     list: (workspaceId: string) => Promise<Topic[]>

@@ -14,6 +14,7 @@ import {
   Tags,
   Network,
   Repeat2,
+  TrendingUp,
   Settings,
   MoreHorizontal,
   ChevronRight,
@@ -60,6 +61,7 @@ type NavAction =
   | 'topics'
   | 'tags'
   | 'graph'
+  | 'publish'
   | 'rewrite'
 const NAV: { icon: LucideIcon; label: string; action: NavAction }[] = [
   { icon: PencilLine, label: '新建创作', action: 'new' },
@@ -70,6 +72,7 @@ const NAV: { icon: LucideIcon; label: string; action: NavAction }[] = [
   { icon: Network, label: '知识图谱', action: 'graph' },
   { icon: Lightbulb, label: '选题库', action: 'topics' },
   { icon: Repeat2, label: '多平台改写', action: 'rewrite' },
+  { icon: TrendingUp, label: '发布数据', action: 'publish' },
   { icon: Puzzle, label: '技能', action: 'skills' },
   { icon: Code2, label: '编程', action: 'coding' },
   { icon: Globe, label: '浏览器', action: 'browser' },

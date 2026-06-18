@@ -71,6 +71,14 @@ import { searchAll } from '../db/search'
 import { getBacklinks, resolveTitle, type LinkKind } from '../db/links'
 import { tagGroups, itemsByTag } from '../db/tags'
 import { buildKnowledgeGraph } from '../db/graph'
+import {
+  listPublications,
+  createPublication,
+  updatePublication,
+  deletePublication,
+  type NewPublication
+} from '../db/publications'
+import { runSuggestTopics } from '../agent/suggest-topics'
 import { safeFetch } from '../net/url-guard'
 import { runRewrite } from '../agent/rewrite'
 import {
@@ -358,6 +366,17 @@ export function registerIpc(): void {
 
   // ---- graph: (知识图谱) ----------------------------------------------
   ipcMain.handle('graph:build', (_e, workspaceId: string) => buildKnowledgeGraph(workspaceId))
+
+  // ---- publications: (发布记录 + 数据驱动选题) ------------------------
+  ipcMain.handle('publications:list', (_e, ws: string) => listPublications(ws))
+  ipcMain.handle('publications:create', (_e, ws: string, p: NewPublication) =>
+    createPublication(ws, p)
+  )
+  ipcMain.handle('publications:update', (_e, id: string, p: NewPublication) =>
+    updatePublication(id, p)
+  )
+  ipcMain.handle('publications:delete', (_e, id: string) => deletePublication(id))
+  ipcMain.handle('publications:suggestTopics', (_e, ws: string) => runSuggestTopics(ws))
 
   // ---- diagnose: (五维内容诊断 / 去 AI 味) ----------------------------
   ipcMain.handle('diagnose:run', (_e, draft: string) => runDiagnose(draft))

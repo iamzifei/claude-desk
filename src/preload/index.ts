@@ -140,6 +140,13 @@ const api = {
   graph: {
     build: (workspaceId: string) => ipcRenderer.invoke('graph:build', workspaceId)
   },
+  publications: {
+    list: (ws: string) => ipcRenderer.invoke('publications:list', ws),
+    create: (ws: string, p: unknown) => ipcRenderer.invoke('publications:create', ws, p),
+    update: (id: string, p: unknown) => ipcRenderer.invoke('publications:update', id, p),
+    delete: (id: string) => ipcRenderer.invoke('publications:delete', id),
+    suggestTopics: (ws: string) => ipcRenderer.invoke('publications:suggestTopics', ws)
+  },
   topics: {
     list: (workspaceId: string) => ipcRenderer.invoke('topics:list', workspaceId),
     create: (workspaceId: string, t: unknown) => ipcRenderer.invoke('topics:create', workspaceId, t),

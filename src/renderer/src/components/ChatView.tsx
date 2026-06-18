@@ -19,6 +19,7 @@ import { AtomsView } from './AtomsView'
 import { TopicsView } from './TopicsView'
 import { TagsView } from './TagsView'
 import { GraphView } from './GraphView'
+import { PublishView } from './PublishView'
 import { RewriteView } from './RewriteView'
 
 /** Render a view by id. Chat is the fallback (uses the global session state). */
@@ -46,6 +47,8 @@ function renderView(view: MainView): JSX.Element {
       return <TagsView />
     case 'graph':
       return <GraphView />
+    case 'publish':
+      return <PublishView />
     case 'rewrite':
       return <RewriteView />
     default:
@@ -60,6 +63,7 @@ const SPLIT_VIEWS: { v: MainView; label: string }[] = [
   { v: 'tags', label: '标签' },
   { v: 'graph', label: '知识图谱' },
   { v: 'topics', label: '选题库' },
+  { v: 'publish', label: '发布数据' },
   { v: 'rewrite', label: '改写工坊' },
   { v: 'skills', label: '技能' },
   { v: 'review', label: '每日回顾' },
