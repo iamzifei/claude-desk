@@ -72,6 +72,7 @@ interface AppState {
   deleteConversation: (id: string) => Promise<void>
   archiveConversation: (id: string) => Promise<void>
   renameConversation: (id: string, title: string) => Promise<void>
+  togglePin: (id: string, pinned: boolean) => Promise<void>
 
   // split-screen: a secondary pane beside the primary — a second conversation
   // or a reference view.
@@ -300,6 +301,11 @@ export const useStore = create<AppState>((set, get) => ({
 
   renameConversation: async (id, title) => {
     await window.api.conversations.rename(id, title)
+    await get().refreshConversations()
+  },
+
+  togglePin: async (id, pinned) => {
+    await window.api.conversations.setPinned(id, pinned)
     await get().refreshConversations()
   },
 

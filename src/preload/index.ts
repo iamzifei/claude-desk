@@ -51,6 +51,8 @@ const api = {
       ipcRenderer.invoke('conversations:archive', id, archived),
     setModel: (id: string, model: string | null) =>
       ipcRenderer.invoke('conversations:setModel', id, model),
+    setPinned: (id: string, pinned: boolean) =>
+      ipcRenderer.invoke('conversations:setPinned', id, pinned),
     messages: (id: string) => ipcRenderer.invoke('conversations:messages', id)
   },
   settings: {

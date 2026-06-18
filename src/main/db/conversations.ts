@@ -9,6 +9,7 @@ export interface Conversation {
   project_id: string | null
   model: string | null // per-conversation model override; null → use global default
   archived: number // 0 | 1
+  pinned: number // 0 | 1 — pinned to the top of the sidebar (Arc-style)
   created_at: number
   updated_at: number
 }
@@ -66,14 +67,15 @@ export function createConversation(
     project_id: projectId,
     model: null,
     archived: 0,
+    pinned: 0,
     created_at: now,
     updated_at: now
   }
   getDb()
     .prepare(
       `INSERT INTO conversations
-        (id, title, workspace, workspace_id, project_id, model, archived, created_at, updated_at)
-       VALUES (@id, @title, @workspace, @workspace_id, @project_id, @model, @archived, @created_at, @updated_at)`
+        (id, title, workspace, workspace_id, project_id, model, archived, pinned, created_at, updated_at)
+       VALUES (@id, @title, @workspace, @workspace_id, @project_id, @model, @archived, @pinned, @created_at, @updated_at)`
     )
     .run(conv)
   return conv
@@ -91,6 +93,10 @@ export function renameConversation(id: string, title: string): void {
 
 export function setArchived(id: string, archived: boolean): void {
   getDb().prepare('UPDATE conversations SET archived = ? WHERE id = ?').run(archived ? 1 : 0, id)
+}
+
+export function setPinned(id: string, pinned: boolean): void {
+  getDb().prepare('UPDATE conversations SET pinned = ? WHERE id = ?').run(pinned ? 1 : 0, id)
 }
 
 export function moveToProject(id: string, projectId: string | null): void {

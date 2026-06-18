@@ -20,10 +20,14 @@ import {
   Archive,
   Trash2,
   FolderInput,
+  Pin,
+  PinOff,
+  SplitSquareHorizontal,
   type LucideIcon
 } from 'lucide-react'
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
+import { groupConversations } from '../group-conversations'
 import type { Conversation, Project } from '../types'
 import { Input } from './ui/input'
 import {
@@ -144,7 +148,7 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
         <div className="mb-1.5">
           <div className="flex items-center justify-between px-2 pb-1 pt-1.5">
             <span className="text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground/70">
-              最近对话
+              对话
             </span>
             <Tip label="新建项目">
               <button
@@ -160,7 +164,17 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
               {search ? '没有匹配' : '还没有开始对话'}
             </div>
           ) : (
-            ungrouped.map((c) => <ConvItem key={c.id} conv={c} />)
+            groupConversations(ungrouped, Date.now()).map((g) => (
+              <div key={g.key} className="mb-0.5">
+                <div className="flex items-center gap-1 px-2.5 pb-0.5 pt-1.5 text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground/45">
+                  {g.key === 'pinned' ? <Pin className="h-2.5 w-2.5" /> : null}
+                  {g.label}
+                </div>
+                {g.items.map((c) => (
+                  <ConvItem key={c.id} conv={c} />
+                ))}
+              </div>
+            ))
           )}
         </div>
 
@@ -277,52 +291,113 @@ function ConvItem({ conv }: { conv: Conversation }): JSX.Element {
   const remove = useStore((s) => s.deleteConversation)
   const archive = useStore((s) => s.archiveConversation)
   const rename = useStore((s) => s.renameConversation)
+  const togglePin = useStore((s) => s.togglePin)
+  const openSplitChat = useStore((s) => s.openSplitChat)
+
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(conv.title)
+  const active = conv.id === activeId
+
+  const commit = (): void => {
+    if (draft.trim() && draft.trim() !== conv.title) rename(conv.id, draft.trim())
+    setEditing(false)
+  }
 
   return (
     <div
       onClick={() => open(conv.id)}
+      onDoubleClick={() => {
+        setDraft(conv.title)
+        setEditing(true)
+      }}
       className={cn(
-        'group flex cursor-pointer items-center gap-1.5 rounded-lg py-2 pl-2.5 pr-1.5 text-[13.5px] transition-colors',
-        conv.id === activeId
-          ? 'bg-accent text-foreground'
-          : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
+        'group relative flex cursor-pointer items-center gap-2 rounded-lg py-[7px] pl-2.5 pr-1.5 text-[13.5px] transition-colors',
+        active ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
       )}
     >
-      <span className="flex-1 truncate">{conv.title}</span>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+      {/* Arc-style leading indicator: filled when active, a quiet ring otherwise. */}
+      <span
+        className={cn(
+          'h-1.5 w-1.5 shrink-0 rounded-full transition-colors',
+          active ? 'bg-primary' : 'bg-muted-foreground/30 group-hover:bg-muted-foreground/50'
+        )}
+      />
+
+      {editing ? (
+        <input
+          autoFocus
+          value={draft}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit()
+            else if (e.key === 'Escape') setEditing(false)
+          }}
+          className="h-5 min-w-0 flex-1 rounded border border-ring bg-background px-1 text-[13px] outline-none"
+        />
+      ) : (
+        <span className="min-w-0 flex-1 truncate">{conv.title}</span>
+      )}
+
+      {conv.pinned && !editing ? (
+        <Pin className="h-3 w-3 shrink-0 text-muted-foreground/50 group-hover:hidden" />
+      ) : null}
+
+      {/* Hover actions: open-in-split + the overflow menu. */}
+      <div className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
+        <Tip label="在分屏中打开">
           <button
-            onClick={(e) => e.stopPropagation()}
-            className="rounded p-0.5 text-muted-foreground/70 opacity-0 transition hover:text-foreground group-hover:opacity-100 data-[state=open]:opacity-100"
+            onClick={(e) => {
+              e.stopPropagation()
+              openSplitChat(conv.id)
+            }}
+            className="rounded p-0.5 text-muted-foreground/70 transition hover:text-foreground"
           >
-            <MoreHorizontal className="h-4 w-4" />
+            <SplitSquareHorizontal className="h-3.5 w-3.5" />
           </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-          <DropdownMenuItem
-            onSelect={() => {
-              const t = window.prompt('重命名对话', conv.title)
-              if (t?.trim()) rename(conv.id, t.trim())
-            }}
-          >
-            <PencilLine /> 重命名
-          </DropdownMenuItem>
-          {conv.archived ? null : (
-            <DropdownMenuItem onSelect={() => archive(conv.id)}>
-              <Archive /> 归档
+        </Tip>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              onClick={(e) => e.stopPropagation()}
+              className="rounded p-0.5 text-muted-foreground/70 transition hover:text-foreground data-[state=open]:text-foreground"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem onSelect={() => togglePin(conv.id, !conv.pinned)}>
+              {conv.pinned ? <PinOff /> : <Pin />} {conv.pinned ? '取消置顶' : '置顶'}
             </DropdownMenuItem>
-          )}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            destructive
-            onSelect={() => {
-              if (window.confirm(`删除「${conv.title}」？`)) remove(conv.id)
-            }}
-          >
-            <Trash2 /> 删除
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <DropdownMenuItem
+              onSelect={() => {
+                setDraft(conv.title)
+                setEditing(true)
+              }}
+            >
+              <PencilLine /> 重命名
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => openSplitChat(conv.id)}>
+              <SplitSquareHorizontal /> 在分屏打开
+            </DropdownMenuItem>
+            {conv.archived ? null : (
+              <DropdownMenuItem onSelect={() => archive(conv.id)}>
+                <Archive /> 归档
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              destructive
+              onSelect={() => {
+                if (window.confirm(`删除「${conv.title}」？`)) remove(conv.id)
+              }}
+            >
+              <Trash2 /> 删除
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   )
 }

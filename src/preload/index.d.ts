@@ -60,6 +60,7 @@ export interface Conversation {
   project_id: string | null
   model: string | null
   archived: number
+  pinned: number
   created_at: number
   updated_at: number
 }
@@ -225,6 +226,7 @@ export interface Api {
     rename: (id: string, title: string) => Promise<void>
     archive: (id: string, archived: boolean) => Promise<void>
     setModel: (id: string, model: string | null) => Promise<void>
+    setPinned: (id: string, pinned: boolean) => Promise<void>
     messages: (id: string) => Promise<Message[]>
   }
   settings: {

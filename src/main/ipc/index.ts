@@ -17,6 +17,7 @@ import {
   deleteConversation,
   renameConversation,
   setArchived,
+  setPinned,
   moveToProject,
   setConversationModel,
   getConversationModel,
@@ -179,6 +180,9 @@ export function registerIpc(): void {
   })
   ipcMain.handle('conversations:setModel', (_e, id: string, model: string | null) =>
     setConversationModel(id, model)
+  )
+  ipcMain.handle('conversations:setPinned', (_e, id: string, pinned: boolean) =>
+    setPinned(id, pinned)
   )
   ipcMain.handle('conversations:messages', (_e, id: string) => getMessages(id))
 

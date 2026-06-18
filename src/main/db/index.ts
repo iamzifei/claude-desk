@@ -183,6 +183,10 @@ function migrate(d: Database.Database): void {
     );
     CREATE INDEX idx_atoms_created ON atoms(created_at);
     CREATE INDEX idx_atoms_type ON atoms(type, created_at);
+    `,
+    // 0009 — pin conversations to the top of the sidebar (Arc-style pinned tabs).
+    `
+    ALTER TABLE conversations ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;
     `
   ]
 

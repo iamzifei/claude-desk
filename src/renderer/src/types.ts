@@ -153,6 +153,7 @@ export interface Conversation {
   project_id: string | null
   model: string | null
   archived: number
+  pinned: number
   created_at: number
   updated_at: number
 }
