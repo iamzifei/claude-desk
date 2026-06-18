@@ -31,10 +31,10 @@ export function useShortcuts(): void {
           s.closeWorkspace()
           break
         case 'new-split':
-          if (!s.splitView) s.setSplitView('materials')
+          if (!s.split) s.toggleSplit() // opens a 2nd conversation, or a reference pane
           break
         case 'close-split':
-          s.setSplitView(null)
+          s.closeSplit()
           break
       }
     }

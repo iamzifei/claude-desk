@@ -130,6 +130,9 @@ export interface Atom {
   created_at: number
 }
 
+/** What the split (secondary) pane shows: a second conversation, or a reference view. */
+export type SplitTarget = { kind: 'chat'; id: string } | { kind: 'view'; view: MainView }
+
 export type MainView =
   | 'chat'
   | 'scheduled'

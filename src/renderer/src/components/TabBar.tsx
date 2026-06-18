@@ -1,5 +1,5 @@
 import { JSX } from 'react'
-import { X, Plus } from 'lucide-react'
+import { X, Plus, SplitSquareHorizontal } from 'lucide-react'
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
 import { Tip } from './ui/tooltip'
@@ -14,6 +14,7 @@ export function TabBar(): JSX.Element | null {
   const close = useStore((s) => s.closeTab)
   const newTab = useStore((s) => s.newConversation)
   const newTabKey = useStore((s) => s.shortcuts['new-tab'])
+  const openSplitChat = useStore((s) => s.openSplitChat)
 
   if (openTabs.length === 0) return null
   const titleOf = (id: string): string => conversations.find((c) => c.id === id)?.title ?? '新对话'
@@ -36,8 +37,19 @@ export function TabBar(): JSX.Element | null {
           <button
             onClick={(e) => {
               e.stopPropagation()
+              openSplitChat(id)
+            }}
+            title="在分屏中打开"
+            className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
+          >
+            <SplitSquareHorizontal className="h-3 w-3" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
               close(id)
             }}
+            title="关闭标签页"
             className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
           >
             <X className="h-3 w-3" />

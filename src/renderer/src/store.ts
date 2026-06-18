@@ -8,7 +8,8 @@ import type {
   StreamingState,
   ProviderInfo,
   FileEntry,
-  MainView
+  MainView,
+  SplitTarget
 } from './types'
 import {
   DEFAULT_SHORTCUTS,
@@ -72,9 +73,12 @@ interface AppState {
   archiveConversation: (id: string) => Promise<void>
   renameConversation: (id: string, title: string) => Promise<void>
 
-  // split-screen: a secondary reference pane beside the primary view
-  splitView: MainView | null
-  setSplitView: (v: MainView | null) => void
+  // split-screen: a secondary pane beside the primary — a second conversation
+  // or a reference view.
+  split: SplitTarget | null
+  setSplit: (t: SplitTarget | null) => void
+  openSplitChat: (conversationId: string) => void
+  closeSplit: () => void
   toggleSplit: () => void
 
   setSearch: (q: string) => void
@@ -111,12 +115,20 @@ export const useStore = create<AppState>((set, get) => ({
   theme: 'light',
   view: 'chat',
   shortcuts: DEFAULT_SHORTCUTS,
-  splitView: null,
+  split: null,
 
   setView: (v) => set({ view: v }),
-  setSplitView: (v) => set({ splitView: v }),
-  // Open the split with a useful default (素材库) or close it if already open.
-  toggleSplit: () => set((s) => ({ splitView: s.splitView ? null : 'materials' })),
+  setSplit: (t) => set({ split: t }),
+  openSplitChat: (id) => set({ split: { kind: 'chat', id } }),
+  closeSplit: () => set({ split: null }),
+  // Toggle the split. When opening, prefer a SECOND open conversation tab (so
+  // ⌘D instantly splits two chats); fall back to a 素材库 reference pane.
+  toggleSplit: () =>
+    set((s) => {
+      if (s.split) return { split: null }
+      const other = s.openTabs.find((t) => t !== s.activeId)
+      return { split: other ? { kind: 'chat', id: other } : { kind: 'view', view: 'materials' } }
+    }),
 
   setTheme: async (theme) => {
     applyTheme(theme)

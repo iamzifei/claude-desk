@@ -14,7 +14,7 @@ export function WorkspaceTabs(): JSX.Element {
   const newWs = useStore((s) => s.newWorkspace)
   const renameWs = useStore((s) => s.renameWorkspace)
   const newWsKey = useStore((s) => s.shortcuts['new-workspace'])
-  const splitView = useStore((s) => s.splitView)
+  const split = useStore((s) => s.split)
   const toggleSplit = useStore((s) => s.toggleSplit)
   const splitKey = useStore((s) => s.shortcuts['new-split'])
 
@@ -74,7 +74,7 @@ export function WorkspaceTabs(): JSX.Element {
           variant="ghost"
           size="icon-sm"
           onClick={() => toggleSplit()}
-          className={cn('ml-auto', splitView && 'text-primary')}
+          className={cn('ml-auto', split && 'text-primary')}
         >
           <SplitSquareHorizontal className="h-4 w-4" />
         </Button>

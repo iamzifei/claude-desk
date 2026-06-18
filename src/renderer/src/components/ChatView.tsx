@@ -5,6 +5,7 @@ import { greeting } from '../utils'
 import type { MainView } from '../types'
 import { MessageBubble } from './MessageBubble'
 import { Composer } from './Composer'
+import { ChatPane } from './ChatPane'
 import { WorkspaceTabs } from './WorkspaceTabs'
 import { TabBar } from './TabBar'
 import { RightDock, RightPanel } from './RightPanel'
@@ -57,45 +58,72 @@ const SPLIT_VIEWS: { v: MainView; label: string }[] = [
 ]
 
 function SplitPanel(): JSX.Element {
-  const splitView = useStore((s) => s.splitView) as MainView
-  const setSplitView = useStore((s) => s.setSplitView)
+  const split = useStore((s) => s.split)!
+  const setSplit = useStore((s) => s.setSplit)
+  const closeSplit = useStore((s) => s.closeSplit)
+  const openTabs = useStore((s) => s.openTabs)
+  const conversations = useStore((s) => s.conversations)
+  const titleOf = (id: string): string => conversations.find((c) => c.id === id)?.title ?? '新对话'
+
+  // The selector value encodes the target: "chat:<id>" or "view:<name>".
+  const value = split.kind === 'chat' ? `chat:${split.id}` : `view:${split.view}`
+  const onSelect = (v: string): void => {
+    if (v.startsWith('chat:')) setSplit({ kind: 'chat', id: v.slice(5) })
+    else setSplit({ kind: 'view', view: v.slice(5) as MainView })
+  }
+
   return (
-    <section className="flex w-[44%] min-w-[320px] shrink-0 flex-col border-l border-border">
+    <section className="flex w-[44%] min-w-[340px] shrink-0 flex-col border-l border-border">
       <div className="flex h-9 shrink-0 items-center justify-between border-b border-border-soft px-2.5">
         <select
-          value={splitView}
-          onChange={(e) => setSplitView(e.target.value as MainView)}
-          className="h-7 rounded-md border border-input bg-background px-2 text-[12.5px] outline-none focus-visible:border-ring"
+          value={value}
+          onChange={(e) => onSelect(e.target.value)}
+          className="h-7 max-w-[220px] rounded-md border border-input bg-background px-2 text-[12.5px] outline-none focus-visible:border-ring"
         >
-          {SPLIT_VIEWS.map((o) => (
-            <option key={o.v} value={o.v}>
-              {o.label}
-            </option>
-          ))}
+          {openTabs.length > 0 ? (
+            <optgroup label="对话">
+              {openTabs.map((id) => (
+                <option key={id} value={`chat:${id}`}>
+                  {titleOf(id)}
+                </option>
+              ))}
+            </optgroup>
+          ) : null}
+          <optgroup label="参考">
+            {SPLIT_VIEWS.map((o) => (
+              <option key={o.v} value={`view:${o.v}`}>
+                {o.label}
+              </option>
+            ))}
+          </optgroup>
         </select>
         <button
-          onClick={() => setSplitView(null)}
+          onClick={() => closeSplit()}
           title="关闭分屏"
           className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col">{renderView(splitView)}</div>
+      {split.kind === 'chat' ? (
+        <ChatPane conversationId={split.id} />
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col">{renderView(split.view)}</div>
+      )}
     </section>
   )
 }
 
 export function ChatView(): JSX.Element {
   const view = useStore((s) => s.view)
-  const splitView = useStore((s) => s.splitView)
+  const split = useStore((s) => s.split)
 
   return (
     <div className="flex min-h-0 min-w-0 flex-col rounded-tl-xl border-l border-t border-border bg-background">
       <WorkspaceTabs />
       <div className="flex min-h-0 flex-1">
         <div className="flex min-w-0 flex-1 flex-col">{renderView(view)}</div>
-        {splitView ? <SplitPanel /> : null}
+        {split ? <SplitPanel /> : null}
       </div>
     </div>
   )
