@@ -193,6 +193,21 @@ export interface RewriteResult {
   text: string
 }
 
+export interface TagCount {
+  tag: string
+  count: number
+}
+export interface TagGroup {
+  prefix: string
+  tags: TagCount[]
+}
+export interface TaggedItem {
+  kind: 'material' | 'atom'
+  id: string
+  title: string
+  tags: string | null
+}
+
 export type LinkKind = 'material' | 'atom' | 'note' | 'topic' | 'conversation'
 
 export interface Backlink {
@@ -356,6 +371,10 @@ export interface Api {
   links: {
     backlinks: (kind: LinkKind, id: string) => Promise<Backlink[]>
     resolve: (title: string) => Promise<ResolvedTarget | null>
+  }
+  tags: {
+    groups: () => Promise<TagGroup[]>
+    byTag: (tag: string) => Promise<TaggedItem[]>
   }
   topics: {
     list: (workspaceId: string) => Promise<Topic[]>

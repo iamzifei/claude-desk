@@ -117,6 +117,21 @@ export interface RewriteResult {
   text: string
 }
 
+export interface TagCount {
+  tag: string
+  count: number
+}
+export interface TagGroup {
+  prefix: string
+  tags: TagCount[]
+}
+export interface TaggedItem {
+  kind: 'material' | 'atom'
+  id: string
+  title: string
+  tags: string | null
+}
+
 export type LinkKind = 'material' | 'atom' | 'note' | 'topic' | 'conversation'
 
 export interface Backlink {
@@ -186,6 +201,7 @@ export type MainView =
   | 'materials'
   | 'atoms'
   | 'topics'
+  | 'tags'
   | 'rewrite'
 
 export interface Conversation {

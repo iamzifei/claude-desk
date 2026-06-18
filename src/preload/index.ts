@@ -133,6 +133,10 @@ const api = {
     backlinks: (kind: string, id: string) => ipcRenderer.invoke('links:backlinks', kind, id),
     resolve: (title: string) => ipcRenderer.invoke('links:resolve', title)
   },
+  tags: {
+    groups: () => ipcRenderer.invoke('tags:groups'),
+    byTag: (tag: string) => ipcRenderer.invoke('tags:byTag', tag)
+  },
   topics: {
     list: (workspaceId: string) => ipcRenderer.invoke('topics:list', workspaceId),
     create: (workspaceId: string, t: unknown) => ipcRenderer.invoke('topics:create', workspaceId, t),

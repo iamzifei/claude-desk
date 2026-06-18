@@ -69,6 +69,7 @@ import {
 import { extractReadable } from '../db/materials-extract'
 import { searchAll } from '../db/search'
 import { getBacklinks, resolveTitle, type LinkKind } from '../db/links'
+import { tagGroups, itemsByTag } from '../db/tags'
 import { safeFetch } from '../net/url-guard'
 import { runRewrite } from '../agent/rewrite'
 import {
@@ -349,6 +350,10 @@ export function registerIpc(): void {
   // ---- links: (双链 / 反链) -------------------------------------------
   ipcMain.handle('links:backlinks', (_e, kind: LinkKind, id: string) => getBacklinks(kind, id))
   ipcMain.handle('links:resolve', (_e, title: string) => resolveTitle(title))
+
+  // ---- tags: (层级标签浏览) -------------------------------------------
+  ipcMain.handle('tags:groups', () => tagGroups())
+  ipcMain.handle('tags:byTag', (_e, tag: string) => itemsByTag(tag))
 
   // ---- diagnose: (五维内容诊断 / 去 AI 味) ----------------------------
   ipcMain.handle('diagnose:run', (_e, draft: string) => runDiagnose(draft))
