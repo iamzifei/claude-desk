@@ -22,7 +22,7 @@ export function TagsView(): JSX.Element {
   const empty = groups.length === 0
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-2xl flex-col px-8 py-7">
+    <div className="mx-auto flex h-full w-full max-w-3xl flex-col px-8 py-7">
       <Header
         icon={Tags}
         title="标签"

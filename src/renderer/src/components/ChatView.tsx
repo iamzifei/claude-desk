@@ -6,7 +6,6 @@ import type { MainView } from '../types'
 import { MessageBubble } from './MessageBubble'
 import { Composer } from './Composer'
 import { ChatPane } from './ChatPane'
-import { WorkspaceTabs } from './WorkspaceTabs'
 import { TabBar } from './TabBar'
 import { FilesView } from './FilesView'
 import {
@@ -152,7 +151,6 @@ export function ChatView(): JSX.Element {
 
   return (
     <div className="flex min-h-0 min-w-0 flex-col rounded-tl-xl border-l border-t border-border bg-background">
-      <WorkspaceTabs />
       <div className="flex min-h-0 flex-1">
         <div className="flex min-w-0 flex-1 flex-col">{renderView(view)}</div>
         {split ? <SplitPanel /> : null}

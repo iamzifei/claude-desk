@@ -48,7 +48,7 @@ export function TopicsView(): JSX.Element {
   const visible = topics.filter((t) => (filter === 'all' ? true : t.status === filter))
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-2xl flex-col px-8 py-7">
+    <div className="mx-auto flex h-full w-full max-w-3xl flex-col px-8 py-7">
       <Header
         icon={Lightbulb}
         title="选题库"

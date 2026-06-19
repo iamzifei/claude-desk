@@ -56,7 +56,7 @@ export function PublishView(): JSX.Element {
   ).sort((a, b) => b.saves + b.likes - (a.saves + a.likes))
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-2xl flex-col px-8 py-7">
+    <div className="mx-auto flex h-full w-full max-w-4xl flex-col px-8 py-7">
       <Header
         icon={BarChart3}
         title="发布数据"

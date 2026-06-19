@@ -4,7 +4,7 @@ import { useStore } from '../store'
 import { cn } from '../lib/utils'
 import { Button } from './ui/button'
 import { Tip } from './ui/tooltip'
-import { formatAccelerator } from '../shortcuts'
+import { formatAccelerator, isMac } from '../shortcuts'
 
 /** Top-level workspace tabs, matching 牛马AI's top bar. */
 export function WorkspaceTabs(): JSX.Element {
@@ -32,7 +32,14 @@ export function WorkspaceTabs(): JSX.Element {
   }
 
   return (
-    <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border-soft px-3">
+    // This is now the top window bar: draggable, with left clearance for the
+    // macOS traffic lights. Interactive children opt out of dragging (no-drag).
+    <div
+      className={cn(
+        'drag-region flex h-10 shrink-0 items-center gap-1 border-b border-border-soft bg-sidebar pr-3',
+        isMac ? 'pl-[78px]' : 'pl-3'
+      )}
+    >
       {workspaces.map((w) =>
         editing === w.id ? (
           <input
@@ -45,7 +52,7 @@ export function WorkspaceTabs(): JSX.Element {
               if (e.key === 'Enter') commit()
               else if (e.key === 'Escape') setEditing(null)
             }}
-            className="h-7 w-[140px] rounded-lg border border-ring bg-background px-2.5 text-[13px] outline-none"
+            className="no-drag h-7 w-[140px] rounded-lg border border-ring bg-background px-2.5 text-[13px] outline-none"
           />
         ) : (
           <div
@@ -54,7 +61,7 @@ export function WorkspaceTabs(): JSX.Element {
             onDoubleClick={() => beginEdit(w.id, w.name)}
             title={`${w.name}（双击重命名）`}
             className={cn(
-              'group/ws flex cursor-pointer items-center gap-1.5 rounded-lg py-1.5 pl-3 pr-1.5 text-[13px] transition-colors',
+              'group/ws no-drag flex cursor-pointer items-center gap-1.5 rounded-lg py-1.5 pl-3 pr-1.5 text-[13px] transition-colors',
               w.id === activeId
                 ? 'bg-accent font-medium text-foreground'
                 : 'text-muted-foreground hover:bg-accent/60'
@@ -81,7 +88,7 @@ export function WorkspaceTabs(): JSX.Element {
         )
       )}
       <Tip label={`新建工作区 ${formatAccelerator(newWsKey)}`}>
-        <Button variant="ghost" size="icon-sm" onClick={() => newWs()}>
+        <Button variant="ghost" size="icon-sm" className="no-drag" onClick={() => newWs()}>
           <Plus className="h-4 w-4" />
         </Button>
       </Tip>
@@ -90,7 +97,7 @@ export function WorkspaceTabs(): JSX.Element {
           variant="ghost"
           size="icon-sm"
           onClick={() => toggleSplit()}
-          className={cn('ml-auto', split && 'text-primary')}
+          className={cn('no-drag ml-auto', split && 'text-primary')}
         >
           <SplitSquareHorizontal className="h-4 w-4" />
         </Button>

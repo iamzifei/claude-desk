@@ -51,7 +51,7 @@ export function AtomsView(): JSX.Element {
   const inContext = atoms.filter((a) => a.in_context).length
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-2xl flex-col px-8 py-7">
+    <div className="mx-auto flex h-full w-full max-w-3xl flex-col px-8 py-7">
       <Header
         icon={AtomIcon}
         title="知识原子"

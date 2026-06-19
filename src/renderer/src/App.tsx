@@ -2,7 +2,7 @@ import { JSX, useEffect, useState } from 'react'
 import { useStore } from './store'
 import { useShortcuts } from './useShortcuts'
 import { TooltipProvider } from './components/ui/tooltip'
-import { TitleBar } from './components/TitleBar'
+import { WorkspaceTabs } from './components/WorkspaceTabs'
 import { Sidebar } from './components/Sidebar'
 import { ChatView } from './components/ChatView'
 import { SettingsModal } from './components/SettingsModal'
@@ -22,7 +22,7 @@ function App(): JSX.Element {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex h-screen flex-col bg-sidebar">
-        <TitleBar />
+        <WorkspaceTabs />
         <div className="grid min-h-0 flex-1 grid-cols-[232px_1fr]">
           <Sidebar onOpenSettings={() => setShowSettings(true)} />
           <ChatView />
