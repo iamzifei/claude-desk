@@ -113,6 +113,8 @@ export interface NewSkill {
 
 export type MaterialKind = 'text' | 'image' | 'link'
 
+export type MaterialStatus = 'inbox' | '已整理'
+
 export interface Material {
   id: string
   title: string
@@ -123,6 +125,7 @@ export interface Material {
   image_path: string | null
   platform: string | null
   in_context: number
+  status: MaterialStatus
   created_at: number
 }
 
@@ -134,6 +137,7 @@ export interface NewMaterial {
   kind?: MaterialKind
   image_path?: string | null
   platform?: string | null
+  status?: MaterialStatus
 }
 
 export interface FetchedUrl {
@@ -395,6 +399,7 @@ export interface Api {
     create: (m: NewMaterial) => Promise<Material>
     update: (id: string, m: NewMaterial) => Promise<void>
     toggleContext: (id: string, on: boolean) => Promise<void>
+    setStatus: (id: string, status: MaterialStatus) => Promise<void>
     delete: (id: string) => Promise<void>
     fetchUrl: (url: string) => Promise<FetchedUrl>
     importImage: () => Promise<string | null>

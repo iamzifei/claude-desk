@@ -117,6 +117,8 @@ const api = {
     update: (id: string, m: unknown) => ipcRenderer.invoke('materials:update', id, m),
     toggleContext: (id: string, on: boolean) =>
       ipcRenderer.invoke('materials:toggleContext', id, on),
+    setStatus: (id: string, status: 'inbox' | '已整理') =>
+      ipcRenderer.invoke('materials:setStatus', id, status),
     delete: (id: string) => ipcRenderer.invoke('materials:delete', id),
     fetchUrl: (url: string) => ipcRenderer.invoke('materials:fetchUrl', url),
     importImage: () => ipcRenderer.invoke('materials:importImage'),

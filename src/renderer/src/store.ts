@@ -87,6 +87,10 @@ interface AppState {
   quickOpen: boolean
   setQuickOpen: (v: boolean) => void
 
+  // ⌘⇧I quick capture → drop a snippet into the materials Inbox
+  quickCaptureOpen: boolean
+  setQuickCaptureOpen: (v: boolean) => void
+
   // hand a draft from 选题装配 over to the 改写工坊
   rewriteSeed: string | null
   sendToRewrite: (text: string) => void
@@ -134,6 +138,9 @@ export const useStore = create<AppState>((set, get) => ({
 
   quickOpen: false,
   setQuickOpen: (v) => set({ quickOpen: v }),
+
+  quickCaptureOpen: false,
+  setQuickCaptureOpen: (v) => set({ quickCaptureOpen: v }),
 
   rewriteSeed: null,
   sendToRewrite: (text) => set({ rewriteSeed: text, view: 'rewrite', split: null }),

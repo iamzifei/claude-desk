@@ -99,8 +99,11 @@ export interface Material {
   image_path: string | null
   platform: string | null
   in_context: number
+  status: MaterialStatus
   created_at: number
 }
+
+export type MaterialStatus = 'inbox' | '已整理'
 
 export interface NewMaterial {
   title: string
@@ -110,6 +113,7 @@ export interface NewMaterial {
   kind?: MaterialKind
   image_path?: string | null
   platform?: string | null
+  status?: MaterialStatus
 }
 
 export interface RewriteResult {

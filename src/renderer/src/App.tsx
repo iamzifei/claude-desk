@@ -7,6 +7,7 @@ import { Sidebar } from './components/Sidebar'
 import { ChatView } from './components/ChatView'
 import { SettingsModal } from './components/SettingsModal'
 import { QuickSwitcher } from './components/QuickSwitcher'
+import { QuickCapture } from './components/QuickCapture'
 
 function App(): JSX.Element {
   const init = useStore((s) => s.init)
@@ -27,6 +28,7 @@ function App(): JSX.Element {
         </div>
         <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
         <QuickSwitcher />
+        <QuickCapture />
       </div>
     </TooltipProvider>
   )

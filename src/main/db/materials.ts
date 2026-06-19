@@ -19,8 +19,11 @@ export interface Material {
   image_path: string | null
   platform: string | null
   in_context: number // 0 | 1 — included in the creation context
+  status: MaterialStatus // 'inbox' (待整理) | '已整理'
   created_at: number
 }
+
+export type MaterialStatus = 'inbox' | '已整理'
 
 export interface NewMaterial {
   title: string
@@ -30,6 +33,7 @@ export interface NewMaterial {
   kind?: MaterialKind
   image_path?: string | null
   platform?: string | null
+  status?: MaterialStatus // quick-capture → 'inbox'; full form → '已整理' (default)
 }
 
 /** Directory holding imported image materials (created lazily). */
@@ -124,12 +128,13 @@ export function createMaterial(m: NewMaterial): Material {
     image_path: safeImagePath,
     platform: m.platform?.trim() || null,
     in_context: 0,
+    status: m.status === 'inbox' ? 'inbox' : '已整理',
     created_at: Date.now()
   }
   getDb()
     .prepare(
-      `INSERT INTO materials (id, title, content, url, tags, kind, image_path, platform, in_context, created_at)
-       VALUES (@id, @title, @content, @url, @tags, @kind, @image_path, @platform, @in_context, @created_at)`
+      `INSERT INTO materials (id, title, content, url, tags, kind, image_path, platform, in_context, status, created_at)
+       VALUES (@id, @title, @content, @url, @tags, @kind, @image_path, @platform, @in_context, @status, @created_at)`
     )
     .run(mat)
   rebuildLinks('material', mat.id, mat.content)
@@ -156,6 +161,13 @@ export function updateMaterial(id: string, m: NewMaterial): void {
 
 export function toggleMaterialContext(id: string, on: boolean): void {
   getDb().prepare('UPDATE materials SET in_context = ? WHERE id = ?').run(on ? 1 : 0, id)
+}
+
+/** Move a material between the Inbox (待整理) and 已整理 states. */
+export function setMaterialStatus(id: string, status: MaterialStatus): void {
+  getDb()
+    .prepare('UPDATE materials SET status = ? WHERE id = ?')
+    .run(status === 'inbox' ? 'inbox' : '已整理', id)
 }
 
 export function deleteMaterial(id: string): void {

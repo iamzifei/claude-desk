@@ -61,6 +61,7 @@ import {
   createMaterial,
   updateMaterial,
   toggleMaterialContext,
+  setMaterialStatus,
   deleteMaterial,
   saveImageFile,
   imageDataUrl,
@@ -319,6 +320,9 @@ export function registerIpc(): void {
   ipcMain.handle('materials:update', (_e, id: string, m: NewMaterial) => updateMaterial(id, m))
   ipcMain.handle('materials:toggleContext', (_e, id: string, on: boolean) =>
     toggleMaterialContext(id, on)
+  )
+  ipcMain.handle('materials:setStatus', (_e, id: string, status: 'inbox' | '已整理') =>
+    setMaterialStatus(id, status)
   )
   ipcMain.handle('materials:delete', (_e, id: string) => deleteMaterial(id))
   // Fetch a URL and reduce it to title + readable text for a pre-filled material.

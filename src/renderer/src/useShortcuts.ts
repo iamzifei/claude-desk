@@ -20,6 +20,9 @@ export function useShortcuts(): void {
         case 'quick-switch':
           s.setQuickOpen(true)
           break
+        case 'quick-capture':
+          s.setQuickCaptureOpen(true)
+          break
         case 'new-chat':
         case 'new-tab':
           s.newConversation(null)

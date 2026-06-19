@@ -235,6 +235,13 @@ function migrate(d: Database.Database): void {
       created_at   INTEGER NOT NULL
     );
     CREATE INDEX idx_pub_ws ON publications(workspace_id, created_at);
+    `,
+    // 0013 — 采集/Inbox: quick-captured snippets land as 'inbox' to be processed
+    // later (拆原子/打标签/链接), curated ones are '已整理'. Existing materials are
+    // all already curated, so backfill them to '已整理'.
+    `
+    ALTER TABLE materials ADD COLUMN status TEXT NOT NULL DEFAULT 'inbox';
+    UPDATE materials SET status = '已整理';
     `
   ]
 

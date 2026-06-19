@@ -1,5 +1,17 @@
 import { JSX, useEffect, useState } from 'react'
-import { Library, Plus, Trash2, Link2, Tag, Pencil, ImagePlus, Download, Loader2, Atom } from 'lucide-react'
+import {
+  Library,
+  Plus,
+  Trash2,
+  Link2,
+  Tag,
+  Pencil,
+  ImagePlus,
+  Download,
+  Loader2,
+  Atom,
+  CircleCheck
+} from 'lucide-react'
 import { cn } from '../lib/utils'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -16,6 +28,7 @@ export function MaterialsView(): JSX.Element {
   const [materials, setMaterials] = useState<Material[]>([])
   const [search, setSearch] = useState('')
   const [platform, setPlatform] = useState('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'inbox' | '已整理'>('all')
   const [editing, setEditing] = useState<Material | 'new' | null>(null)
 
   const refresh = async (): Promise<void> => {
@@ -31,8 +44,11 @@ export function MaterialsView(): JSX.Element {
   // Platform groups present in the data drive the filter chips.
   const present = Array.from(new Set(materials.map((m) => m.platform).filter(Boolean))) as string[]
   const hasNone = materials.some((m) => !m.platform)
-  const visible = materials.filter((m) =>
-    platform === 'all' ? true : platform === NONE ? !m.platform : m.platform === platform
+  const inboxCount = materials.filter((m) => m.status === 'inbox').length
+  const visible = materials.filter(
+    (m) =>
+      (statusFilter === 'all' ? true : m.status === statusFilter) &&
+      (platform === 'all' ? true : platform === NONE ? !m.platform : m.platform === platform)
   )
   const inContext = materials.filter((m) => m.in_context).length
 
@@ -49,11 +65,25 @@ export function MaterialsView(): JSX.Element {
         }
       />
 
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        <FilterChip label="全部" active={statusFilter === 'all'} onClick={() => setStatusFilter('all')} />
+        <FilterChip
+          label={inboxCount ? `收件箱 ${inboxCount}` : '收件箱'}
+          active={statusFilter === 'inbox'}
+          onClick={() => setStatusFilter('inbox')}
+        />
+        <FilterChip
+          label="已整理"
+          active={statusFilter === '已整理'}
+          onClick={() => setStatusFilter('已整理')}
+        />
+      </div>
+
       <Input
         placeholder="搜索素材（标题 / 内容 / 标签）…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="mt-3"
+        className="mt-2.5"
       />
 
       {present.length || hasNone ? (
@@ -385,6 +415,16 @@ function MaterialRow({
             />
           </span>
         </label>
+        {m.status === 'inbox' ? (
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            title="标记为已整理(移出收件箱)"
+            onClick={() => window.api.materials.setStatus(m.id, '已整理').then(onChange)}
+          >
+            <CircleCheck className="h-4 w-4 text-primary" />
+          </Button>
+        ) : null}
         <Button
           size="icon-sm"
           variant="ghost"
