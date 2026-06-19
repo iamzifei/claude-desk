@@ -1,11 +1,22 @@
 import { JSX, useState, useEffect } from 'react'
-import { Repeat2, Sparkles, Copy, Check, Loader2, Save, Stethoscope, Wand2 } from 'lucide-react'
+import {
+  Repeat2,
+  Sparkles,
+  Copy,
+  Check,
+  Loader2,
+  Save,
+  Stethoscope,
+  Wand2,
+  TriangleAlert
+} from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { cn } from '../lib/utils'
 import { useStore } from '../store'
 import { Button } from './ui/button'
 import { Header } from './ScheduledView'
 import { PLATFORM_OPTIONS, labelForPlatform } from '../platforms'
+import { isEngineError, engineErrorText } from '../engine-error'
 import type { RewriteResult } from '../types'
 
 export function RewriteView(): JSX.Element {
@@ -165,6 +176,23 @@ function ResultCard({ result, label }: { result: RewriteResult; label?: string }
   const [saved, setSaved] = useState(false)
   const title = label ?? labelForPlatform(result.platform)
   const isPlatform = result.platform !== 'deai'
+
+  // A failed generation comes back as a `[错误] …` sentinel — show it as an error
+  // (no copy/save), not as a draft the creator might mistake for real output.
+  if (isEngineError(result.text)) {
+    return (
+      <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+        <div className="mb-1 flex items-center gap-1.5 text-[13px] font-medium text-destructive">
+          <TriangleAlert className="h-4 w-4" /> {title} · 生成失败
+        </div>
+        <div className="text-[12.5px] leading-relaxed text-muted-foreground">
+          {engineErrorText(result.text)}
+          <br />
+          已自动重试仍未成功，请检查网络或 API key 后，点上方「一键改写」重试。
+        </div>
+      </div>
+    )
+  }
   const copy = (): void => {
     navigator.clipboard.writeText(result.text)
     setCopied(true)

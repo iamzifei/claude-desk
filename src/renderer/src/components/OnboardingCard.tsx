@@ -32,6 +32,9 @@ export function OnboardingCard(): JSX.Element | null {
         内容创作者的资产工作台:沉淀素材 → 拆原子 → 选题装配成稿 → 多平台改写发布 → 数据反哺选题。
         载入一份示例数据,边看边懂。
       </p>
+      <p className="mt-2 text-[11.5px] leading-relaxed text-muted-foreground/80">
+        🔒 你的素材、原子、选题等全部存在本机,不上传云端;仅生成内容时把必要文本发往你配置的模型。
+      </p>
       <div className="mt-3.5 flex justify-center gap-2">
         <Button onClick={seed} disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}

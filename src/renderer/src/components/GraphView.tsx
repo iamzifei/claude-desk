@@ -95,14 +95,36 @@ export function GraphView(): JSX.Element {
         b.vx -= fx
         b.vy -= fy
       }
+      const rad = (i: number): number => 4 + Math.min(deg[i], 9) * 0.9
+      // Integrate velocity (no clamp yet — the collision pass needs free room).
       for (let i = 0; i < n; i++) {
         p[i].vx *= 0.85
         p[i].vy *= 0.85
-        p[i].x = Math.max(20, Math.min(W - 20, p[i].x + p[i].vx))
-        p[i].y = Math.max(20, Math.min(H - 20, p[i].y + p[i].vy))
+        p[i].x += p[i].vx
+        p[i].y += p[i].vy
+      }
+      // Collision separation: push apart any two nodes whose circles + label
+      // padding overlap, so small graphs don't pile into an unreadable clump.
+      for (let i = 0; i < n; i++)
+        for (let k = i + 1; k < n; k++) {
+          const dx = p[k].x - p[i].x
+          const dy = p[k].y - p[i].y
+          const d = Math.sqrt(dx * dx + dy * dy) || 1
+          const min = rad(i) + rad(k) + 22
+          if (d < min) {
+            const push = (min - d) / 2
+            p[i].x -= (dx / d) * push
+            p[i].y -= (dy / d) * push
+            p[k].x += (dx / d) * push
+            p[k].y += (dy / d) * push
+          }
+        }
+      for (let i = 0; i < n; i++) {
+        p[i].x = Math.max(20, Math.min(W - 20, p[i].x))
+        p[i].y = Math.max(20, Math.min(H - 20, p[i].y))
       }
       force((t) => t + 1)
-      if (++ticks < 280) raf = requestAnimationFrame(step)
+      if (++ticks < 340) raf = requestAnimationFrame(step)
     }
     raf = requestAnimationFrame(step)
     return () => cancelAnimationFrame(raf)
@@ -134,6 +156,9 @@ export function GraphView(): JSX.Element {
                 {label}
               </span>
             ))}
+            {graph.edges.length < graph.nodes.length / 2 ? (
+              <span className="text-primary/80">孤立节点较多 —— 多用 [[ ]] 互链或打相同标签,网络会更连通</span>
+            ) : null}
             <span className="ml-auto">{graph.nodes.length} 节点 · {graph.edges.length} 连线</span>
           </div>
           <div className="mt-2 min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card">

@@ -11,7 +11,8 @@ import {
   Save,
   Repeat2,
   Stethoscope,
-  Wand2
+  Wand2,
+  TriangleAlert
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { cn } from '../lib/utils'
@@ -24,6 +25,7 @@ import { Backlinks } from './WikiText'
 import { useFocusHighlight } from '../useFocusHighlight'
 import { recommendFormat } from '../format-match'
 import { PLATFORM_OPTIONS } from '../platforms'
+import { isEngineError, engineErrorText } from '../engine-error'
 import type { Topic, TopicStatus } from '../types'
 
 const STATUSES: TopicStatus[] = ['灵感', '待写', '进行', '已发']
@@ -167,13 +169,21 @@ function TopicRow({
   onAssembled: (text: string) => void
 }): JSX.Element {
   const [assembling, setAssembling] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const { ref, focused } = useFocusHighlight(t.id)
 
   const assemble = async (): Promise<void> => {
     if (assembling) return
     setAssembling(true)
+    setError(null)
     try {
       const r = await window.api.topics.assemble(t.id)
+      // A failed assembly comes back as a `[错误] …` sentinel — surface it inline
+      // instead of opening a draft dialog full of an error message.
+      if (isEngineError(r.draft)) {
+        setError(engineErrorText(r.draft))
+        return
+      }
       onAssembled(r.draft)
       if (t.status === '灵感') {
         await window.api.topics.setStatus(t.id, '进行')
@@ -240,6 +250,12 @@ function TopicRow({
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
+      {error ? (
+        <div className="mt-2 flex items-start gap-1.5 text-[12px] text-destructive">
+          <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>装配失败：{error} 已自动重试仍未成功，请检查网络/API key 后重试。</span>
+        </div>
+      ) : null}
       <Backlinks kind="topic" id={t.id} />
     </div>
   )
@@ -266,7 +282,8 @@ function DraftDialog({
     if (busy) return
     setBusy('diagnose')
     try {
-      setReport(await window.api.diagnose.run(draft))
+      const rep = await window.api.diagnose.run(draft)
+      setReport(isEngineError(rep) ? `**诊断失败**：${engineErrorText(rep)}` : rep)
     } finally {
       setBusy(null)
     }
