@@ -112,9 +112,7 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
   return (
     <aside className="flex min-h-0 flex-col bg-sidebar">
       <div className="flex items-center gap-2 px-4 pb-2.5 pt-1">
-        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-[#6d5dfb] to-[#a06dfb] text-white shadow-sm">
-          <Logo className="h-[15px] w-[15px]" />
-        </div>
+        <Logo className="h-6 w-6 rounded-[7px] shadow-sm" />
         <span className="text-sm font-semibold tracking-tight">
           墨栖 <span className="text-muted-foreground/70">InkNest</span>
         </span>
