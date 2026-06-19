@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
+import { formatAccelerator } from '../shortcuts'
 import { Logo } from './Logo'
 import { groupConversations } from '../group-conversations'
 import type { Conversation, Project } from '../types'
@@ -65,23 +66,61 @@ type NavAction =
   | 'graph'
   | 'publish'
   | 'rewrite'
-const NAV: { icon: LucideIcon; label: string; action: NavAction }[] = [
-  { icon: PencilLine, label: '新建创作', action: 'new' },
-  { icon: Search, label: '搜索', action: 'search' },
-  { icon: Library, label: '素材库', action: 'materials' },
-  { icon: Atom, label: '知识原子', action: 'atoms' },
-  { icon: Tags, label: '标签', action: 'tags' },
-  { icon: Network, label: '知识图谱', action: 'graph' },
-  { icon: Lightbulb, label: '选题库', action: 'topics' },
-  { icon: Repeat2, label: '多平台改写', action: 'rewrite' },
-  { icon: TrendingUp, label: '发布数据', action: 'publish' },
-  { icon: Puzzle, label: '技能', action: 'skills' },
-  { icon: Code2, label: '编程', action: 'coding' },
-  { icon: Globe, label: '浏览器', action: 'browser' },
-  { icon: Clock, label: '定时任务', action: 'scheduled' },
-  { icon: CalendarDays, label: '每日笔记', action: 'daily' },
-  { icon: BarChart3, label: '每日回顾', action: 'review' },
-  { icon: ClipboardList, label: '会议纪要', action: 'minutes' }
+interface NavItem {
+  icon: LucideIcon
+  label: string
+  action: NavAction
+}
+interface NavSection {
+  title?: string // a header above the group (omitted for the always-on top group)
+  collapsible?: boolean // 工具 collapses to keep the daily creation loop front-and-center
+  items: NavItem[]
+}
+
+// Grouped to mirror the product's mental model (素材→原子→选题→改写→发布) instead
+// of one flat 16-item list. 通用/开发类工具收进默认折叠的「工具」组。
+const NAV_SECTIONS: NavSection[] = [
+  {
+    items: [
+      { icon: PencilLine, label: '新建创作', action: 'new' },
+      { icon: Search, label: '搜索', action: 'search' }
+    ]
+  },
+  {
+    title: '资产库',
+    items: [
+      { icon: Library, label: '素材库', action: 'materials' },
+      { icon: Atom, label: '知识原子', action: 'atoms' },
+      { icon: Tags, label: '标签', action: 'tags' },
+      { icon: Network, label: '知识图谱', action: 'graph' }
+    ]
+  },
+  {
+    title: '选题 · 成稿',
+    items: [
+      { icon: Lightbulb, label: '选题库', action: 'topics' },
+      { icon: Repeat2, label: '多平台改写', action: 'rewrite' },
+      { icon: TrendingUp, label: '发布数据', action: 'publish' }
+    ]
+  },
+  {
+    title: '笔记',
+    items: [
+      { icon: CalendarDays, label: '每日笔记', action: 'daily' },
+      { icon: BarChart3, label: '每日回顾', action: 'review' },
+      { icon: ClipboardList, label: '会议纪要', action: 'minutes' }
+    ]
+  },
+  {
+    title: '工具',
+    collapsible: true,
+    items: [
+      { icon: Puzzle, label: '技能', action: 'skills' },
+      { icon: Clock, label: '定时任务', action: 'scheduled' },
+      { icon: Globe, label: '浏览器', action: 'browser' },
+      { icon: Code2, label: '编程', action: 'coding' }
+    ]
+  }
 ]
 
 export function Sidebar({ onOpenSettings }: Props): JSX.Element {
@@ -95,9 +134,36 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
   const view = useStore((s) => s.view)
   const setView = useStore((s) => s.setView)
   const setQuickOpen = useStore((s) => s.setQuickOpen)
+  const shortcuts = useStore((s) => s.shortcuts)
 
   const [results, setResults] = useState<Conversation[] | null>(null)
   const [showArchived, setShowArchived] = useState(false)
+  const [showTools, setShowTools] = useState(false)
+
+  const renderNavItem = (item: NavItem): JSX.Element => (
+    <button
+      key={item.label}
+      onClick={() => {
+        if (item.action === 'new') create(null)
+        else if (item.action === 'search') setQuickOpen(true)
+        else setView(item.action)
+      }}
+      className={cn(
+        'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] transition-colors',
+        item.action === view
+          ? 'bg-accent text-foreground'
+          : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+      )}
+    >
+      <item.icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
+      <span className="flex-1 text-left">{item.label}</span>
+      {item.action === 'search' ? (
+        <span className="text-[10.5px] text-muted-foreground/50">
+          {formatAccelerator(shortcuts['quick-switch'])}
+        </span>
+      ) : null}
+    </button>
+  )
 
   useEffect(() => {
     if (!search.trim() || !ws) {
@@ -121,26 +187,36 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
         </span>
       </div>
 
-      <nav className="flex flex-col gap-px px-2 pb-2">
-        {NAV.map((item) => (
-          <button
-            key={item.label}
-            onClick={() => {
-              if (item.action === 'new') create(null)
-              else if (item.action === 'search') setQuickOpen(true)
-              else setView(item.action)
-            }}
-            className={cn(
-              'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] transition-colors',
-              item.action === view
-                ? 'bg-accent text-foreground'
-                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-            )}
-          >
-            <item.icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
-            <span>{item.label}</span>
-          </button>
-        ))}
+      <nav className="flex flex-col px-2 pb-2">
+        {NAV_SECTIONS.map((section, si) => {
+          const collapsed = section.collapsible && !showTools
+          return (
+            <div key={section.title ?? 'top'} className={si === 0 ? '' : 'mt-1.5'}>
+              {section.title ? (
+                section.collapsible ? (
+                  <button
+                    onClick={() => setShowTools((v) => !v)}
+                    className="flex w-full items-center gap-1 px-2.5 pb-0.5 pt-1 text-[11px] font-medium text-muted-foreground/55 transition-colors hover:text-muted-foreground"
+                  >
+                    {showTools ? (
+                      <ChevronDown className="h-3 w-3" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3" />
+                    )}
+                    {section.title}
+                  </button>
+                ) : (
+                  <div className="px-2.5 pb-0.5 pt-1 text-[11px] font-medium text-muted-foreground/55">
+                    {section.title}
+                  </div>
+                )
+              ) : null}
+              {!collapsed ? (
+                <div className="flex flex-col gap-px">{section.items.map(renderNavItem)}</div>
+              ) : null}
+            </div>
+          )
+        })}
       </nav>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
