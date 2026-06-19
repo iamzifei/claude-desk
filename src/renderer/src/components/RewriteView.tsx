@@ -8,7 +8,8 @@ import {
   Save,
   Stethoscope,
   Wand2,
-  TriangleAlert
+  TriangleAlert,
+  Image as ImageIcon
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { cn } from '../lib/utils'
@@ -172,6 +173,7 @@ function ResultSkeleton({ platform }: { platform: string }): JSX.Element {
 }
 
 function ResultCard({ result, label }: { result: RewriteResult; label?: string }): JSX.Element {
+  const openCard = useStore((s) => s.openCard)
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState(false)
   const title = label ?? labelForPlatform(result.platform)
@@ -214,6 +216,9 @@ function ResultCard({ result, label }: { result: RewriteResult; label?: string }
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[13px] font-medium text-foreground">{title}</span>
         <div className="flex items-center gap-0.5">
+          <Button size="icon-sm" variant="ghost" title="导出为卡片图" onClick={() => openCard(result.text)}>
+            <ImageIcon className="h-4 w-4" />
+          </Button>
           <Button size="icon-sm" variant="ghost" title="存为素材" onClick={save}>
             {saved ? <Check className="h-4 w-4 text-primary" /> : <Save className="h-4 w-4" />}
           </Button>

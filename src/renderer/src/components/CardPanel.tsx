@@ -1,7 +1,6 @@
 import { JSX, ReactNode, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Copy, Download, FileDown, Check } from 'lucide-react'
-import { useStore } from '../store'
 import { cn } from '../lib/utils'
 
 // Background presets for the exported card (id → className + export bg color).
@@ -24,8 +23,9 @@ const WIDTHS = [
   { id: 'lg', label: '宽', px: 600 }
 ] as const
 
-export function CardPanel(): JSX.Element {
-  const messages = useStore((s) => s.messages)
+/** Renders the given text as an exportable styled card (image/PDF). The caller
+ *  supplies the text — a chat reply, an assembled draft, a rewrite result… */
+export function CardPanel({ text }: { text: string }): JSX.Element {
   const cardRef = useRef<HTMLDivElement>(null)
   const [bg, setBg] = useState<(typeof BACKGROUNDS)[number]['id']>('cream')
   const [width, setWidth] = useState<(typeof WIDTHS)[number]['id']>('md')
@@ -34,7 +34,6 @@ export function CardPanel(): JSX.Element {
   const [busy, setBusy] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant')
   const bgDef = BACKGROUNDS.find((b) => b.id === bg)!
   const widthPx = WIDTHS.find((w) => w.id === width)!.px
 
@@ -86,10 +85,10 @@ export function CardPanel(): JSX.Element {
     }
   }
 
-  if (!lastAssistant) {
+  if (!text.trim()) {
     return (
       <div className="m-auto max-w-[240px] px-6 text-center text-muted-foreground">
-        <p className="text-sm">还没有可生成卡片的回复</p>
+        <p className="text-sm">还没有可生成卡片的内容</p>
         <p className="mt-1 text-xs text-muted-foreground/70">先和 AI 对话，再把回复导出成卡片。</p>
       </div>
     )
@@ -105,7 +104,7 @@ export function CardPanel(): JSX.Element {
           className={cn('markdown shadow-sm', bgDef.cls)}
           style={{ width: widthPx, padding: pad, borderRadius: radius }}
         >
-          <ReactMarkdown>{lastAssistant.content}</ReactMarkdown>
+          <ReactMarkdown>{text}</ReactMarkdown>
         </div>
       </div>
 

@@ -8,6 +8,7 @@ import { ChatView } from './components/ChatView'
 import { SettingsModal } from './components/SettingsModal'
 import { QuickSwitcher } from './components/QuickSwitcher'
 import { QuickCapture } from './components/QuickCapture'
+import { CardExportModal } from './components/CardExportModal'
 
 function App(): JSX.Element {
   const init = useStore((s) => s.init)
@@ -29,6 +30,7 @@ function App(): JSX.Element {
         <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
         <QuickSwitcher />
         <QuickCapture />
+        <CardExportModal />
       </div>
     </TooltipProvider>
   )

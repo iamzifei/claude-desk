@@ -1,6 +1,7 @@
 import { JSX, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { Bot, User, Save, Atom, Check, Loader2 } from 'lucide-react'
+import { Bot, User, Save, Atom, Check, Loader2, Image as ImageIcon } from 'lucide-react'
+import { useStore } from '../store'
 
 interface Props {
   role: 'user' | 'assistant'
@@ -49,6 +50,7 @@ export function MessageBubble({ role, content, thinking }: Props): JSX.Element {
 
 /** Harvest an AI reply back into the asset library (素材 / 原子) — closes the loop. */
 function AssistantActions({ content }: { content: string }): JSX.Element {
+  const openCard = useStore((s) => s.openCard)
   const [saved, setSaved] = useState(false)
   const [atoms, setAtoms] = useState<number | null>(null)
   const [splitting, setSplitting] = useState(false)
@@ -98,6 +100,14 @@ function AssistantActions({ content }: { content: string }): JSX.Element {
           <Atom className="h-3.5 w-3.5" />
         )}
         {atoms !== null ? `已拆 ${atoms} 个原子` : '拆为原子'}
+      </button>
+      <button
+        onClick={() => openCard(content)}
+        title="导出为卡片图"
+        className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[11.5px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        <ImageIcon className="h-3.5 w-3.5" />
+        导出卡片
       </button>
     </div>
   )

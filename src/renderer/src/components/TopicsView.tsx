@@ -12,7 +12,8 @@ import {
   Repeat2,
   Stethoscope,
   Wand2,
-  TriangleAlert
+  TriangleAlert,
+  Image as ImageIcon
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { cn } from '../lib/utils'
@@ -271,6 +272,7 @@ function DraftDialog({
   onClose: () => void
 }): JSX.Element {
   const sendToRewrite = useStore((s) => s.sendToRewrite)
+  const openCard = useStore((s) => s.openCard)
   const [draft, setDraft] = useState(text)
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -342,6 +344,9 @@ function DraftDialog({
             }}
           >
             {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />} 复制
+          </Button>
+          <Button variant="secondary" onClick={() => openCard(draft)}>
+            <ImageIcon className="h-4 w-4" /> 导出卡片
           </Button>
           <Button
             variant="secondary"

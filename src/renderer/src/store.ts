@@ -91,6 +91,11 @@ interface AppState {
   quickCaptureOpen: boolean
   setQuickCaptureOpen: (v: boolean) => void
 
+  // 卡片导出 modal — any surface can hand text in to export it as a card image
+  cardText: string | null
+  openCard: (text: string) => void
+  closeCard: () => void
+
   // hand a draft from 选题装配 over to the 改写工坊
   rewriteSeed: string | null
   sendToRewrite: (text: string) => void
@@ -141,6 +146,10 @@ export const useStore = create<AppState>((set, get) => ({
 
   quickCaptureOpen: false,
   setQuickCaptureOpen: (v) => set({ quickCaptureOpen: v }),
+
+  cardText: null,
+  openCard: (text) => set({ cardText: text }),
+  closeCard: () => set({ cardText: null }),
 
   rewriteSeed: null,
   sendToRewrite: (text) => set({ rewriteSeed: text, view: 'rewrite', split: null }),

@@ -11,7 +11,10 @@ const TITLES: Record<PanelKey, string> = { card: '卡片预览', files: '文件'
 export function RightPanel(): JSX.Element | null {
   const panel = useStore((s) => s.rightPanel)
   const setPanel = useStore((s) => s.setRightPanel)
+  const messages = useStore((s) => s.messages)
   if (!panel) return null
+
+  const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant')
 
   return (
     <section className="flex w-[340px] shrink-0 flex-col border-l border-border bg-background">
@@ -25,7 +28,7 @@ export function RightPanel(): JSX.Element | null {
         </button>
       </div>
       <div className="flex min-h-0 flex-1 flex-col">
-        {panel === 'files' ? <FilesList /> : <CardPanel />}
+        {panel === 'files' ? <FilesList /> : <CardPanel text={lastAssistant?.content ?? ''} />}
       </div>
     </section>
   )
