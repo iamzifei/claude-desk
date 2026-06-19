@@ -1,7 +1,7 @@
 import { getDb } from './index'
 import { snippet, likePattern } from './search-util'
 
-export type SearchKind = 'conversation' | 'material' | 'atom' | 'note'
+export type SearchKind = 'conversation' | 'material' | 'atom' | 'note' | 'topic' | 'publication'
 
 export interface SearchHit {
   kind: SearchKind
@@ -59,6 +59,41 @@ export function searchAll(workspaceId: string | null, query: string, limit = 8):
     .all(like, like, limit) as { id: string; content: string; type: string }[]
   for (const a of atoms)
     hits.push({ kind: 'atom', id: a.id, title: snippet(a.content, q, 36), snippet: snippet(a.content, q), meta: a.type })
+
+  // Topics & publications live entirely inside a workspace — a creator jumps to
+  // these constantly, so the quick-switch must reach them too.
+  if (workspaceId) {
+    const topics = db
+      .prepare(
+        `SELECT id, title, angle, status FROM topics
+         WHERE workspace_id = ? AND (title LIKE ? ESCAPE '\\' OR angle LIKE ? ESCAPE '\\')
+         ORDER BY updated_at DESC LIMIT ?`
+      )
+      .all(workspaceId, like, like, limit) as {
+      id: string
+      title: string
+      angle: string | null
+      status: string
+    }[]
+    for (const t of topics)
+      hits.push({
+        kind: 'topic',
+        id: t.id,
+        title: t.title,
+        snippet: t.angle ? snippet(t.angle, q) : '',
+        meta: t.status
+      })
+
+    const pubs = db
+      .prepare(
+        `SELECT id, title, platform FROM publications
+         WHERE workspace_id = ? AND title LIKE ? ESCAPE '\\'
+         ORDER BY created_at DESC LIMIT ?`
+      )
+      .all(workspaceId, like, limit) as { id: string; title: string; platform: string | null }[]
+    for (const p of pubs)
+      hits.push({ kind: 'publication', id: p.id, title: p.title, snippet: '', meta: p.platform || '发布' })
+  }
 
   if (workspaceId) {
     const notes = db

@@ -1,5 +1,5 @@
 import { JSX, useEffect, useRef, useState, KeyboardEvent } from 'react'
-import { Search, MessageSquare, Library, Atom, FileText } from 'lucide-react'
+import { Search, MessageSquare, Library, Atom, FileText, Lightbulb, BarChart3 } from 'lucide-react'
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
 import type { SearchHit, SearchKind } from '../types'
@@ -8,7 +8,9 @@ const KIND_ICON: Record<SearchKind, typeof Search> = {
   conversation: MessageSquare,
   material: Library,
   atom: Atom,
-  note: FileText
+  note: FileText,
+  topic: Lightbulb,
+  publication: BarChart3
 }
 
 /** ⌘K command palette: search everything (对话/素材/原子/笔记) and jump. */
@@ -61,6 +63,8 @@ export function QuickSwitcher(): JSX.Element | null {
   const jump = (h: SearchHit): void => {
     if (h.kind === 'conversation') openConversation(h.id)
     else if (h.kind === 'note') setView(h.noteType === 'minutes' ? 'minutes' : 'review')
+    else if (h.kind === 'topic') setView('topics')
+    else if (h.kind === 'publication') setView('publish')
     else jumpTo({ kind: h.kind, id: h.id }) // material/atom → navigate + focus the item
     setOpen(false)
   }

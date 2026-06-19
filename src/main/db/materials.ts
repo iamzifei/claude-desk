@@ -231,3 +231,23 @@ export function buildMaterialsSystemPrompt(): string {
   }))
   return formatMaterialsPrompt(mats)
 }
+
+/**
+ * Concatenate the creator's persona/voice materials — those tagged 人设 / 风格 /
+ * 口吻 / 语气 (or whose title says so) — into a system-prompt fragment. Used by
+ * 去 AI 味 to rewrite in the creator's own voice rather than a generic casual
+ * tone. Returns '' if the creator hasn't marked any persona material yet.
+ */
+export function buildPersonaPrompt(): string {
+  const rows = getDb()
+    .prepare(
+      `SELECT title, content, url, tags FROM materials
+       WHERE kind != 'image' AND (
+         tags LIKE '%人设%' OR tags LIKE '%风格%' OR tags LIKE '%口吻%' OR tags LIKE '%语气%'
+         OR title LIKE '%人设%' OR title LIKE '%口吻%' OR title LIKE '%风格%'
+       )
+       ORDER BY created_at`
+    )
+    .all() as { title: string; content: string; url: string | null; tags: string | null }[]
+  return formatMaterialsPrompt(rows)
+}

@@ -246,6 +246,9 @@ function MaterialForm({
           onChange={(e) => setTags(e.target.value)}
         />
       </div>
+      <p className="-mt-1 text-[11.5px] text-muted-foreground">
+        标上 <span className="text-primary">人设</span> / 风格 / 口吻 的素材，会被「去 AI 味」当作你的腔调来改写。
+      </p>
       {allTags.filter((t) => !current.includes(t)).length ? (
         <div className="flex flex-wrap gap-1">
           {allTags

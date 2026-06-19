@@ -1,5 +1,18 @@
 import { JSX, useEffect, useState } from 'react'
-import { Lightbulb, Plus, Trash2, Pencil, Sparkles, Loader2, Copy, Check, Save, Repeat2 } from 'lucide-react'
+import {
+  Lightbulb,
+  Plus,
+  Trash2,
+  Pencil,
+  Sparkles,
+  Loader2,
+  Copy,
+  Check,
+  Save,
+  Repeat2,
+  Stethoscope,
+  Wand2
+} from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { cn } from '../lib/utils'
 import { useStore } from '../store'
@@ -232,10 +245,42 @@ function TopicRow({
   )
 }
 
-function DraftDialog({ topic, text, onClose }: { topic: Topic; text: string; onClose: () => void }): JSX.Element {
+function DraftDialog({
+  topic,
+  text,
+  onClose
+}: {
+  topic: Topic
+  text: string
+  onClose: () => void
+}): JSX.Element {
   const sendToRewrite = useStore((s) => s.sendToRewrite)
+  const [draft, setDraft] = useState(text)
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [report, setReport] = useState<string | null>(null)
+  const [busy, setBusy] = useState<'diagnose' | 'deai' | null>(null)
+
+  // Diagnose & de-AI right here — no need to detour through 改写工坊 first.
+  const diagnose = async (): Promise<void> => {
+    if (busy) return
+    setBusy('diagnose')
+    try {
+      setReport(await window.api.diagnose.run(draft))
+    } finally {
+      setBusy(null)
+    }
+  }
+  const deAI = async (): Promise<void> => {
+    if (busy) return
+    setBusy('deai')
+    try {
+      const out = await window.api.diagnose.deai(draft)
+      if (out && !out.startsWith('[错误]')) setDraft(out)
+    } finally {
+      setBusy(null)
+    }
+  }
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -243,14 +288,38 @@ function DraftDialog({ topic, text, onClose }: { topic: Topic; text: string; onC
         <DialogHeader className="mb-0 border-b border-border-soft px-5 py-3.5">
           <DialogTitle>装配初稿 · {topic.title}</DialogTitle>
         </DialogHeader>
-        <div className="markdown min-h-0 flex-1 overflow-y-auto px-5 py-4 text-[13.5px] leading-relaxed">
-          <ReactMarkdown>{text}</ReactMarkdown>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          <div className="markdown text-[13.5px] leading-relaxed">
+            <ReactMarkdown>{draft}</ReactMarkdown>
+          </div>
+          {report ? (
+            <div className="mt-4 rounded-lg border border-border-soft bg-muted/40 px-4 py-3">
+              <div className="mb-1.5 flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
+                <Stethoscope className="h-3.5 w-3.5" /> 五维诊断
+              </div>
+              <div className="markdown text-[12.5px] leading-relaxed">
+                <ReactMarkdown>{report}</ReactMarkdown>
+              </div>
+            </div>
+          ) : null}
         </div>
-        <div className="flex justify-end gap-2 border-t border-border-soft px-5 py-3">
+        <div className="flex flex-wrap justify-end gap-2 border-t border-border-soft px-5 py-3">
+          <Button variant="secondary" onClick={diagnose} disabled={!!busy}>
+            {busy === 'diagnose' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Stethoscope className="h-4 w-4" />
+            )}{' '}
+            诊断
+          </Button>
+          <Button variant="secondary" onClick={deAI} disabled={!!busy}>
+            {busy === 'deai' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}{' '}
+            去 AI 味
+          </Button>
           <Button
             variant="secondary"
             onClick={() => {
-              navigator.clipboard.writeText(text)
+              navigator.clipboard.writeText(draft)
               setCopied(true)
               setTimeout(() => setCopied(false), 1500)
             }}
@@ -260,7 +329,13 @@ function DraftDialog({ topic, text, onClose }: { topic: Topic; text: string; onC
           <Button
             variant="secondary"
             onClick={async () => {
-              await window.api.materials.create({ title: `${topic.title} 初稿`, content: text, kind: 'text' })
+              // Embed a [[选题]] wikilink so the saved draft back-links to its
+              // topic — the topic row's 反链 panel then surfaces this draft.
+              await window.api.materials.create({
+                title: `${topic.title} 初稿`,
+                content: `${draft}\n\n— 整理自选题 [[${topic.title}]]`,
+                kind: 'text'
+              })
               setSaved(true)
               setTimeout(() => setSaved(false), 1500)
             }}
@@ -269,7 +344,7 @@ function DraftDialog({ topic, text, onClose }: { topic: Topic; text: string; onC
           </Button>
           <Button
             onClick={() => {
-              sendToRewrite(text)
+              sendToRewrite(draft)
               onClose()
             }}
           >

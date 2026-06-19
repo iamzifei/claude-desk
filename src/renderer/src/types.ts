@@ -171,7 +171,7 @@ export interface ResolvedTarget {
   id: string
 }
 
-export type SearchKind = 'conversation' | 'material' | 'atom' | 'note'
+export type SearchKind = 'conversation' | 'material' | 'atom' | 'note' | 'topic' | 'publication'
 
 export interface SearchHit {
   kind: SearchKind
