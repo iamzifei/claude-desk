@@ -7,7 +7,6 @@ import type {
   Chunk,
   StreamingState,
   ProviderInfo,
-  FileEntry,
   MainView,
   SplitTarget
 } from './types'
@@ -42,8 +41,6 @@ interface AppState {
   search: string
   providers: ProviderInfo[]
   globalModel: string
-  rightPanel: 'card' | 'files' | null
-  files: FileEntry[]
   theme: string
   view: MainView
 
@@ -106,7 +103,6 @@ interface AppState {
   focusId: string | null
 
   setSearch: (q: string) => void
-  setRightPanel: (p: AppState['rightPanel']) => void
 
   send: (text: string, web?: boolean) => Promise<void>
   cancel: () => void
@@ -134,8 +130,6 @@ export const useStore = create<AppState>((set, get) => ({
   search: '',
   providers: [],
   globalModel: 'claude-opus-4-8',
-  rightPanel: null,
-  files: [],
   theme: 'light',
   view: 'chat',
   shortcuts: DEFAULT_SHORTCUTS,
@@ -368,17 +362,6 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setSearch: (q) => set({ search: q }),
-
-  setRightPanel: (p) => {
-    set((s) => ({ rightPanel: s.rightPanel === p ? null : p }))
-    // When opening the files panel, load the active conversation's project dir.
-    if (get().rightPanel === 'files') {
-      const conv = get().conversations.find((c) => c.id === get().activeId)
-      const proj = get().projects.find((pr) => pr.id === conv?.project_id)
-      if (proj?.dir_path) window.api.files.listDir(proj.dir_path).then((files) => set({ files }))
-      else set({ files: [] })
-    }
-  },
 
   send: async (text, web) => {
     if (get().streaming) return

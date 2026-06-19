@@ -1,5 +1,5 @@
 import { JSX, useEffect, useRef } from 'react'
-import { TriangleAlert, X } from 'lucide-react'
+import { TriangleAlert, X, ChevronDown } from 'lucide-react'
 import { useStore } from '../store'
 import { greeting } from '../utils'
 import type { MainView } from '../types'
@@ -8,7 +8,14 @@ import { Composer } from './Composer'
 import { ChatPane } from './ChatPane'
 import { WorkspaceTabs } from './WorkspaceTabs'
 import { TabBar } from './TabBar'
-import { RightDock, RightPanel } from './RightPanel'
+import { FilesView } from './FilesView'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from './ui/dropdown-menu'
 import { ScheduledView } from './ScheduledView'
 import { NotesView } from './NotesView'
 import { DailyView } from './DailyView'
@@ -55,6 +62,8 @@ function renderView(view: MainView): JSX.Element {
       return <PublishView />
     case 'rewrite':
       return <RewriteView />
+    case 'files':
+      return <FilesView />
     default:
       return <ChatArea />
   }
@@ -75,7 +84,8 @@ const SPLIT_VIEWS: { v: MainView; label: string }[] = [
   { v: 'minutes', label: '会议纪要' },
   { v: 'scheduled', label: '定时任务' },
   { v: 'browser', label: '浏览器' },
-  { v: 'coding', label: '编程' }
+  { v: 'coding', label: '编程' },
+  { v: 'files', label: '项目文件' }
 ]
 
 function SplitPanel(): JSX.Element {
@@ -86,38 +96,39 @@ function SplitPanel(): JSX.Element {
   const conversations = useStore((s) => s.conversations)
   const titleOf = (id: string): string => conversations.find((c) => c.id === id)?.title ?? '新对话'
 
-  // The selector value encodes the target: "chat:<id>" or "view:<name>".
-  const value = split.kind === 'chat' ? `chat:${split.id}` : `view:${split.view}`
-  const onSelect = (v: string): void => {
-    if (v.startsWith('chat:')) setSplit({ kind: 'chat', id: v.slice(5) })
-    else setSplit({ kind: 'view', view: v.slice(5) as MainView })
-  }
+  const currentLabel =
+    split.kind === 'chat'
+      ? titleOf(split.id)
+      : (SPLIT_VIEWS.find((o) => o.v === split.view)?.label ?? '参考')
 
   return (
     <section className="flex w-[44%] min-w-[340px] shrink-0 flex-col border-l border-border">
       <div className="flex h-9 shrink-0 items-center justify-between border-b border-border-soft px-2.5">
-        <select
-          value={value}
-          onChange={(e) => onSelect(e.target.value)}
-          className="h-7 max-w-[220px] rounded-md border border-input bg-background px-2 text-[12.5px] outline-none focus-visible:border-ring"
-        >
-          {openTabs.length > 0 ? (
-            <optgroup label="对话">
-              {openTabs.map((id) => (
-                <option key={id} value={`chat:${id}`}>
-                  {titleOf(id)}
-                </option>
-              ))}
-            </optgroup>
-          ) : null}
-          <optgroup label="参考">
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex h-7 max-w-[240px] items-center gap-1 rounded-md px-2 text-[12.5px] text-foreground outline-none transition-colors hover:bg-accent focus-visible:bg-accent">
+            <span className="truncate">{currentLabel}</span>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-[60vh] overflow-y-auto">
+            {openTabs.length > 0 ? (
+              <>
+                <div className="px-2.5 py-1 text-[11px] font-medium text-muted-foreground/60">对话</div>
+                {openTabs.map((id) => (
+                  <DropdownMenuItem key={id} onSelect={() => setSplit({ kind: 'chat', id })}>
+                    <span className="truncate">{titleOf(id)}</span>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+              </>
+            ) : null}
+            <div className="px-2.5 py-1 text-[11px] font-medium text-muted-foreground/60">参考</div>
             {SPLIT_VIEWS.map((o) => (
-              <option key={o.v} value={`view:${o.v}`}>
+              <DropdownMenuItem key={o.v} onSelect={() => setSplit({ kind: 'view', view: o.v })}>
                 {o.label}
-              </option>
+              </DropdownMenuItem>
             ))}
-          </optgroup>
-        </select>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <button
           onClick={() => closeSplit()}
           title="关闭分屏"
@@ -200,8 +211,6 @@ function ChatArea(): JSX.Element {
             </>
           )}
         </main>
-        <RightPanel />
-        <RightDock />
       </div>
     </>
   )

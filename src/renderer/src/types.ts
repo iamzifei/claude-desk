@@ -236,6 +236,7 @@ export type MainView =
   | 'graph'
   | 'publish'
   | 'rewrite'
+  | 'files'
 
 export interface Conversation {
   id: string
