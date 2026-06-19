@@ -1,6 +1,15 @@
 import { JSX, useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { BarChart3, ClipboardList, Sparkles, Trash2, ChevronLeft, Copy, Check } from 'lucide-react'
+import {
+  BarChart3,
+  ClipboardList,
+  Sparkles,
+  Trash2,
+  ChevronLeft,
+  Copy,
+  Check,
+  TriangleAlert
+} from 'lucide-react'
 import { useStore } from '../store'
 import { Button } from './ui/button'
 import { Header, Empty } from './ScheduledView'
@@ -15,6 +24,7 @@ export function NotesView({ type }: Props): JSX.Element {
   const [notes, setNotes] = useState<Note[]>([])
   const [open, setOpen] = useState<Note | null>(null)
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [transcript, setTranscript] = useState('')
 
   const meta =
@@ -34,6 +44,7 @@ export function NotesView({ type }: Props): JSX.Element {
     if (!ws || busy) return
     if (type === 'minutes' && !transcript.trim()) return
     setBusy(true)
+    setError(null)
     try {
       const note =
         type === 'review'
@@ -42,6 +53,9 @@ export function NotesView({ type }: Props): JSX.Element {
       setTranscript('')
       await refresh()
       setOpen(note)
+    } catch {
+      // A failed generation rejects (it's not saved as a note) — show an error.
+      setError('生成失败，已自动重试仍未成功。请检查网络或 API key 后重试。')
     } finally {
       setBusy(false)
     }
@@ -78,6 +92,12 @@ export function NotesView({ type }: Props): JSX.Element {
               <Sparkles className="h-4 w-4" /> {busy ? '生成中…' : '生成纪要'}
             </Button>
           </div>
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="mt-4 flex items-start gap-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[12.5px] text-destructive">
+          <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {error}
         </div>
       ) : null}
 

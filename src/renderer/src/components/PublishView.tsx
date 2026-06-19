@@ -75,12 +75,18 @@ export function PublishView(): JSX.Element {
       />
 
       {suggested !== null ? (
-        <button
-          onClick={() => setView('topics')}
-          className="mt-3 rounded-lg border border-primary/40 bg-primary-soft px-3 py-2 text-left text-[13px] text-primary"
-        >
-          ✓ 已据数据生成 {suggested} 个选题,点此去「选题库」查看 →
-        </button>
+        suggested > 0 ? (
+          <button
+            onClick={() => setView('topics')}
+            className="mt-3 rounded-lg border border-primary/40 bg-primary-soft px-3 py-2 text-left text-[13px] text-primary"
+          >
+            ✓ 已据数据生成 {suggested} 个选题,点此去「选题库」查看 →
+          </button>
+        ) : (
+          <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-muted-foreground">
+            未能生成选题,已自动重试仍未成功。请检查网络或 API key 后重试。
+          </div>
+        )
       ) : null}
 
       {pubs.length > 0 ? (

@@ -16,6 +16,7 @@ export function AtomsView(): JSX.Element {
   const [type, setType] = useState('all')
   const [raw, setRaw] = useState('')
   const [extracting, setExtracting] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
 
   const refresh = async (): Promise<void> => {
     setAtoms(search.trim() ? await window.api.atoms.search(search) : await window.api.atoms.list())
@@ -28,10 +29,18 @@ export function AtomsView(): JSX.Element {
   const extract = async (): Promise<void> => {
     if (!raw.trim() || extracting) return
     setExtracting(true)
+    setNote(null)
     try {
-      await window.api.atoms.extractFromText(raw.trim(), 'manual')
-      setRaw('')
-      await refresh()
+      const out = await window.api.atoms.extractFromText(raw.trim(), 'manual')
+      if (out.length === 0) {
+        // Either nothing reusable was found or the engine failed after retries.
+        setNote('未拆出可复用的原子，换段更有观点/数据的素材再试，或检查网络。')
+      } else {
+        setRaw('')
+        setNote(`已拆出 ${out.length} 条原子`)
+        await refresh()
+      }
+      setTimeout(() => setNote(null), 3000)
     } finally {
       setExtracting(false)
     }
@@ -58,7 +67,8 @@ export function AtomsView(): JSX.Element {
           rows={3}
           className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring"
         />
-        <div className="mt-2 flex justify-end">
+        <div className="mt-2 flex items-center justify-end gap-3">
+          {note ? <span className="text-[12px] text-muted-foreground">{note}</span> : null}
           <Button size="sm" onClick={extract} disabled={!raw.trim() || extracting}>
             {extracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {extracting ? '拆分中…' : '拆成原子'}

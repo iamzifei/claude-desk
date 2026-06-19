@@ -388,7 +388,13 @@ function MaterialRow({
         <Button
           size="icon-sm"
           variant="ghost"
-          title={extracted !== null ? `已拆出 ${extracted} 个原子` : '拆成知识原子'}
+          title={
+            extracted !== null
+              ? extracted > 0
+                ? `已拆出 ${extracted} 个原子`
+                : '未拆出可复用原子,换段素材或检查网络后再试'
+              : '拆成知识原子'
+          }
           onClick={splitAtoms}
           disabled={extracting}
         >

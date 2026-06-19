@@ -293,6 +293,8 @@ export function registerIpc(): void {
     const content = await runOnce([
       { id: 't', conversation_id: 't', role: 'user', content: prompt, created_at: Date.now() }
     ])
+    // Don't persist a failed generation as a note — reject so the UI shows an error.
+    if (content.trimStart().startsWith('[错误]')) throw new Error(content.trim())
     return createNote(ws, 'review', dateTitle('每日回顾'), content)
   })
 
@@ -305,6 +307,7 @@ export function registerIpc(): void {
     const content = await runOnce([
       { id: 't', conversation_id: 't', role: 'user', content: prompt, created_at: Date.now() }
     ])
+    if (content.trimStart().startsWith('[错误]')) throw new Error(content.trim())
     return createNote(ws, 'minutes', dateTitle('会议纪要'), content)
   })
 
