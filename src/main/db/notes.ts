@@ -5,7 +5,7 @@ import { rebuildLinks, resolvePending, purgeLinks } from './links'
 export interface Note {
   id: string
   workspace_id: string | null
-  type: 'review' | 'minutes'
+  type: 'review' | 'minutes' | 'daily'
   title: string
   content: string
   created_at: number
@@ -39,6 +39,23 @@ export function createNote(
   rebuildLinks('note', note.id, note.content)
   resolvePending(note.title, 'note', note.id)
   return note
+}
+
+/** Update a note's body (used by the editable 每日笔记). Re-resolves wikilinks. */
+export function updateNote(id: string, content: string): void {
+  getDb().prepare('UPDATE notes SET content = ? WHERE id = ?').run(content, id)
+  rebuildLinks('note', id, content)
+}
+
+/**
+ * Today's 每日笔记 (daily note), creating an empty one on first open. Titled by
+ * the given date string so there's exactly one capture surface per day.
+ */
+export function getOrCreateDailyNote(workspaceId: string, dateTitle: string): Note {
+  const existing = getDb()
+    .prepare("SELECT * FROM notes WHERE workspace_id = ? AND type = 'daily' AND title = ?")
+    .get(workspaceId, dateTitle) as Note | undefined
+  return existing ?? createNote(workspaceId, 'daily', dateTitle, '')
 }
 
 export function deleteNote(id: string): void {

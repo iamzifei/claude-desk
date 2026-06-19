@@ -20,6 +20,7 @@ import { WikiText, Backlinks } from './WikiText'
 import { WikiTextarea } from './WikiTextarea'
 import { useFocusHighlight } from '../useFocusHighlight'
 import { PLATFORM_OPTIONS, labelForPlatform } from '../platforms'
+import { MATERIAL_TEMPLATES, templateById } from '../material-templates'
 import type { Material, MaterialKind } from '../types'
 
 const NONE = '__none__' // platform-filter key for un-tagged materials
@@ -225,8 +226,33 @@ function MaterialForm({
   // Image materials may have an empty body (the picture is the content).
   const canSave = title.trim() && (kind === 'image' ? !!imagePath : !!content.trim())
 
+  // Prefill the form from a starter template (new materials only).
+  const applyTemplate = (id: string): void => {
+    const t = templateById(id)
+    if (!t) return
+    if (t.title) setTitle(t.title)
+    setContent(t.content)
+    setTags(t.tags)
+  }
+
   return (
     <div className="mt-3 space-y-2.5 rounded-xl border border-border bg-card p-4">
+      {!material ? (
+        <div className="flex items-center gap-2 text-[12.5px] text-muted-foreground">
+          <span>从模板开始：</span>
+          <div className="flex flex-wrap gap-1.5">
+            {MATERIAL_TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => applyTemplate(t.id)}
+                className="rounded-full border border-border px-2 py-0.5 text-[11px] transition-colors hover:border-primary hover:bg-primary-soft hover:text-primary"
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
       {/* fetch-from-link */}
       <div className="flex gap-2">
         <Input

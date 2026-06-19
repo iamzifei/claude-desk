@@ -45,7 +45,14 @@ import {
   toggleTask,
   type NewTask
 } from '../db/scheduledTasks'
-import { listNotes, createNote, deleteNote, type Note } from '../db/notes'
+import {
+  listNotes,
+  createNote,
+  deleteNote,
+  updateNote,
+  getOrCreateDailyNote,
+  type Note
+} from '../db/notes'
 import {
   listSkills,
   createSkill,
@@ -271,6 +278,15 @@ export function registerIpc(): void {
   // ---- notes: (每日回顾 / 会议纪要) -----------------------------------
   ipcMain.handle('notes:list', (_e, ws: string, type: Note['type']) => listNotes(ws, type))
   ipcMain.handle('notes:delete', (_e, id: string) => deleteNote(id))
+  ipcMain.handle('notes:update', (_e, id: string, content: string) => updateNote(id, content))
+  // 每日笔记 — open (or lazily create) today's daily capture note.
+  ipcMain.handle('notes:daily', (_e, ws: string) => {
+    const d = new Date()
+    const p = (n: number): string => String(n).padStart(2, '0')
+    const week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()]
+    const title = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${week}`
+    return getOrCreateDailyNote(ws, title)
+  })
 
   // 每日回顾 — summarize today's conversations into a review note.
   ipcMain.handle('review:generate', async (_e, ws: string) => {

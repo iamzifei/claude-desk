@@ -49,7 +49,7 @@ export interface NewScheduledTask {
 export interface Note {
   id: string
   workspace_id: string | null
-  type: 'review' | 'minutes'
+  type: 'review' | 'minutes' | 'daily'
   title: string
   content: string
   created_at: number
@@ -225,6 +225,7 @@ export type MainView =
   | 'scheduled'
   | 'review'
   | 'minutes'
+  | 'daily'
   | 'browser'
   | 'skills'
   | 'coding'

@@ -11,6 +11,7 @@ import { TabBar } from './TabBar'
 import { RightDock, RightPanel } from './RightPanel'
 import { ScheduledView } from './ScheduledView'
 import { NotesView } from './NotesView'
+import { DailyView } from './DailyView'
 import { BrowserView } from './BrowserView'
 import { SkillsView } from './SkillsView'
 import { CodingView } from './CodingView'
@@ -32,6 +33,8 @@ function renderView(view: MainView): JSX.Element {
       return <NotesView type="review" />
     case 'minutes':
       return <NotesView type="minutes" />
+    case 'daily':
+      return <DailyView />
     case 'browser':
       return <BrowserView />
     case 'skills':
@@ -67,6 +70,7 @@ const SPLIT_VIEWS: { v: MainView; label: string }[] = [
   { v: 'publish', label: '发布数据' },
   { v: 'rewrite', label: '改写工坊' },
   { v: 'skills', label: '技能' },
+  { v: 'daily', label: '每日笔记' },
   { v: 'review', label: '每日回顾' },
   { v: 'minutes', label: '会议纪要' },
   { v: 'scheduled', label: '定时任务' },

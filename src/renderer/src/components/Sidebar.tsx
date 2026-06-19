@@ -7,6 +7,7 @@ import {
   Puzzle,
   BarChart3,
   ClipboardList,
+  CalendarDays,
   Code2,
   Library,
   Atom,
@@ -53,6 +54,7 @@ type NavAction =
   | 'scheduled'
   | 'review'
   | 'minutes'
+  | 'daily'
   | 'browser'
   | 'skills'
   | 'coding'
@@ -77,6 +79,7 @@ const NAV: { icon: LucideIcon; label: string; action: NavAction }[] = [
   { icon: Code2, label: '编程', action: 'coding' },
   { icon: Globe, label: '浏览器', action: 'browser' },
   { icon: Clock, label: '定时任务', action: 'scheduled' },
+  { icon: CalendarDays, label: '每日笔记', action: 'daily' },
   { icon: BarChart3, label: '每日回顾', action: 'review' },
   { icon: ClipboardList, label: '会议纪要', action: 'minutes' }
 ]

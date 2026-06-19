@@ -46,7 +46,7 @@ export type NewScheduledTask = Pick<
 export interface Note {
   id: string
   workspace_id: string | null
-  type: 'review' | 'minutes'
+  type: 'review' | 'minutes' | 'daily'
   title: string
   content: string
   created_at: number
@@ -362,6 +362,8 @@ export interface Api {
   notes: {
     list: (ws: string, type: Note['type']) => Promise<Note[]>
     delete: (id: string) => Promise<void>
+    update: (id: string, content: string) => Promise<void>
+    daily: (ws: string) => Promise<Note>
     generateReview: (ws: string) => Promise<Note>
     generateMinutes: (ws: string, transcript: string) => Promise<Note>
   }

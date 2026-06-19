@@ -71,6 +71,8 @@ const api = {
   notes: {
     list: (ws: string, type: string) => ipcRenderer.invoke('notes:list', ws, type),
     delete: (id: string) => ipcRenderer.invoke('notes:delete', id),
+    update: (id: string, content: string) => ipcRenderer.invoke('notes:update', id, content),
+    daily: (ws: string) => ipcRenderer.invoke('notes:daily', ws),
     generateReview: (ws: string) => ipcRenderer.invoke('review:generate', ws),
     generateMinutes: (ws: string, transcript: string) =>
       ipcRenderer.invoke('minutes:generate', ws, transcript)
