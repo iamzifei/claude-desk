@@ -97,6 +97,10 @@
   #root {
     height: 100%;
     margin: 0;
+    /* The app is a fixed full-window shell — only inner regions scroll, never
+       the whole document. Without this, any content slightly taller than the
+       viewport scrolls the entire app (top bar and all). */
+    overflow: hidden;
   }
   body {
     @apply bg-sidebar text-foreground antialiased;

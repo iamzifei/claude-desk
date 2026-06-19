@@ -187,6 +187,9 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
         </span>
       </div>
 
+      {/* Nav + conversation list share one scroll region so a tall nav never
+          clips the pinned footer (settings) under the app's overflow-hidden shell. */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <nav className="flex flex-col px-2 pb-2">
         {NAV_SECTIONS.map((section, si) => {
           const collapsed = section.collapsible && !showTools
@@ -219,7 +222,7 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
         })}
       </nav>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+      <div className="px-2 pb-2">
         {projects.map((p) => (
           <ProjectGroup key={p.id} project={p} items={inProject(p)} />
         ))}
@@ -274,6 +277,7 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
             {showArchived ? archived.map((c) => <ConvItem key={c.id} conv={c} />) : null}
           </div>
         ) : null}
+      </div>
       </div>
 
       <div className="flex items-center justify-between border-t border-border-soft px-3 py-2.5">

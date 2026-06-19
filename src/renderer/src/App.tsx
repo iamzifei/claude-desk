@@ -23,7 +23,7 @@ function App(): JSX.Element {
     <TooltipProvider delayDuration={300}>
       <div className="flex h-screen flex-col bg-sidebar">
         <WorkspaceTabs />
-        <div className="grid min-h-0 flex-1 grid-cols-[232px_1fr]">
+        <div className="grid min-h-0 flex-1 grid-cols-[232px_1fr] grid-rows-[minmax(0,1fr)]">
           <Sidebar onOpenSettings={() => setShowSettings(true)} />
           <ChatView />
         </div>
