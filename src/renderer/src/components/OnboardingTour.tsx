@@ -1,5 +1,15 @@
 import { JSX, useState } from 'react'
-import { ArrowRight, ArrowLeft, Check } from 'lucide-react'
+import {
+  ArrowRight,
+  ArrowLeft,
+  Check,
+  FolderOpen,
+  PenLine,
+  MessageSquare,
+  LayoutGrid,
+  Puzzle,
+  type LucideIcon
+} from 'lucide-react'
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
 import { Logo } from './Logo'
@@ -11,7 +21,7 @@ import panesShot from '../assets/onboarding/4-panes.png'
 import skillsShot from '../assets/onboarding/5-skills.png'
 
 interface Step {
-  emoji: string
+  icon: LucideIcon
   title: string
   body: string
   image: string
@@ -21,31 +31,31 @@ interface Step {
 // a real screenshot with a short explanation.
 const STEPS: Step[] = [
   {
-    emoji: '📁',
+    icon: FolderOpen,
     title: '项目 = 一个知识库',
     body: '墨栖以项目为中心。左上角的项目切换器用来新建/切换项目；为项目「绑定知识库文件夹」即可直接打开你的 Obsidian vault，在「知识库」里读写真实的 .md 文件——磁盘才是本体，改了会双向同步。',
     image: vaultShot
   },
   {
-    emoji: '✍️',
+    icon: PenLine,
     title: '创作流水线',
     body: '侧边栏「创作」是主轴：知识库 → 素材库 → 知识原子 → 标签 / 知识图谱 → 选题库 → 多平台改写 → 发布数据。这些资产都跟随顶部选中的项目过滤，互不串台。图为从对话里的 [[双链]] 自动长出的知识图谱。',
     image: graphShot
   },
   {
-    emoji: '💬',
+    icon: MessageSquare,
     title: '对话与上下文迁移',
     body: '直接开对话创作，标题会按内容自动生成。想把一个对话的上下文带到新对话？复制它的 Session ID（对话菜单里），粘贴进新对话发送，即可引入它的完整历史。空闲片刻还会自动生成「对话回顾」。',
     image: chatShot
   },
   {
-    emoji: '🪟',
+    icon: LayoutGrid,
     title: '分屏窗格',
     body: '顶栏布局菜单可切换 单栏 / 两栏 / 三栏 / 四象限。把侧边栏的任意模块或对话拖进工作区即可分屏；拖窗格手柄可重排或拖到侧栏「收藏」，拖分隔条可调尺寸——像终端一样自由平铺。',
     image: panesShot
   },
   {
-    emoji: '🧩',
+    icon: Puzzle,
     title: '技能：自动扫描 + / 调用',
     body: '「技能」会自动读取你本机已安装的 Skills（~/.claude/skills 与插件），默认停用。在对话里输入 / 选择技能，或把技能拖进输入框，即可像 Claude Code 一样按需调用（仅本条消息生效）。',
     image: skillsShot
@@ -89,7 +99,9 @@ export function OnboardingTour(): JSX.Element {
 
         <div className="mt-3.5 flex flex-col px-1">
           <div className="flex items-center gap-2">
-            <span className="text-xl">{step.emoji}</span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary">
+              <step.icon className="h-4 w-4" strokeWidth={1.75} />
+            </span>
             <h2 className="text-[16px] font-semibold text-foreground">{step.title}</h2>
             {i === 0 ? (
               <span className="ml-auto flex items-center gap-1.5 text-[12px] text-muted-foreground/70">

@@ -98,6 +98,8 @@ export interface AppSettings {
   shortcuts: string | null // JSON map of action → accelerator (null = defaults)
   onboarded: boolean // first-run guided tour already completed/skipped
   favorites: string | null // JSON array of pinned sidebar shortcuts (SplitTarget[])
+  projectScope: string | null // last-opened project scope ('all'|'unfiled'|<uuid>)
+  lastSeenVersion: string | null // last app version whose "更新内容" the user saw
 }
 
 /** Settings safe to send to the renderer (never includes the raw key). */
@@ -116,6 +118,8 @@ export function getPublicSettings(): AppSettings {
     transcriptionModel: getSetting('transcriptionModel') ?? DEFAULT_TRANSCRIBE_MODEL,
     hasTranscriptionKey: !!resolveTranscriptionKey(),
     onboarded: getSetting('onboarded') === '1',
-    favorites: getSetting('favorites')
+    favorites: getSetting('favorites'),
+    projectScope: getSetting('projectScope'), // last-opened project scope (restore on boot)
+    lastSeenVersion: getSetting('lastSeenVersion') // for the "更新内容" what's-new gate
   }
 }

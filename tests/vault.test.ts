@@ -49,10 +49,21 @@ describe('parseMarkdown — frontmatter + wikilinks', () => {
     expect(p.links).toEqual(['关羽', '张飞'])
   })
 
-  it('falls back to the filename title when no frontmatter', () => {
-    const p = parseMarkdown('正文没有 frontmatter，只有 [[资治通鉴]]。', '关羽')
+  it('derives the title from the first # H1 when no frontmatter title', () => {
+    const p = parseMarkdown('# 赤壁之战\n\n正文 [[周瑜]]。', '133_20241023_0')
+    expect(p.title).toBe('赤壁之战')
+    expect(p.links).toEqual(['周瑜'])
+  })
+
+  it('derives the title from the first content line when no heading', () => {
+    const p = parseMarkdown('曹操挟天子以令诸侯，[[袁绍]] 不能制。', '133_20241023_0')
+    expect(p.title).toBe('曹操挟天子以令诸侯，[[袁绍]] 不能制。')
+    expect(p.links).toEqual(['袁绍'])
+  })
+
+  it('falls back to the filename only when the body is empty', () => {
+    const p = parseMarkdown('\n\n   \n', '关羽')
     expect(p.title).toBe('关羽')
-    expect(p.links).toEqual(['资治通鉴'])
   })
 
   it('survives malformed frontmatter without throwing', () => {

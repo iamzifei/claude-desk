@@ -394,8 +394,14 @@ function FavoritesBar(): JSX.Element | null {
         )}
       >
         {favorites.length === 0 ? (
-          <div className="px-2 py-1.5 text-[11.5px] text-muted-foreground/60">
-            {dragging ? '松手收藏到这里 ★' : '把窗格、模块或技能拖到这里收藏'}
+          <div className="flex items-center gap-1 px-2 py-1.5 text-[11.5px] text-muted-foreground/60">
+            {dragging ? (
+              <>
+                松手收藏到这里 <Star className="h-3 w-3 fill-current" />
+              </>
+            ) : (
+              '把窗格、模块或技能拖到这里收藏'
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-px p-0.5">

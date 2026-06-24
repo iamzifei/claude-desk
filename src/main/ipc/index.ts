@@ -243,6 +243,8 @@ export function registerIpc(): void {
     if (typeof patch.shortcuts === 'string') setSetting('shortcuts', patch.shortcuts)
     if (typeof patch.onboarded === 'string') setSetting('onboarded', patch.onboarded)
     if (typeof patch.favorites === 'string') setSetting('favorites', patch.favorites)
+    if (typeof patch.lastSeenVersion === 'string')
+      setSetting('lastSeenVersion', patch.lastSeenVersion)
     // Secrets → encrypted at rest via safeStorage.
     if (typeof patch.apiKey === 'string' && patch.apiKey) setSetting('apiKey', patch.apiKey, true)
     if (typeof patch.transcriptionKey === 'string' && patch.transcriptionKey)
@@ -428,6 +430,7 @@ export function registerIpc(): void {
   })
 
   // ---- app/dialog: -----------------------------------------------------
+  ipcMain.handle('app:version', () => app.getVersion())
   ipcMain.handle('app:getDefaultWorkspace', () => app.getPath('home'))
   ipcMain.handle('dialog:openFolder', async () => {
     const win = BrowserWindow.getFocusedWindow()

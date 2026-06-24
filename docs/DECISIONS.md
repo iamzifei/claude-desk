@@ -1,5 +1,20 @@
 # Claude Desk — 构建决策日志与分析报告
 
+> 2026-06-24 续五：**禁用 emoji 图标，全改 SVG（lucide）**。新建项目规则 `CLAUDE.md`（强约束：UI 禁用 emoji 作图标/状态符号，一律 lucide SVG）。替换：引导 OnboardingTour（📁✍️💬🪟🧩→FolderOpen/PenLine/MessageSquare/LayoutGrid/Puzzle）、更新内容 changelog.ts+WhatsNew（🎉📁🪟⭐🧩🔗🕸️🚀→Sparkles/FolderOpen/LayoutGrid/Star/Puzzle/Link2/Network/Rocket）、OnboardingCard（👋🔒→Hand/Lock）、BrowserView（✓›→Check/ChevronRight）、QuickCapture/PublishView（✓→Check）、CodingView（⚠→TriangleAlert）、Sidebar 收藏提示（★→Star）。CDP 验证：弹窗 9 个 SVG、零 emoji。typecheck+167 tests+build 全绿。
+
+> 2026-06-24 续四：**更新日志 + 应用内「更新内容」弹窗**。
+> - `CHANGELOG.md`（脱敏、小白话，按大版本）为内容源；renderer `changelog.ts` 镜像最新条目供弹窗用。
+> - 新增 `app:version` IPC、设置 `lastSeenVersion`。gate：已 onboarded 且 `minorOf(lastSeen) !== minorOf(当前版本)` 且该大版本有条目 → 启动弹一次「更新内容」（`WhatsNew` 复用 Dialog）；首次安装走引导并标记 caught-up，不重复弹。完成引导/关闭弹窗都写 `lastSeenVersion=当前版本`。
+> - 脱敏原则：不出现公司实体名、上游供应商、内部技术（SQLite/Electron/d3 等），只讲用户能感知的价值。
+> - CDP 验证：模拟 1.4→1.5→弹「已更新到 v1.5.0」7 条要点→点开始体验→`lastSeenVersion=1.5.0` 持久化→重载不再弹。已把 James 的 `lastSeenVersion` 重置为 1.4.0，下次启动会看到一次。
+
+> 2026-06-24 续三：**图谱节点标签更有意义**。vault 节点标签原来是 `title || 文件名`，而 `title` 无 frontmatter 时就退化成文件名（如 `133_20241023_0`）。改 `parseMarkdown` 标题优先级：frontmatter title → 首个 `# H1` → 首行正文(去 markdown) → 文件名。需重新索引（已为资治通鉴触发）。CDP 验证：标签变成「姚明：一个渴望渺小的巨人」「我围绕 OpenClaw 投了几百块广告…」等真实标题。+2 单测。
+
+> 2026-06-24 续二：**默认打开上次项目 + 图谱改 Obsidian 式力导向**。
+> - 默认上次项目：scope 之前「boot 重置为 all、不持久化」。改为 `scope.ts` 持久化 setting `projectScope`（best-effort try/catch，DB 未就绪不报错），`getPublicSettings` 暴露，store `init` 校验项目仍存在后还原 `projectScope/activeProjectId` 并打开该 scope 下最近对话。CDP：set 资治通鉴→reload→切换器仍是资治通鉴。
+> - 知识图谱：旧版自实现 O(n²) 斥力 + 硬边界裁剪，1091 节点散成网格、几乎无连线，很乱。改用 **d3-force**（Barnes-Hut O(n log n)）跑力导向 + **canvas** 渲染（千节点流畅），支持滚轮缩放/拖背景平移/拖节点固定/hover 高亮邻居/点击跳转。CDP：1091 节点连通簇居中、孤立节点成云，远好于网格。新增依赖 d3-force。
+
+
 > 2026-06-24 续：**收藏支持技能 + 拖拽可靠性修复**。
 > - 反馈：技能拖不进收藏夹、窗格也拖不进收藏夹。
 > - 根因①：收藏放置区只认 `hasPaneDrop`（窗格/模块载荷），不接受技能载荷；且收藏存的是 `SplitTarget`，没有「技能」类型。→ 新增 `Favorite = SplitTarget | {kind:'skill',name,slug}`；放置区改 `hasPaneDrop || hasSkillDrag`，落点按载荷分流（技能→skill 收藏，其它→pane 收藏）。

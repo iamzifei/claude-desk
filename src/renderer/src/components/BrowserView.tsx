@@ -1,5 +1,14 @@
 import { JSX, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, RotateCw, Sparkles, Square, Loader2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  RotateCw,
+  Sparkles,
+  Square,
+  Loader2,
+  Check,
+  ChevronRight
+} from 'lucide-react'
 import { cn } from '../lib/utils'
 import { Button } from './ui/button'
 import type { WebviewEl } from '../webview'
@@ -25,7 +34,11 @@ const EXTRACT_JS = `(function(){
 
 const delay = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 const normalizeUrl = (u: string): string =>
-  /^https?:\/\//.test(u) ? u : /^[\w-]+(\.[\w-]+)+/.test(u) ? `https://${u}` : `https://www.bing.com/search?q=${encodeURIComponent(u)}`
+  /^https?:\/\//.test(u)
+    ? u
+    : /^[\w-]+(\.[\w-]+)+/.test(u)
+      ? `https://${u}`
+      : `https://www.bing.com/search?q=${encodeURIComponent(u)}`
 
 export function BrowserView(): JSX.Element {
   const ref = useRef<WebviewEl | null>(null)
@@ -183,7 +196,10 @@ export function BrowserView(): JSX.Element {
       {/* Agent bar */}
       <div className="border-t border-border-soft">
         {log.length > 0 ? (
-          <div ref={logRef} className="max-h-32 space-y-1 overflow-y-auto px-4 py-2.5 text-[12.5px]">
+          <div
+            ref={logRef}
+            className="max-h-32 space-y-1 overflow-y-auto px-4 py-2.5 text-[12.5px]"
+          >
             {log.map((l, i) => (
               <div
                 key={i}
@@ -198,7 +214,11 @@ export function BrowserView(): JSX.Element {
                         : 'text-foreground'
                 )}
               >
-                {l.kind === 'done' ? '✓ ' : l.kind === 'act' ? '› ' : ''}
+                {l.kind === 'done' ? (
+                  <Check className="mr-1 inline h-3.5 w-3.5" strokeWidth={2} />
+                ) : l.kind === 'act' ? (
+                  <ChevronRight className="mr-0.5 inline h-3.5 w-3.5" strokeWidth={2} />
+                ) : null}
                 {l.text}
               </div>
             ))}
@@ -220,7 +240,11 @@ export function BrowserView(): JSX.Element {
             </Button>
           ) : (
             <Button onClick={run} disabled={!task.trim()}>
-              {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {running ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
               运行
             </Button>
           )}

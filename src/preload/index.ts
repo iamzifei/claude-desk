@@ -98,6 +98,7 @@ const api = {
       ipcRenderer.invoke('minutes:generate', ws, transcript)
   },
   app: {
+    version: () => ipcRenderer.invoke('app:version'),
     getDefaultWorkspace: () => ipcRenderer.invoke('app:getDefaultWorkspace'),
     openFolder: () => ipcRenderer.invoke('dialog:openFolder'),
     openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),

@@ -10,6 +10,7 @@ import { QuickSwitcher } from './components/QuickSwitcher'
 import { QuickCapture } from './components/QuickCapture'
 import { CardExportModal } from './components/CardExportModal'
 import { OnboardingTour } from './components/OnboardingTour'
+import { WhatsNew } from './components/WhatsNew'
 
 function App(): JSX.Element {
   const init = useStore((s) => s.init)
@@ -33,6 +34,7 @@ function App(): JSX.Element {
         <QuickCapture />
         <CardExportModal />
         <OnboardingTour />
+        <WhatsNew />
       </div>
     </TooltipProvider>
   )

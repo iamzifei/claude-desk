@@ -127,12 +127,19 @@ export function CodingView(): JSX.Element {
                 <span className="truncate">{it.text}</span>
               </div>
             ) : it.kind === 'result' ? (
-              <div key={i} className="rounded-lg border border-primary/30 bg-primary-soft/40 px-3.5 py-2.5 text-[13.5px]">
+              <div
+                key={i}
+                className="rounded-lg border border-primary/30 bg-primary-soft/40 px-3.5 py-2.5 text-[13.5px]"
+              >
                 {it.text}
               </div>
             ) : it.kind === 'error' ? (
-              <div key={i} className="px-2 py-1 text-[13px] text-destructive">
-                ⚠ {it.text}
+              <div
+                key={i}
+                className="flex items-start gap-1.5 px-2 py-1 text-[13px] text-destructive"
+              >
+                <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+                <span>{it.text}</span>
               </div>
             ) : (
               <div key={i} className="px-2 py-1 text-[13.5px] leading-relaxed">

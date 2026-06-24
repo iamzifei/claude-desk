@@ -13,6 +13,7 @@ import type {
   Favorite
 } from './types'
 import { DEFAULT_SHORTCUTS, mergeShortcuts, type ShortcutAction } from './shortcuts'
+import { entryForVersion, minorOf, type ChangelogEntry } from './changelog'
 
 let booted = false
 
@@ -157,6 +158,12 @@ interface AppState {
   setTourOpen: (v: boolean) => void
   completeOnboarding: () => Promise<void>
 
+  // "更新内容" — what's-new shown once after a major (x.y) update.
+  appVersion: string
+  whatsNewOpen: boolean
+  whatsNew: ChangelogEntry | null
+  dismissWhatsNew: () => Promise<void>
+
   // ⌘K quick switcher
   quickOpen: boolean
   setQuickOpen: (v: boolean) => void
@@ -221,7 +228,16 @@ export const useStore = create<AppState>((set, get) => ({
   setTourOpen: (v) => set({ tourOpen: v }),
   completeOnboarding: async () => {
     set({ tourOpen: false })
-    await window.api.settings.set({ onboarded: '1' })
+    // New users start "caught up" so they don't also get a what's-new popup.
+    await window.api.settings.set({ onboarded: '1', lastSeenVersion: get().appVersion })
+  },
+
+  appVersion: '',
+  whatsNewOpen: false,
+  whatsNew: null,
+  dismissWhatsNew: async () => {
+    set({ whatsNewOpen: false })
+    await window.api.settings.set({ lastSeenVersion: get().appVersion })
   },
 
   quickOpen: false,
@@ -369,11 +385,19 @@ export const useStore = create<AppState>((set, get) => ({
   init: async () => {
     if (booted) return
     booted = true
-    const [settings, providers, workspaces] = await Promise.all([
+    const [settings, providers, workspaces, appVersion] = await Promise.all([
       window.api.settings.get(),
       window.api.settings.getProviders(),
-      window.api.workspaces.list()
+      window.api.workspaces.list(),
+      window.api.app.version()
     ])
+    // Returning user whose last-seen 大版本 differs from now → show "更新内容".
+    // First-run users see the onboarding tour instead (and get marked caught-up).
+    const wnEntry = entryForVersion(appVersion)
+    const showWhatsNew =
+      settings.onboarded &&
+      !!wnEntry &&
+      minorOf(settings.lastSeenVersion ?? '0.0') !== minorOf(appVersion)
     applyTheme(settings.theme)
     const activeWorkspaceId =
       (settings.activeWorkspace && workspaces.some((w) => w.id === settings.activeWorkspace)
@@ -400,11 +424,33 @@ export const useStore = create<AppState>((set, get) => ({
       workspaces,
       activeWorkspaceId,
       tourOpen: !settings.onboarded, // first run → show the guided tour
-      favorites
+      favorites,
+      appVersion,
+      whatsNewOpen: showWhatsNew,
+      whatsNew: showWhatsNew ? wnEntry : null
     })
     await get().refreshAll()
-    const { conversations } = get()
-    if (conversations.length > 0) await get().openConversation(conversations[0].id)
+    // Restore the last-opened project scope so the app reopens where the user
+    // left off (default-select that project), if it still exists in this workspace.
+    const saved = settings.projectScope
+    if (saved && saved !== 'all') {
+      const valid = saved === 'unfiled' || get().projects.some((p) => p.id === saved)
+      if (valid) {
+        set({
+          projectScope: saved,
+          ...(saved !== 'unfiled' ? { activeProjectId: saved } : {})
+        })
+        await window.api.scope.set(saved)
+      }
+    }
+    // Open the most recent conversation within the restored scope (else any).
+    const sc = get().projectScope
+    const list = get().conversations
+    const scoped = list.filter((c) =>
+      sc === 'all' ? true : sc === 'unfiled' ? !c.project_id : c.project_id === sc
+    )
+    const toOpen = scoped[0] ?? list[0]
+    if (toOpen) await get().openConversation(toOpen.id)
     else await get().newConversation()
   },
 

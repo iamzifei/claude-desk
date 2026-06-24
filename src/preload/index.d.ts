@@ -108,6 +108,8 @@ export interface PublicSettings {
   shortcuts: string | null
   onboarded: boolean
   favorites: string | null
+  projectScope: string | null
+  lastSeenVersion: string | null
 }
 
 export type TranscribeResult = { text: string } | { error: string }
@@ -379,6 +381,7 @@ export interface Api {
         shortcuts: string
         onboarded: string
         favorites: string
+        lastSeenVersion: string
       }>
     ) => Promise<PublicSettings>
   }
@@ -398,6 +401,7 @@ export interface Api {
     generateMinutes: (ws: string, transcript: string) => Promise<Note>
   }
   app: {
+    version: () => Promise<string>
     getDefaultWorkspace: () => Promise<string>
     openFolder: () => Promise<string | null>
     openExternal: (url: string) => Promise<void>

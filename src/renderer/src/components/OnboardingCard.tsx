@@ -1,5 +1,5 @@
 import { JSX, useEffect, useState } from 'react'
-import { Sparkles, Loader2 } from 'lucide-react'
+import { Sparkles, Loader2, Hand, Lock } from 'lucide-react'
 import { useStore } from '../store'
 import { Button } from './ui/button'
 
@@ -27,17 +27,26 @@ export function OnboardingCard(): JSX.Element | null {
 
   return (
     <div className="mb-6 w-full max-w-md rounded-2xl border border-primary/30 bg-primary-soft/50 p-5 text-center">
-      <div className="text-[15px] font-semibold text-foreground">👋 第一次用墨栖?</div>
+      <div className="flex items-center justify-center gap-1.5 text-[15px] font-semibold text-foreground">
+        <Hand className="h-4 w-4 text-primary" strokeWidth={1.75} /> 第一次用墨栖?
+      </div>
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
         内容创作者的资产工作台:沉淀素材 → 拆原子 → 选题装配成稿 → 多平台改写发布 → 数据反哺选题。
         载入一份示例数据,边看边懂。
       </p>
-      <p className="mt-2 text-[11.5px] leading-relaxed text-muted-foreground/80">
-        🔒 你的素材、原子、选题等全部存在本机,不上传云端;仅生成内容时把必要文本发往你配置的模型。
+      <p className="mt-2 flex items-start justify-center gap-1.5 text-[11.5px] leading-relaxed text-muted-foreground/80">
+        <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+        <span>
+          你的素材、原子、选题等全部存在本机,不上传云端;仅生成内容时把必要文本发往你配置的模型。
+        </span>
       </p>
       <div className="mt-3.5 flex justify-center gap-2">
         <Button onClick={seed} disabled={loading}>
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="h-4 w-4" />
+          )}
           载入示例数据
         </Button>
         <Button variant="secondary" onClick={() => setShow(false)}>

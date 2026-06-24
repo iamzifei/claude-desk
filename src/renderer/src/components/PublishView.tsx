@@ -1,5 +1,16 @@
 import { JSX, useEffect, useState } from 'react'
-import { BarChart3, Plus, Trash2, Pencil, Sparkles, Loader2, Link2, Star, Check } from 'lucide-react'
+import {
+  BarChart3,
+  Plus,
+  Trash2,
+  Pencil,
+  Sparkles,
+  Loader2,
+  Link2,
+  Star,
+  Check,
+  ArrowRight
+} from 'lucide-react'
 import { useStore } from '../store'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -35,25 +46,25 @@ export function PublishView(): JSX.Element {
     }
   }
 
-  const total = pubs.reduce(
-    (a, p) => ({ v: a.v + p.views, l: a.l + p.likes, s: a.s + p.saves }),
-    { v: 0, l: 0, s: 0 }
-  )
+  const total = pubs.reduce((a, p) => ({ v: a.v + p.views, l: a.l + p.likes, s: a.s + p.saves }), {
+    v: 0,
+    l: 0,
+    s: 0
+  })
   // Per-platform breakdown (best avg-engagement platform surfaces first).
   const byPlatform = Object.values(
-    pubs.reduce<Record<string, { platform: string; n: number; views: number; likes: number; saves: number }>>(
-      (acc, p) => {
-        const key = p.platform ?? '未分'
-        const g = acc[key] ?? { platform: key, n: 0, views: 0, likes: 0, saves: 0 }
-        g.n++
-        g.views += p.views
-        g.likes += p.likes
-        g.saves += p.saves
-        acc[key] = g
-        return acc
-      },
-      {}
-    )
+    pubs.reduce<
+      Record<string, { platform: string; n: number; views: number; likes: number; saves: number }>
+    >((acc, p) => {
+      const key = p.platform ?? '未分'
+      const g = acc[key] ?? { platform: key, n: 0, views: 0, likes: 0, saves: 0 }
+      g.n++
+      g.views += p.views
+      g.likes += p.likes
+      g.saves += p.saves
+      acc[key] = g
+      return acc
+    }, {})
   ).sort((a, b) => b.saves + b.likes - (a.saves + a.likes))
 
   return (
@@ -64,8 +75,17 @@ export function PublishView(): JSX.Element {
         desc="记录各平台发布与数据,让表现反哺下一轮选题——发布越多,选题越准,形成增长飞轮。"
         action={
           <div className="flex gap-2">
-            <Button size="sm" variant="secondary" onClick={suggest} disabled={suggesting || pubs.length === 0}>
-              {suggesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={suggest}
+              disabled={suggesting || pubs.length === 0}
+            >
+              {suggesting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
               据数据出选题
             </Button>
             <Button size="sm" onClick={() => setEditing('new')}>
@@ -79,9 +99,11 @@ export function PublishView(): JSX.Element {
         suggested > 0 ? (
           <button
             onClick={() => setView('topics')}
-            className="mt-3 rounded-lg border border-primary/40 bg-primary-soft px-3 py-2 text-left text-[13px] text-primary"
+            className="mt-3 flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary-soft px-3 py-2 text-left text-[13px] text-primary"
           >
-            ✓ 已据数据生成 {suggested} 个选题,点此去「选题库」查看 →
+            <Check className="h-4 w-4 shrink-0" strokeWidth={2} />
+            <span>已据数据生成 {suggested} 个选题,点此去「选题库」查看</span>
+            <ArrowRight className="h-3.5 w-3.5 shrink-0" />
           </button>
         ) : (
           <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-muted-foreground">
@@ -107,7 +129,9 @@ export function PublishView(): JSX.Element {
           <div className="space-y-1">
             {byPlatform.map((g) => (
               <div key={g.platform} className="flex items-center gap-3 text-[12.5px]">
-                <span className="w-16 shrink-0 text-foreground">{labelForPlatform(g.platform)}</span>
+                <span className="w-16 shrink-0 text-foreground">
+                  {labelForPlatform(g.platform)}
+                </span>
                 <span className="text-muted-foreground">{g.n} 条</span>
                 <span className="ml-auto text-muted-foreground">
                   播放 {g.views.toLocaleString()} · 赞 {g.likes} · 藏 {g.saves}
@@ -132,7 +156,9 @@ export function PublishView(): JSX.Element {
         {pubs.length === 0 ? (
           <Empty>还没有发布记录。发完一条内容,把数据记下来,系统就能据此给你出下一轮选题。</Empty>
         ) : (
-          pubs.map((p) => <PubRow key={p.id} p={p} onEdit={() => setEditing(p)} onChange={refresh} />)
+          pubs.map((p) => (
+            <PubRow key={p.id} p={p} onEdit={() => setEditing(p)} onChange={refresh} />
+          ))
         )}
       </div>
     </div>
@@ -148,7 +174,15 @@ function Stat({ label, value }: { label: string; value: number }): JSX.Element {
   )
 }
 
-function PubRow({ p, onEdit, onChange }: { p: Publication; onEdit: () => void; onChange: () => void }): JSX.Element {
+function PubRow({
+  p,
+  onEdit,
+  onChange
+}: {
+  p: Publication
+  onEdit: () => void
+  onChange: () => void
+}): JSX.Element {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const saveTemplate = async (): Promise<void> => {
@@ -227,7 +261,12 @@ function PubForm({ pub, onDone }: { pub: Publication | null; onDone: () => void 
 
   const submit = async (): Promise<void> => {
     if (!title.trim() || !ws) return
-    const payload = { title: title.trim(), platform: platform || null, url: url.trim() || null, ...m }
+    const payload = {
+      title: title.trim(),
+      platform: platform || null,
+      url: url.trim() || null,
+      ...m
+    }
     if (pub) await window.api.publications.update(pub.id, payload)
     else await window.api.publications.create(ws, payload)
     onDone()
