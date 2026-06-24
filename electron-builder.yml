@@ -58,6 +58,24 @@ linux:
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
+# --- Anti reverse-engineering / anti-tamper: Electron Fuses --------------------
+# Fuses are flipped in the Electron binary at package time (before signing), so
+# they can't be toggled back without breaking the code signature.
+electronFuses:
+  # Block `ELECTRON_RUN_AS_NODE=1 InkNest …` — otherwise an attacker can use the
+  # signed binary as a Node interpreter to run arbitrary code in-process and dump
+  # everything, bypassing all obfuscation. Safe here: the Claude agent subprocess
+  # is spawned via a real `node`/`bun` on PATH, it does NOT rely on RUN_AS_NODE.
+  runAsNode: false
+  # Block attaching a debugger via --inspect / NODE_OPTIONS to read memory/source.
+  enableNodeCliInspectArguments: false
+  enableNodeOptionsEnvironmentVariable: false
+  # Encrypt anything stored via Electron's safeStorage-backed cookie store.
+  enableCookieEncryption: true
+  # Verify the app.asar header hash at load and refuse to run if app.asar was
+  # modified — stops trivial "extract → patch → repack" tampering.
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
 publish:
   provider: generic
   url: https://example.com/auto-updates

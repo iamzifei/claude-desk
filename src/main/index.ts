@@ -32,7 +32,11 @@ function createWindow(): void {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
-      webviewTag: true // embedded browser for 浏览器自动化
+      webviewTag: true, // embedded browser for 浏览器自动化
+      // Anti reverse-engineering: never expose DevTools in the packaged build —
+      // it's the easiest path to read the (obfuscated) renderer and inspect IPC.
+      // Stays enabled for `npm run dev` so local development is unaffected.
+      devTools: !app.isPackaged
     }
   })
 
