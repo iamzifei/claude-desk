@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 import { getDb } from './index'
 import { rebuildLinks, purgeLinks } from './links'
+import { scopeClause, scopeProjectId } from './scope'
 import type { AtomType, ExtractedAtom } from './atom-extract'
 
 export interface Atom {
@@ -27,26 +28,43 @@ export function getAtom(id: string): Atom | undefined {
 }
 
 export function listAtoms(type?: string): Atom[] {
+  const conds: string[] = []
+  const params: unknown[] = []
   if (type && type !== 'all') {
-    return getDb()
-      .prepare('SELECT * FROM atoms WHERE type = ? ORDER BY created_at DESC')
-      .all(type) as Atom[]
+    conds.push('type = ?')
+    params.push(type)
   }
-  return getDb().prepare('SELECT * FROM atoms ORDER BY created_at DESC').all() as Atom[]
+  const sc = scopeClause()
+  if (sc.sql) {
+    conds.push(sc.sql)
+    params.push(...sc.params)
+  }
+  const where = conds.length ? `WHERE ${conds.join(' AND ')}` : ''
+  return getDb()
+    .prepare(`SELECT * FROM atoms ${where} ORDER BY created_at DESC`)
+    .all(...params) as Atom[]
 }
 
 export function searchAtoms(query: string): Atom[] {
   const q = `%${query.trim()}%`
+  const params: unknown[] = [q, q]
+  const sc = scopeClause()
+  const scopeSql = sc.sql ? `AND ${sc.sql}` : ''
+  params.push(...sc.params)
   return getDb()
-    .prepare('SELECT * FROM atoms WHERE content LIKE ? OR tags LIKE ? ORDER BY created_at DESC')
-    .all(q, q) as Atom[]
+    .prepare(
+      `SELECT * FROM atoms WHERE (content LIKE ? OR tags LIKE ?) ${scopeSql} ORDER BY created_at DESC`
+    )
+    .all(...params) as Atom[]
 }
 
 /** Distinct atom types currently in use (for the filter chips). */
 export function listAtomTypes(): string[] {
   return (
     getDb()
-      .prepare("SELECT DISTINCT type FROM atoms WHERE type IS NOT NULL AND type <> '' ORDER BY type")
+      .prepare(
+        "SELECT DISTINCT type FROM atoms WHERE type IS NOT NULL AND type <> '' ORDER BY type"
+      )
       .all() as { type: string }[]
   ).map((r) => r.type)
 }
@@ -68,6 +86,8 @@ export function createAtom(a: NewAtom): Atom {
        VALUES (@id, @content, @type, @source_kind, @source_id, @tags, @in_context, @created_at)`
     )
     .run(atom)
+  const pid = scopeProjectId()
+  if (pid) getDb().prepare('UPDATE atoms SET project_id = ? WHERE id = ?').run(pid, atom.id)
   rebuildLinks('atom', atom.id, atom.content)
   return atom
 }
@@ -93,6 +113,11 @@ export function createAtoms(
     created_at: now + i // preserve order
   }))
   getDb().transaction(() => rows.forEach((r) => insert.run(r)))()
+  const pid = scopeProjectId()
+  if (pid) {
+    const upd = getDb().prepare('UPDATE atoms SET project_id = ? WHERE id = ?')
+    getDb().transaction(() => rows.forEach((r) => upd.run(pid, r.id)))()
+  }
   rows.forEach((r) => rebuildLinks('atom', r.id, r.content))
   return rows
 }
@@ -105,7 +130,9 @@ export function updateAtom(id: string, a: NewAtom): void {
 }
 
 export function toggleAtomContext(id: string, on: boolean): void {
-  getDb().prepare('UPDATE atoms SET in_context = ? WHERE id = ?').run(on ? 1 : 0, id)
+  getDb()
+    .prepare('UPDATE atoms SET in_context = ? WHERE id = ?')
+    .run(on ? 1 : 0, id)
 }
 
 export function deleteAtom(id: string): void {

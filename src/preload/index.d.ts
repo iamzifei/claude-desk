@@ -14,6 +14,7 @@ export interface Project {
   name: string
   dir_path: string | null
   sort: number
+  archived: number
   created_at: number
 }
 
@@ -21,6 +22,14 @@ export interface FileEntry {
   name: string
   path: string
   isDir: boolean
+}
+
+/** A node in the Vault (knowledge base) file tree. `rel` is '' for the root. */
+export interface VaultNode {
+  name: string
+  rel: string
+  isDir: boolean
+  children?: VaultNode[]
 }
 
 export interface ScheduledTask {
@@ -73,6 +82,13 @@ export interface Message {
   created_at: number
 }
 
+/** A referenced conversation injected as context (上下文迁移). */
+export interface ContextRef {
+  id: string
+  title: string
+  messageCount: number
+}
+
 export type Chunk =
   | { type: 'text'; text: string }
   | { type: 'thinking'; text: string }
@@ -90,6 +106,8 @@ export interface PublicSettings {
   transcriptionModel: string
   hasTranscriptionKey: boolean
   shortcuts: string | null
+  onboarded: boolean
+  favorites: string | null
 }
 
 export type TranscribeResult = { text: string } | { error: string }
@@ -102,6 +120,7 @@ export interface Skill {
   enabled: number
   source: string
   created_at: number
+  slug: string
 }
 
 export interface NewSkill {
@@ -316,8 +335,11 @@ export interface Api {
   }
   projects: {
     list: (workspaceId: string) => Promise<Project[]>
+    listArchived: (workspaceId: string) => Promise<Project[]>
     create: (workspaceId: string, name: string) => Promise<Project>
     rename: (id: string, name: string) => Promise<void>
+    archive: (id: string, archived: boolean) => Promise<void>
+    reorder: (orderedIds: string[]) => Promise<void>
     setDir: (id: string, dir: string | null) => Promise<void>
     delete: (id: string) => Promise<void>
   }
@@ -333,6 +355,12 @@ export interface Api {
     setModel: (id: string, model: string | null) => Promise<void>
     setPinned: (id: string, pinned: boolean) => Promise<void>
     messages: (id: string) => Promise<Message[]>
+    exportToVault: (convId: string, projectId: string) => Promise<string>
+    contextRefs: (id: string) => Promise<ContextRef[]>
+    addContextRef: (id: string, refId: string) => Promise<ContextRef | null>
+    removeContextRef: (id: string, refId: string) => Promise<void>
+    recap: (id: string) => Promise<{ brief: string; sessionId: string }>
+    onContextChanged: (cb: (conversationId: string) => void) => () => void
   }
   settings: {
     get: () => Promise<PublicSettings>
@@ -349,6 +377,8 @@ export interface Api {
         transcriptionModel: string
         transcriptionKey: string
         shortcuts: string
+        onboarded: string
+        favorites: string
       }>
     ) => Promise<PublicSettings>
   }
@@ -371,11 +401,32 @@ export interface Api {
     getDefaultWorkspace: () => Promise<string>
     openFolder: () => Promise<string | null>
     openExternal: (url: string) => Promise<void>
-    seedSample: (ws: string) => Promise<{ materials: number; atoms: number; topics: number; publications: number }>
+    seedSample: (
+      ws: string
+    ) => Promise<{ materials: number; atoms: number; topics: number; publications: number }>
     onDataChanged: (cb: () => void) => () => void
   }
   files: {
     listDir: (dir: string) => Promise<FileEntry[]>
+  }
+  scope: {
+    set: (scope: string) => Promise<void>
+  }
+  vault: {
+    tree: (projectId: string) => Promise<VaultNode | null>
+    read: (projectId: string, rel: string) => Promise<string>
+    write: (projectId: string, rel: string, content: string) => Promise<void>
+    create: (projectId: string, rel: string, kind: 'file' | 'dir') => Promise<void>
+    rename: (projectId: string, from: string, to: string) => Promise<void>
+    remove: (projectId: string, rel: string) => Promise<void>
+    reindex: (projectId: string) => Promise<{ files: number; links: number }>
+    mtime: (projectId: string, rel: string) => Promise<number | null>
+    readDataUrl: (projectId: string, rel: string) => Promise<string>
+    openExternal: (projectId: string, rel: string) => Promise<string | void>
+    reveal: (projectId: string, rel: string) => Promise<void>
+    watch: (projectId: string) => Promise<void>
+    unwatch: (projectId: string) => Promise<void>
+    onChanged: (cb: (projectId: string) => void) => () => void
   }
   voice: {
     transcribe: (base64: string, mime: string) => Promise<TranscribeResult>
@@ -389,10 +440,12 @@ export interface Api {
   }
   skills: {
     list: () => Promise<Skill[]>
+    names: () => Promise<{ name: string; slug: string; description: string | null }[]>
     create: (s: NewSkill) => Promise<Skill>
     toggle: (id: string, enabled: boolean) => Promise<void>
     delete: (id: string) => Promise<void>
     import: () => Promise<Skill | null>
+    rescan: () => Promise<Skill[]>
   }
   materials: {
     list: (platform?: string) => Promise<Material[]>

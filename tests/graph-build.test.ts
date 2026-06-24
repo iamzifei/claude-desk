@@ -52,4 +52,23 @@ describe('buildGraph', () => {
     )
     expect(edges).toEqual([])
   })
+
+  it('treats vault notes like any other kind (knowledge-base wikilinks)', () => {
+    // graph.ts feeds vault notes as kind 'vault' with id `${projectId}::${rel}`.
+    const vaultItems = [
+      { kind: 'vault', id: 'proj1::人物/刘备.md', label: '刘备', tags: null },
+      { kind: 'vault', id: 'proj1::人物/关羽.md', label: '关羽', tags: null }
+    ]
+    const { nodes, edges } = buildGraph(vaultItems, [
+      {
+        from_kind: 'vault',
+        from_id: 'proj1::人物/刘备.md',
+        to_kind: 'vault',
+        to_id: 'proj1::人物/关羽.md'
+      }
+    ])
+    expect(nodes.map((n) => n.kind)).toEqual(['vault', 'vault'])
+    expect(edges).toHaveLength(1)
+    expect(edges[0].type).toBe('link')
+  })
 })

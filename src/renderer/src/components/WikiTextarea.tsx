@@ -11,10 +11,18 @@ const KIND_LABEL: Record<string, string> = {
 type Props = {
   value: string
   onChange: (v: string) => void
+  /** Classes for the positioning wrapper — needed when the textarea must flex/fill. */
+  wrapperClassName?: string
 } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChange'>
 
 /** A textarea with `[[title]]` autocomplete — type `[[` to pick a link target. */
-export function WikiTextarea({ value, onChange, className, ...rest }: Props): JSX.Element {
+export function WikiTextarea({
+  value,
+  onChange,
+  className,
+  wrapperClassName,
+  ...rest
+}: Props): JSX.Element {
   const taRef = useRef<HTMLTextAreaElement>(null)
   const [titles, setTitles] = useState<{ title: string; kind: string }[]>([])
   const [query, setQuery] = useState<string | null>(null)
@@ -69,7 +77,7 @@ export function WikiTextarea({ value, onChange, className, ...rest }: Props): JS
   }
 
   return (
-    <div className="relative">
+    <div className={cn('relative', wrapperClassName)}>
       <textarea
         ref={taRef}
         value={value}
@@ -96,7 +104,9 @@ export function WikiTextarea({ value, onChange, className, ...rest }: Props): JS
               )}
             >
               <span className="truncate">{t.title}</span>
-              <span className="ml-2 shrink-0 text-[10px] text-muted-foreground/60">{KIND_LABEL[t.kind]}</span>
+              <span className="ml-2 shrink-0 text-[10px] text-muted-foreground/60">
+                {KIND_LABEL[t.kind]}
+              </span>
             </button>
           ))}
         </div>

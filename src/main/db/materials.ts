@@ -6,6 +6,7 @@ import { getDb } from './index'
 import { formatMaterialsPrompt } from './skill-parse'
 import { mediaTypeForPath, type ImageMediaType } from './image-util'
 import { rebuildLinks, resolvePending, purgeLinks } from './links'
+import { scopeClause, scopeProjectId } from './scope'
 
 export type MaterialKind = 'text' | 'image' | 'link'
 
@@ -86,21 +87,34 @@ export function getMaterial(id: string): Material | undefined {
 }
 
 export function listMaterials(platform?: string): Material[] {
+  const conds: string[] = []
+  const params: unknown[] = []
   if (platform && platform !== 'all') {
-    return getDb()
-      .prepare('SELECT * FROM materials WHERE platform = ? ORDER BY created_at DESC')
-      .all(platform) as Material[]
+    conds.push('platform = ?')
+    params.push(platform)
   }
-  return getDb().prepare('SELECT * FROM materials ORDER BY created_at DESC').all() as Material[]
+  const sc = scopeClause()
+  if (sc.sql) {
+    conds.push(sc.sql)
+    params.push(...sc.params)
+  }
+  const where = conds.length ? `WHERE ${conds.join(' AND ')}` : ''
+  return getDb()
+    .prepare(`SELECT * FROM materials ${where} ORDER BY created_at DESC`)
+    .all(...params) as Material[]
 }
 
 export function searchMaterials(query: string): Material[] {
   const q = `%${query.trim()}%`
+  const params: unknown[] = [q, q, q]
+  const sc = scopeClause()
+  const scopeSql = sc.sql ? `AND ${sc.sql}` : ''
+  params.push(...sc.params)
   return getDb()
     .prepare(
-      'SELECT * FROM materials WHERE title LIKE ? OR content LIKE ? OR tags LIKE ? ORDER BY created_at DESC'
+      `SELECT * FROM materials WHERE (title LIKE ? OR content LIKE ? OR tags LIKE ?) ${scopeSql} ORDER BY created_at DESC`
     )
-    .all(q, q, q) as Material[]
+    .all(...params) as Material[]
 }
 
 /** Distinct non-empty platform tags currently in use (for the group filter). */
@@ -137,6 +151,9 @@ export function createMaterial(m: NewMaterial): Material {
        VALUES (@id, @title, @content, @url, @tags, @kind, @image_path, @platform, @in_context, @status, @created_at)`
     )
     .run(mat)
+  // Stamp the active project scope (null under 全部/未归类 → stays unfiled).
+  const pid = scopeProjectId()
+  if (pid) getDb().prepare('UPDATE materials SET project_id = ? WHERE id = ?').run(pid, mat.id)
   rebuildLinks('material', mat.id, mat.content)
   resolvePending(mat.title, 'material', mat.id)
   return mat
@@ -160,7 +177,9 @@ export function updateMaterial(id: string, m: NewMaterial): void {
 }
 
 export function toggleMaterialContext(id: string, on: boolean): void {
-  getDb().prepare('UPDATE materials SET in_context = ? WHERE id = ?').run(on ? 1 : 0, id)
+  getDb()
+    .prepare('UPDATE materials SET in_context = ? WHERE id = ?')
+    .run(on ? 1 : 0, id)
 }
 
 /** Move a material between the Inbox (待整理) and 已整理 states. */

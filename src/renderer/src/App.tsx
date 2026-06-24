@@ -9,6 +9,7 @@ import { SettingsModal } from './components/SettingsModal'
 import { QuickSwitcher } from './components/QuickSwitcher'
 import { QuickCapture } from './components/QuickCapture'
 import { CardExportModal } from './components/CardExportModal'
+import { OnboardingTour } from './components/OnboardingTour'
 
 function App(): JSX.Element {
   const init = useStore((s) => s.init)
@@ -31,6 +32,7 @@ function App(): JSX.Element {
         <QuickSwitcher />
         <QuickCapture />
         <CardExportModal />
+        <OnboardingTour />
       </div>
     </TooltipProvider>
   )

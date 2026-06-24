@@ -33,6 +33,7 @@ const STATUSES: TopicStatus[] = ['灵感', '待写', '进行', '已发']
 
 export function TopicsView(): JSX.Element {
   const ws = useStore((s) => s.activeWorkspaceId)
+  const projectScope = useStore((s) => s.projectScope)
   const [topics, setTopics] = useState<Topic[]>([])
   const [filter, setFilter] = useState<'all' | TopicStatus>('all')
   const [editing, setEditing] = useState<Topic | 'new' | null>(null)
@@ -43,7 +44,7 @@ export function TopicsView(): JSX.Element {
   }
   useEffect(() => {
     refresh()
-  }, [ws])
+  }, [ws, projectScope])
 
   const visible = topics.filter((t) => (filter === 'all' ? true : t.status === filter))
 

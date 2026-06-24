@@ -96,6 +96,8 @@ export interface AppSettings {
   transcriptionModel: string
   hasTranscriptionKey: boolean
   shortcuts: string | null // JSON map of action → accelerator (null = defaults)
+  onboarded: boolean // first-run guided tour already completed/skipped
+  favorites: string | null // JSON array of pinned sidebar shortcuts (SplitTarget[])
 }
 
 /** Settings safe to send to the renderer (never includes the raw key). */
@@ -112,6 +114,8 @@ export function getPublicSettings(): AppSettings {
     transcriptionEngine: getSetting('transcriptionEngine') ?? 'cloud',
     transcriptionBaseUrl: getSetting('transcriptionBaseUrl') ?? DEFAULT_TRANSCRIBE_URL,
     transcriptionModel: getSetting('transcriptionModel') ?? DEFAULT_TRANSCRIBE_MODEL,
-    hasTranscriptionKey: !!resolveTranscriptionKey()
+    hasTranscriptionKey: !!resolveTranscriptionKey(),
+    onboarded: getSetting('onboarded') === '1',
+    favorites: getSetting('favorites')
   }
 }

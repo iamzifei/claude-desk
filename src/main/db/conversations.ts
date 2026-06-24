@@ -96,11 +96,15 @@ export function renameConversation(id: string, title: string): void {
 }
 
 export function setArchived(id: string, archived: boolean): void {
-  getDb().prepare('UPDATE conversations SET archived = ? WHERE id = ?').run(archived ? 1 : 0, id)
+  getDb()
+    .prepare('UPDATE conversations SET archived = ? WHERE id = ?')
+    .run(archived ? 1 : 0, id)
 }
 
 export function setPinned(id: string, pinned: boolean): void {
-  getDb().prepare('UPDATE conversations SET pinned = ? WHERE id = ?').run(pinned ? 1 : 0, id)
+  getDb()
+    .prepare('UPDATE conversations SET pinned = ? WHERE id = ?')
+    .run(pinned ? 1 : 0, id)
 }
 
 export function moveToProject(id: string, projectId: string | null): void {
@@ -116,6 +120,13 @@ export function getConversationModel(id: string): string | null {
     | { model: string | null }
     | undefined
   return row?.model ?? null
+}
+
+export function getConversationTitle(id: string): string | null {
+  const row = getDb().prepare('SELECT title FROM conversations WHERE id = ?').get(id) as
+    | { title: string }
+    | undefined
+  return row?.title ?? null
 }
 
 export function getMessages(conversationId: string): Message[] {

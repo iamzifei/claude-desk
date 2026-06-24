@@ -29,9 +29,13 @@ const api = {
   },
   projects: {
     list: (workspaceId: string) => ipcRenderer.invoke('projects:list', workspaceId),
+    listArchived: (workspaceId: string) => ipcRenderer.invoke('projects:listArchived', workspaceId),
     create: (workspaceId: string, name: string) =>
       ipcRenderer.invoke('projects:create', workspaceId, name),
     rename: (id: string, name: string) => ipcRenderer.invoke('projects:rename', id, name),
+    archive: (id: string, archived: boolean) =>
+      ipcRenderer.invoke('projects:archive', id, archived),
+    reorder: (orderedIds: string[]) => ipcRenderer.invoke('projects:reorder', orderedIds),
     setDir: (id: string, dir: string | null) => ipcRenderer.invoke('projects:setDir', id, dir),
     delete: (id: string) => ipcRenderer.invoke('projects:delete', id)
   },
@@ -53,7 +57,23 @@ const api = {
       ipcRenderer.invoke('conversations:setModel', id, model),
     setPinned: (id: string, pinned: boolean) =>
       ipcRenderer.invoke('conversations:setPinned', id, pinned),
-    messages: (id: string) => ipcRenderer.invoke('conversations:messages', id)
+    messages: (id: string) => ipcRenderer.invoke('conversations:messages', id),
+    exportToVault: (convId: string, projectId: string) =>
+      ipcRenderer.invoke('conversations:exportToVault', convId, projectId),
+    // 上下文迁移：引用其它对话的历史作为上下文
+    contextRefs: (id: string) => ipcRenderer.invoke('conversations:contextRefs', id),
+    addContextRef: (id: string, refId: string) =>
+      ipcRenderer.invoke('conversations:addContextRef', id, refId),
+    removeContextRef: (id: string, refId: string) =>
+      ipcRenderer.invoke('conversations:removeContextRef', id, refId),
+    recap: (id: string) => ipcRenderer.invoke('conversations:recap', id),
+    // Fires when a conversation's context refs change (e.g. a pasted Session ID
+    // was auto-imported) so the composer chips can refresh.
+    onContextChanged: (cb: (conversationId: string) => void) => {
+      const listener = (_e: unknown, conversationId: string): void => cb(conversationId)
+      ipcRenderer.on('context:changed', listener)
+      return () => ipcRenderer.removeListener('context:changed', listener)
+    }
   },
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
@@ -91,6 +111,36 @@ const api = {
   files: {
     listDir: (dir: string) => ipcRenderer.invoke('files:listDir', dir)
   },
+  scope: {
+    // 'all' | 'unfiled' | <projectId> — filters asset views in the main process.
+    set: (scope: string) => ipcRenderer.invoke('scope:set', scope)
+  },
+  vault: {
+    tree: (projectId: string) => ipcRenderer.invoke('vault:tree', projectId),
+    read: (projectId: string, rel: string) => ipcRenderer.invoke('vault:read', projectId, rel),
+    write: (projectId: string, rel: string, content: string) =>
+      ipcRenderer.invoke('vault:write', projectId, rel, content),
+    create: (projectId: string, rel: string, kind: 'file' | 'dir') =>
+      ipcRenderer.invoke('vault:create', projectId, rel, kind),
+    rename: (projectId: string, from: string, to: string) =>
+      ipcRenderer.invoke('vault:rename', projectId, from, to),
+    remove: (projectId: string, rel: string) => ipcRenderer.invoke('vault:remove', projectId, rel),
+    reindex: (projectId: string) => ipcRenderer.invoke('vault:reindex', projectId),
+    mtime: (projectId: string, rel: string) => ipcRenderer.invoke('vault:mtime', projectId, rel),
+    readDataUrl: (projectId: string, rel: string) =>
+      ipcRenderer.invoke('vault:readDataUrl', projectId, rel),
+    openExternal: (projectId: string, rel: string) =>
+      ipcRenderer.invoke('vault:openExternal', projectId, rel),
+    reveal: (projectId: string, rel: string) => ipcRenderer.invoke('vault:reveal', projectId, rel),
+    watch: (projectId: string) => ipcRenderer.invoke('vault:watch', projectId),
+    unwatch: (projectId: string) => ipcRenderer.invoke('vault:unwatch', projectId),
+    // External edits (Obsidian, etc.) re-fire this with the affected projectId.
+    onChanged: (cb: (projectId: string) => void) => {
+      const listener = (_e: unknown, projectId: string): void => cb(projectId)
+      ipcRenderer.on('vault:changed', listener)
+      return () => ipcRenderer.removeListener('vault:changed', listener)
+    }
+  },
   voice: {
     transcribe: (base64: string, mime: string) =>
       ipcRenderer.invoke('transcribe:audio', base64, mime),
@@ -106,10 +156,12 @@ const api = {
   },
   skills: {
     list: () => ipcRenderer.invoke('skills:list'),
+    names: () => ipcRenderer.invoke('skills:names'),
     create: (s: unknown) => ipcRenderer.invoke('skills:create', s),
     toggle: (id: string, enabled: boolean) => ipcRenderer.invoke('skills:toggle', id, enabled),
     delete: (id: string) => ipcRenderer.invoke('skills:delete', id),
-    import: () => ipcRenderer.invoke('skills:import')
+    import: () => ipcRenderer.invoke('skills:import'),
+    rescan: () => ipcRenderer.invoke('skills:rescan')
   },
   materials: {
     list: (platform?: string) => ipcRenderer.invoke('materials:list', platform),
@@ -156,7 +208,8 @@ const api = {
   },
   topics: {
     list: (workspaceId: string) => ipcRenderer.invoke('topics:list', workspaceId),
-    create: (workspaceId: string, t: unknown) => ipcRenderer.invoke('topics:create', workspaceId, t),
+    create: (workspaceId: string, t: unknown) =>
+      ipcRenderer.invoke('topics:create', workspaceId, t),
     update: (id: string, t: unknown) => ipcRenderer.invoke('topics:update', id, t),
     setStatus: (id: string, status: string) => ipcRenderer.invoke('topics:setStatus', id, status),
     delete: (id: string) => ipcRenderer.invoke('topics:delete', id),

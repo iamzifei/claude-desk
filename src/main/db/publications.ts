@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 import { getDb } from './index'
+import { scopeClause, scopeProjectId } from './scope'
 
 export interface Publication {
   id: string
@@ -29,13 +30,21 @@ export interface NewPublication {
 }
 
 export function getPublication(id: string): Publication | undefined {
-  return getDb().prepare('SELECT * FROM publications WHERE id = ?').get(id) as Publication | undefined
+  return getDb().prepare('SELECT * FROM publications WHERE id = ?').get(id) as
+    | Publication
+    | undefined
 }
 
 export function listPublications(workspaceId: string): Publication[] {
+  const params: unknown[] = [workspaceId]
+  const sc = scopeClause()
+  const scopeSql = sc.sql ? `AND ${sc.sql}` : ''
+  params.push(...sc.params)
   return getDb()
-    .prepare('SELECT * FROM publications WHERE workspace_id = ? ORDER BY created_at DESC')
-    .all(workspaceId) as Publication[]
+    .prepare(
+      `SELECT * FROM publications WHERE workspace_id = ? ${scopeSql} ORDER BY created_at DESC`
+    )
+    .all(...params) as Publication[]
 }
 
 export function createPublication(workspaceId: string, p: NewPublication): Publication {
@@ -60,6 +69,8 @@ export function createPublication(workspaceId: string, p: NewPublication): Publi
        VALUES (@id, @workspace_id, @topic_id, @title, @platform, @url, @published_at, @views, @likes, @comments, @saves, @created_at)`
     )
     .run(pub)
+  const pid = scopeProjectId()
+  if (pid) getDb().prepare('UPDATE publications SET project_id = ? WHERE id = ?').run(pid, pub.id)
   return pub
 }
 

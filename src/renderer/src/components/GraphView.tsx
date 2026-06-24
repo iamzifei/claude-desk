@@ -12,12 +12,23 @@ interface P {
 }
 const W = 820
 const H = 580
-const COLOR: Record<string, string> = { material: '#6d5dfb', atom: '#a06dfb', topic: '#f59e0b' }
-const KIND_LABEL: Record<string, string> = { material: '素材', atom: '原子', topic: '选题' }
+const COLOR: Record<string, string> = {
+  material: '#6d5dfb',
+  atom: '#a06dfb',
+  topic: '#f59e0b',
+  vault: '#10b981'
+}
+const KIND_LABEL: Record<string, string> = {
+  material: '素材',
+  atom: '原子',
+  topic: '选题',
+  vault: '知识库'
+}
 
 /** Lightweight force-directed knowledge graph (no graph library). */
 export function GraphView(): JSX.Element {
   const ws = useStore((s) => s.activeWorkspaceId)
+  const projectScope = useStore((s) => s.projectScope)
   const jumpTo = useStore((s) => s.jumpTo)
   const [graph, setGraph] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] })
   const posRef = useRef<P[]>([])
@@ -26,7 +37,7 @@ export function GraphView(): JSX.Element {
 
   useEffect(() => {
     if (ws) window.api.graph.build(ws).then(setGraph)
-  }, [ws])
+  }, [ws, projectScope])
 
   // index + simulation edges + degree (for sizing)
   const idx = useMemo(() => new Map(graph.nodes.map((n, i) => [n.id, i])), [graph])

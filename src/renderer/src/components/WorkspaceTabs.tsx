@@ -1,10 +1,25 @@
 import { JSX, useState } from 'react'
-import { Folder, Plus, SplitSquareHorizontal, X } from 'lucide-react'
+import { Folder, Plus, X, Square, Columns2, Rows2, Columns3, Grid2x2 } from 'lucide-react'
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
 import { Button } from './ui/button'
 import { Tip } from './ui/tooltip'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem
+} from './ui/dropdown-menu'
 import { formatAccelerator, isMac } from '../shortcuts'
+import type { LayoutPreset } from '../types'
+
+const LAYOUTS: { v: LayoutPreset; label: string; icon: typeof Square }[] = [
+  { v: 'single', label: '单栏', icon: Square },
+  { v: 'col-2', label: '左右两栏', icon: Columns2 },
+  { v: 'row-2', label: '上下两栏', icon: Rows2 },
+  { v: 'col-3', label: '三栏', icon: Columns3 },
+  { v: 'quad', label: '四象限', icon: Grid2x2 }
+]
 
 /** Top-level workspace tabs, matching 牛马AI's top bar. */
 export function WorkspaceTabs(): JSX.Element {
@@ -15,9 +30,10 @@ export function WorkspaceTabs(): JSX.Element {
   const renameWs = useStore((s) => s.renameWorkspace)
   const removeWs = useStore((s) => s.removeWorkspace)
   const newWsKey = useStore((s) => s.shortcuts['new-workspace'])
-  const split = useStore((s) => s.split)
-  const toggleSplit = useStore((s) => s.toggleSplit)
+  const layout = useStore((s) => s.layout)
+  const setLayout = useStore((s) => s.setLayout)
   const splitKey = useStore((s) => s.shortcuts['new-split'])
+  const CurrentLayoutIcon = (LAYOUTS.find((l) => l.v === layout) ?? LAYOUTS[0]).icon
 
   const [editing, setEditing] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
@@ -92,16 +108,30 @@ export function WorkspaceTabs(): JSX.Element {
           <Plus className="h-4 w-4" />
         </Button>
       </Tip>
-      <Tip label={`分屏 ${formatAccelerator(splitKey)}`}>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => toggleSplit()}
-          className={cn('no-drag ml-auto', split && 'text-primary')}
-        >
-          <SplitSquareHorizontal className="h-4 w-4" />
-        </Button>
-      </Tip>
+      <DropdownMenu>
+        <Tip label={`窗格布局 ${formatAccelerator(splitKey)}`}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className={cn('no-drag ml-auto', layout !== 'single' && 'text-primary')}
+            >
+              <CurrentLayoutIcon className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+        </Tip>
+        <DropdownMenuContent align="end">
+          {LAYOUTS.map((l) => (
+            <DropdownMenuItem
+              key={l.v}
+              onSelect={() => setLayout(l.v)}
+              className={cn(layout === l.v && 'text-primary')}
+            >
+              <l.icon className="h-4 w-4" /> {l.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }

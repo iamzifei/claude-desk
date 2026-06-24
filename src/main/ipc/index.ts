@@ -21,6 +21,7 @@ import {
   moveToProject,
   setConversationModel,
   getConversationModel,
+  getConversationTitle,
   getMessages,
   addMessage
 } from '../db/conversations'
@@ -33,18 +34,15 @@ import {
 } from '../db/workspaces'
 import {
   listProjects,
+  listArchivedProjects,
   createProject,
   renameProject,
   setProjectDir,
+  setProjectArchived,
+  reorderProjects,
   deleteProject
 } from '../db/projects'
-import {
-  listTasks,
-  createTask,
-  deleteTask,
-  toggleTask,
-  type NewTask
-} from '../db/scheduledTasks'
+import { listTasks, createTask, deleteTask, toggleTask, type NewTask } from '../db/scheduledTasks'
 import {
   listNotes,
   createNote,
@@ -59,8 +57,13 @@ import {
   toggleSkill,
   deleteSkill,
   parseSkillMd,
+  syncInstalledSkills,
+  buildInvokedSkillsPrompt,
+  listSkillNames,
   type NewSkill
 } from '../db/skills'
+import { scanInstalledSkills } from '../agent/installed-skills'
+import { formatConversationMarkdown, safeFileName } from '../agent/export-conversation'
 import {
   listMaterials,
   searchMaterials,
@@ -126,12 +129,78 @@ import {
 import { runChat, runOnce, type RunHandle } from '../agent/run'
 import { decideBrowserAction, type PageElement } from '../agent/browser'
 import { runCodingAgent, cancelCoding } from '../agent/coding'
-import { isModelReady, downloadModel, transcribePcm, broadcastModelProgress } from '../voice/offline'
+import {
+  isModelReady,
+  downloadModel,
+  transcribePcm,
+  broadcastModelProgress
+} from '../voice/offline'
 import { runTaskById } from '../scheduler'
 import { PROVIDERS } from '../agent/providers'
+import { vaultRoot } from '../db/vault'
+import { setScope } from '../db/scope'
+import {
+  listContextRefs,
+  addContextRef,
+  removeContextRef,
+  buildContextPreamble,
+  purgeContextRefs
+} from '../db/context'
+import {
+  scanVault,
+  vaultTree,
+  readVaultFile,
+  writeVaultFile,
+  createEntry,
+  renameEntry,
+  removeEntry,
+  fileMtime,
+  readDataUrl,
+  vaultAbsPath,
+  watchVault,
+  stopWatch,
+  forgetVault
+} from '../vault'
 
 /** In-flight streaming runs, keyed by conversation id, so we can cancel. */
 const activeRuns = new Map<string, RunHandle>()
+
+/** A bare conversation id (randomUUID) pasted as a message → context import. */
+const SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Generate a concise title from the first exchange and rename the conversation
+ * — but only if it's still the default '新对话' (so a manual rename always wins).
+ * Fired once, after the first assistant reply; failures are silent.
+ */
+async function autoTitle(
+  conversationId: string,
+  userText: string,
+  assistantText: string,
+  wc: Electron.WebContents
+): Promise<void> {
+  if (getConversationTitle(conversationId) !== '新对话') return
+  const prompt =
+    '为下面这段对话起一个简短中文标题：6-16 字，概括主题；只输出标题本身，不要引号、标点或解释。\n\n' +
+    `用户：${userText.slice(0, 600)}\n\n助手：${assistantText.slice(0, 600)}`
+  const raw = await runOnce(
+    [
+      { id: 'title', conversation_id: conversationId, role: 'user', content: prompt, created_at: 0 }
+    ],
+    getConversationModel(conversationId)
+  )
+  const title = raw
+    .trim()
+    .split('\n')[0]
+    .replace(/^["'「『《]+|["'」』》]+$/g, '')
+    .slice(0, 24)
+    .trim()
+  // Skip empties and the runOnce error sentinel; re-check it wasn't renamed meanwhile.
+  if (!title || title.startsWith('[错误]')) return
+  if (getConversationTitle(conversationId) !== '新对话') return
+  renameConversation(conversationId, title)
+  if (!wc.isDestroyed()) wc.send('data:changed')
+}
 
 /** "每日回顾 · 2026-06-17 10:30" style title. */
 function dateTitle(prefix: string): string {
@@ -141,6 +210,19 @@ function dateTitle(prefix: string): string {
 }
 
 export function registerIpc(): void {
+  // Surface locally installed skills (~/.claude/skills + plugins) on startup so
+  // the 技能 view shows them without a manual import. Bounded + best-effort.
+  setImmediate(() => {
+    try {
+      syncInstalledSkills(scanInstalledSkills())
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.webContents.isDestroyed()) win.webContents.send('data:changed')
+      }
+    } catch {
+      /* a missing/unreadable skills dir shouldn't break startup */
+    }
+  })
+
   // ---- settings: -------------------------------------------------------
   ipcMain.handle('settings:get', () => getPublicSettings())
   ipcMain.handle('settings:getProviders', () =>
@@ -149,7 +231,8 @@ export function registerIpc(): void {
   ipcMain.handle('settings:set', (_e, patch: Record<string, string>) => {
     if (typeof patch.provider === 'string') setSetting('provider', patch.provider)
     if (typeof patch.model === 'string') setSetting('model', patch.model)
-    if (typeof patch.activeWorkspace === 'string') setSetting('activeWorkspace', patch.activeWorkspace)
+    if (typeof patch.activeWorkspace === 'string')
+      setSetting('activeWorkspace', patch.activeWorkspace)
     if (typeof patch.theme === 'string') setSetting('theme', patch.theme)
     if (typeof patch.transcriptionEngine === 'string')
       setSetting('transcriptionEngine', patch.transcriptionEngine)
@@ -158,6 +241,8 @@ export function registerIpc(): void {
     if (typeof patch.transcriptionModel === 'string')
       setSetting('transcriptionModel', patch.transcriptionModel)
     if (typeof patch.shortcuts === 'string') setSetting('shortcuts', patch.shortcuts)
+    if (typeof patch.onboarded === 'string') setSetting('onboarded', patch.onboarded)
+    if (typeof patch.favorites === 'string') setSetting('favorites', patch.favorites)
     // Secrets → encrypted at rest via safeStorage.
     if (typeof patch.apiKey === 'string' && patch.apiKey) setSetting('apiKey', patch.apiKey, true)
     if (typeof patch.transcriptionKey === 'string' && patch.transcriptionKey)
@@ -174,14 +259,32 @@ export function registerIpc(): void {
   )
   ipcMain.handle('workspaces:delete', (_e, id: string) => deleteWorkspace(id))
 
+  // ---- scope: active project for asset views (素材/原子/标签/图谱/选题/发布) ----
+  ipcMain.handle('scope:set', (_e, scope: string) => setScope(scope))
+
   // ---- projects: -------------------------------------------------------
   ipcMain.handle('projects:list', (_e, workspaceId: string) => listProjects(workspaceId))
   ipcMain.handle('projects:create', (_e, workspaceId: string, name: string) =>
     createProject(workspaceId, name)
   )
+  ipcMain.handle('projects:listArchived', (_e, workspaceId: string) =>
+    listArchivedProjects(workspaceId)
+  )
   ipcMain.handle('projects:rename', (_e, id: string, name: string) => renameProject(id, name))
-  ipcMain.handle('projects:setDir', (_e, id: string, dir: string | null) => setProjectDir(id, dir))
-  ipcMain.handle('projects:delete', (_e, id: string) => deleteProject(id))
+  ipcMain.handle('projects:archive', (_e, id: string, archived: boolean) => {
+    if (archived) forgetVault(id) // stop watching an archived project's vault
+    setProjectArchived(id, archived)
+  })
+  ipcMain.handle('projects:reorder', (_e, orderedIds: string[]) => reorderProjects(orderedIds))
+  ipcMain.handle('projects:setDir', (_e, id: string, dir: string | null) => {
+    // Rebinding (or unbinding) the folder invalidates the old vault index/watcher.
+    forgetVault(id)
+    setProjectDir(id, dir)
+  })
+  ipcMain.handle('projects:delete', (_e, id: string) => {
+    forgetVault(id)
+    deleteProject(id)
+  })
 
   // ---- conversations: --------------------------------------------------
   ipcMain.handle('conversations:list', (_e, workspaceId: string) => listConversations(workspaceId))
@@ -200,7 +303,33 @@ export function registerIpc(): void {
   ipcMain.handle('conversations:delete', (_e, id: string) => {
     activeRuns.get(id)?.cancel()
     activeRuns.delete(id)
+    purgeContextRefs(id)
     deleteConversation(id)
+  })
+  // ---- context migration (贴 Session ID 引用其历史作为上下文) ----
+  ipcMain.handle('conversations:contextRefs', (_e, id: string) => listContextRefs(id))
+  ipcMain.handle('conversations:addContextRef', (_e, id: string, refId: string) =>
+    addContextRef(id, refId)
+  )
+  ipcMain.handle('conversations:removeContextRef', (_e, id: string, refId: string) =>
+    removeContextRef(id, refId)
+  )
+  // Idle recap: a 3-line brief of the conversation + its copyable Session ID.
+  ipcMain.handle('conversations:recap', async (_e, id: string) => {
+    const msgs = getMessages(id)
+    if (msgs.length === 0) return { brief: '', sessionId: id }
+    const transcript = msgs
+      .map((m) => `${m.role === 'user' ? '用户' : '助手'}：${m.content}`)
+      .join('\n\n')
+    const prompt =
+      '用三行以内中文简要回顾下面这段对话：第一行——在做什么；第二行——已产出/已确立的关键结论；' +
+      '第三行——建议的下一步。只输出这三行正文，不要加标题或解释。\n\n' +
+      transcript.slice(-12000)
+    const brief = await runOnce(
+      [{ id: 'recap', conversation_id: id, role: 'user', content: prompt, created_at: 0 }],
+      getConversationModel(id)
+    )
+    return { brief: brief.trim(), sessionId: id }
   })
   ipcMain.handle('conversations:rename', (_e, id: string, title: string) =>
     renameConversation(id, title)
@@ -217,20 +346,61 @@ export function registerIpc(): void {
     setPinned(id, pinned)
   )
   ipcMain.handle('conversations:messages', (_e, id: string) => getMessages(id))
+  // Export a conversation as a Markdown note into the project's vault (对话/).
+  ipcMain.handle('conversations:exportToVault', (_e, convId: string, projectId: string) => {
+    const root = vaultRoot(projectId)
+    if (!root) throw new Error('该项目未绑定知识库文件夹')
+    const title = getConversationTitle(convId) || '对话'
+    const d = new Date()
+    const p = (n: number): string => String(n).padStart(2, '0')
+    const dateStr = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+    const md = formatConversationMarkdown(title, getMessages(convId), dateStr)
+    const base = safeFileName(title)
+    let rel = `对话/${base}.md`
+    for (let i = 2; fileMtime(root, rel) !== null; i++) rel = `对话/${base}-${i}.md`
+    writeVaultFile(root, rel, md)
+    scanVault(projectId, root) // index the new note immediately
+    return rel
+  })
 
   // ---- agent: ----------------------------------------------------------
   // Send a user message and stream the assistant reply back via 'agent:chunk'.
   ipcMain.handle('agent:query', (e, conversationId: string, text: string, web?: boolean) => {
     const wc = e.sender
-    // Persist the user's turn, then auto-title the conversation on first message.
+    const trimmed = text.trim()
+
+    // (A) Session-ID import: a message that is *just* a conversation id pulls in
+    // that conversation's full history as context — no model call. This is the
+    // "paste a Session ID to sync context" flow the user expects.
+    if (SESSION_ID_RE.test(trimmed) && trimmed !== conversationId) {
+      const ref = addContextRef(conversationId, trimmed)
+      if (ref) {
+        addMessage(conversationId, 'user', text)
+        const note =
+          `✅ 已引入对话「${ref.title}」的 ${ref.messageCount} 条消息作为上下文。` +
+          `接下来直接提问即可，我会参考它的完整历史来回答。`
+        addMessage(conversationId, 'assistant', note)
+        wc.send('agent:chunk', conversationId, { type: 'text', text: note })
+        wc.send('agent:chunk', conversationId, { type: 'done' })
+        wc.send('context:changed', conversationId) // refresh the composer chips
+        return
+      }
+      // Unknown/invalid id → fall through and let the model respond normally.
+    }
+
+    // (B) Normal turn. Title stays 新对话 until the first reply, then auto-titled
+    // from content (below) — not from the raw first message.
     addMessage(conversationId, 'user', text)
     const history = getMessages(conversationId)
-    if (history.length === 1) {
-      renameConversation(conversationId, text.slice(0, 40).trim() || 'New chat')
-    }
+    const firstExchange = history.length === 1
 
     let assistant = ''
     const model = getConversationModel(conversationId)
+    // System prefix = /slug-invoked skills (this turn) + referenced-conversation
+    // context (上下文迁移). Always-on enabled skills are added inside runChat.
+    const prefix = [buildInvokedSkillsPrompt(trimmed), buildContextPreamble(conversationId)]
+      .filter(Boolean)
+      .join('\n\n')
     const handle = runChat(
       history,
       (chunk) => {
@@ -240,12 +410,14 @@ export function registerIpc(): void {
         if (chunk.type === 'done') {
           if (assistant.trim()) addMessage(conversationId, 'assistant', assistant)
           activeRuns.delete(conversationId)
+          if (firstExchange && assistant.trim()) void autoTitle(conversationId, text, assistant, wc)
         }
         if (chunk.type === 'error') activeRuns.delete(conversationId)
       },
       model,
       undefined, // no system override for normal chat
-      web // 联网搜索 toggle
+      web, // 联网搜索 toggle
+      prefix || undefined
     )
     activeRuns.set(conversationId, handle)
   })
@@ -447,9 +619,19 @@ export function registerIpc(): void {
 
   // ---- skills: (技能市场) ---------------------------------------------
   ipcMain.handle('skills:list', () => listSkills())
+  ipcMain.handle('skills:names', () => listSkillNames())
   ipcMain.handle('skills:create', (_e, s: NewSkill) => createSkill(s))
   ipcMain.handle('skills:toggle', (_e, id: string, enabled: boolean) => toggleSkill(id, enabled))
   ipcMain.handle('skills:delete', (_e, id: string) => deleteSkill(id))
+  // Re-scan locally installed skills (~/.claude/skills + plugins) into the list.
+  ipcMain.handle('skills:rescan', () => {
+    try {
+      syncInstalledSkills(scanInstalledSkills())
+    } catch {
+      /* best-effort: a missing/unreadable skills dir shouldn't break the view */
+    }
+    return listSkills()
+  })
   ipcMain.handle('skills:import', async () => {
     const win = BrowserWindow.getFocusedWindow()
     const opts = {
@@ -544,7 +726,9 @@ export function registerIpc(): void {
       return { text: data.text ?? '' }
     } catch (e) {
       const err = e as { message?: string; cause?: { message?: string } }
-      return { error: `转写出错：${err.message ?? String(e)}${err.cause?.message ? ' (' + err.cause.message + ')' : ''}` }
+      return {
+        error: `转写出错：${err.message ?? String(e)}${err.cause?.message ? ' (' + err.cause.message + ')' : ''}`
+      }
     }
   })
 
@@ -578,7 +762,10 @@ export function registerIpc(): void {
     try {
       await win.loadFile(htmlPath)
       await new Promise((r) => setTimeout(r, 120)) // let the image decode
-      const pdf = await win.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true })
+      const pdf = await win.webContents.printToPDF({
+        printBackground: true,
+        preferCSSPageSize: true
+      })
       return pdf.toString('base64')
     } finally {
       win.destroy()
@@ -594,9 +781,7 @@ export function registerIpc(): void {
   ipcMain.handle('export:saveBinary', async (_e, defaultName: string, base64: string) => {
     const win = BrowserWindow.getFocusedWindow()
     const opts = { defaultPath: join(app.getPath('downloads'), defaultName) }
-    const res = win
-      ? await dialog.showSaveDialog(win, opts)
-      : await dialog.showSaveDialog(opts)
+    const res = win ? await dialog.showSaveDialog(win, opts) : await dialog.showSaveDialog(opts)
     if (res.canceled || !res.filePath) return null
     writeFileSync(res.filePath, Buffer.from(base64, 'base64'))
     return res.filePath
@@ -617,4 +802,73 @@ export function registerIpc(): void {
       return []
     }
   })
+
+  // ---- vault: (Obsidian-style knowledge base; disk .md = source of truth) ---
+  // Every handler resolves the project's bound folder, then delegates to the
+  // path-guarded VaultService. A missing binding returns null/throws clearly.
+  ipcMain.handle('vault:tree', (_e, projectId: string) => {
+    const root = vaultRoot(projectId)
+    return root ? vaultTree(root) : null
+  })
+  ipcMain.handle('vault:read', (_e, projectId: string, rel: string) => {
+    const root = vaultRoot(projectId)
+    if (!root) throw new Error('当前项目未绑定知识库文件夹')
+    return readVaultFile(root, rel)
+  })
+  ipcMain.handle('vault:write', (_e, projectId: string, rel: string, content: string) => {
+    const root = vaultRoot(projectId)
+    if (!root) throw new Error('当前项目未绑定知识库文件夹')
+    writeVaultFile(root, rel, content)
+    scanVault(projectId, root) // keep the index in step with the edit
+  })
+  ipcMain.handle('vault:create', (_e, projectId: string, rel: string, kind: 'file' | 'dir') => {
+    const root = vaultRoot(projectId)
+    if (!root) throw new Error('当前项目未绑定知识库文件夹')
+    createEntry(root, rel, kind)
+    scanVault(projectId, root)
+  })
+  ipcMain.handle('vault:rename', (_e, projectId: string, from: string, to: string) => {
+    const root = vaultRoot(projectId)
+    if (!root) throw new Error('当前项目未绑定知识库文件夹')
+    renameEntry(root, from, to)
+    scanVault(projectId, root)
+  })
+  ipcMain.handle('vault:remove', (_e, projectId: string, rel: string) => {
+    const root = vaultRoot(projectId)
+    if (!root) throw new Error('当前项目未绑定知识库文件夹')
+    removeEntry(root, rel)
+    scanVault(projectId, root)
+  })
+  ipcMain.handle('vault:reindex', (_e, projectId: string) => {
+    const root = vaultRoot(projectId)
+    return root ? scanVault(projectId, root) : { files: 0, links: 0 }
+  })
+  ipcMain.handle('vault:mtime', (_e, projectId: string, rel: string) => {
+    const root = vaultRoot(projectId)
+    return root ? fileMtime(root, rel) : null
+  })
+  // Binary preview (images / PDF) as a data URL.
+  ipcMain.handle('vault:readDataUrl', (_e, projectId: string, rel: string) => {
+    const root = vaultRoot(projectId)
+    if (!root) throw new Error('当前项目未绑定知识库文件夹')
+    return readDataUrl(root, rel)
+  })
+  // Hand a file to the OS — system default app (Quick Look territory) / Finder.
+  ipcMain.handle('vault:openExternal', (_e, projectId: string, rel: string) => {
+    const root = vaultRoot(projectId)
+    if (!root) return
+    return shell.openPath(vaultAbsPath(root, rel))
+  })
+  ipcMain.handle('vault:reveal', (_e, projectId: string, rel: string) => {
+    const root = vaultRoot(projectId)
+    if (!root) return
+    shell.showItemInFolder(vaultAbsPath(root, rel))
+  })
+  ipcMain.handle('vault:watch', async (_e, projectId: string) => {
+    const root = vaultRoot(projectId)
+    if (!root) return
+    await watchVault(projectId, root)
+    scanVault(projectId, root) // initial index so the UI has data immediately
+  })
+  ipcMain.handle('vault:unwatch', (_e, projectId: string) => stopWatch(projectId))
 }

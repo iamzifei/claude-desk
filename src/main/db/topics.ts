@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 import { getDb } from './index'
 import { resolvePending, purgeLinks } from './links'
+import { scopeClause, scopeProjectId } from './scope'
 
 export type TopicStatus = '灵感' | '待写' | '进行' | '已发'
 export const TOPIC_STATUSES: TopicStatus[] = ['灵感', '待写', '进行', '已发']
@@ -24,9 +25,13 @@ export interface NewTopic {
 }
 
 export function listTopics(workspaceId: string): Topic[] {
+  const params: unknown[] = [workspaceId]
+  const sc = scopeClause()
+  const scopeSql = sc.sql ? `AND ${sc.sql}` : ''
+  params.push(...sc.params)
   return getDb()
-    .prepare('SELECT * FROM topics WHERE workspace_id = ? ORDER BY updated_at DESC')
-    .all(workspaceId) as Topic[]
+    .prepare(`SELECT * FROM topics WHERE workspace_id = ? ${scopeSql} ORDER BY updated_at DESC`)
+    .all(...params) as Topic[]
 }
 
 export function getTopic(id: string): Topic | undefined {
@@ -51,20 +56,28 @@ export function createTopic(workspaceId: string, t: NewTopic): Topic {
        VALUES (@id, @workspace_id, @title, @angle, @status, @platform, @created_at, @updated_at)`
     )
     .run(topic)
+  const pid = scopeProjectId()
+  if (pid) getDb().prepare('UPDATE topics SET project_id = ? WHERE id = ?').run(pid, topic.id)
   resolvePending(topic.title, 'topic', topic.id)
   return topic
 }
 
 export function updateTopic(id: string, t: NewTopic): void {
   getDb()
-    .prepare(
-      'UPDATE topics SET title = ?, angle = ?, platform = ?, updated_at = ? WHERE id = ?'
+    .prepare('UPDATE topics SET title = ?, angle = ?, platform = ?, updated_at = ? WHERE id = ?')
+    .run(
+      t.title.trim() || '未命名选题',
+      t.angle?.trim() || null,
+      t.platform?.trim() || null,
+      Date.now(),
+      id
     )
-    .run(t.title.trim() || '未命名选题', t.angle?.trim() || null, t.platform?.trim() || null, Date.now(), id)
 }
 
 export function setTopicStatus(id: string, status: TopicStatus): void {
-  getDb().prepare('UPDATE topics SET status = ?, updated_at = ? WHERE id = ?').run(status, Date.now(), id)
+  getDb()
+    .prepare('UPDATE topics SET status = ?, updated_at = ? WHERE id = ?')
+    .run(status, Date.now(), id)
 }
 
 export function deleteTopic(id: string): void {

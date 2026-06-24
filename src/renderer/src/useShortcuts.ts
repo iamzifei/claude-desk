@@ -37,7 +37,7 @@ export function useShortcuts(): void {
           s.closeWorkspace()
           break
         case 'new-split':
-          if (!s.split) s.toggleSplit() // opens a 2nd conversation, or a reference pane
+          if (s.panes.length === 0) s.toggleSplit() // opens a 2nd conversation, or a reference pane
           break
         case 'close-split':
           s.closeSplit()

@@ -8,13 +8,11 @@ import type {
   StreamingState,
   ProviderInfo,
   MainView,
-  SplitTarget
+  SplitTarget,
+  LayoutPreset,
+  Favorite
 } from './types'
-import {
-  DEFAULT_SHORTCUTS,
-  mergeShortcuts,
-  type ShortcutAction
-} from './shortcuts'
+import { DEFAULT_SHORTCUTS, mergeShortcuts, type ShortcutAction } from './shortcuts'
 
 let booted = false
 
@@ -22,11 +20,43 @@ function applyTheme(theme: string): void {
   document.documentElement.classList.toggle('dark', theme === 'dark')
 }
 
+// ---- tiling-pane helpers ----------------------------------------------------
+
+/** Number of secondary panes each layout preset holds (primary is separate). */
+const PANE_SLOTS: Record<LayoutPreset, number> = {
+  single: 0,
+  'col-2': 1,
+  'row-2': 1,
+  'col-3': 2,
+  quad: 3
+}
+
+/** Pick a preset that fits `count` secondary panes, keeping orientation if possible. */
+function presetForCount(current: LayoutPreset, count: number): LayoutPreset {
+  if (count <= 0) return 'single'
+  if (count === 1) return current === 'row-2' ? 'row-2' : 'col-2'
+  if (count === 2) return 'col-3'
+  return 'quad'
+}
+
+/** A sensible content for a freshly-opened pane: another open chat, else 素材库. */
+function defaultPaneTarget(
+  s: { openTabs: string[]; activeId: string | null },
+  existing: SplitTarget[]
+): SplitTarget {
+  const used = new Set(
+    existing.filter((p) => p.kind === 'chat').map((p) => (p as { id: string }).id)
+  )
+  const other = s.openTabs.find((t) => t !== s.activeId && !used.has(t))
+  return other ? { kind: 'chat', id: other } : { kind: 'view', view: 'materials' }
+}
+
 interface AppState {
   // hierarchy
   workspaces: Workspace[]
   activeWorkspaceId: string | null
   projects: Project[]
+  archivedProjects: Project[]
   conversations: Conversation[] // active (non-archived) in current workspace
   archived: Conversation[]
 
@@ -58,10 +88,24 @@ interface AppState {
   closeWorkspace: () => Promise<void>
 
   // project
+  // The project whose knowledge base (Vault) the 知识库 view should show. Set
+  // explicitly when opening a project's vault; null → VaultView falls back to
+  // the active conversation's project.
+  activeProjectId: string | null
+  // Active asset scope (top-of-sidebar switcher): 'all' | 'unfiled' | <projectId>.
+  // Drives 素材/原子/标签/图谱/选题/发布 filtering. Asset views read this and
+  // re-fetch when it changes.
+  projectScope: string
+  setProjectScope: (scope: string) => Promise<void>
   newProject: () => Promise<void>
   renameProject: (id: string, name: string) => Promise<void>
   deleteProject: (id: string) => Promise<void>
+  archiveProject: (id: string) => Promise<void>
+  unarchiveProject: (id: string) => Promise<void>
+  reorderProjects: (orderedIds: string[]) => Promise<void>
+  clearProjectSelection: (id: string) => Promise<void>
   bindProjectDir: (id: string) => Promise<void>
+  openProjectVault: (id: string) => void
 
   // conversation / tabs
   openConversation: (id: string) => Promise<void>
@@ -71,14 +115,47 @@ interface AppState {
   archiveConversation: (id: string) => Promise<void>
   renameConversation: (id: string, title: string) => Promise<void>
   togglePin: (id: string, pinned: boolean) => Promise<void>
+  exportConversationToVault: (id: string) => Promise<void>
 
-  // split-screen: a secondary pane beside the primary — a second conversation
-  // or a reference view.
-  split: SplitTarget | null
+  // Tiling panes (iTerm-style). The primary work area (follows `view`) is always
+  // slot 0; `panes` holds the secondary panes (0–3) and `layout` how they tile.
+  panes: SplitTarget[]
+  layout: LayoutPreset
+  setLayout: (preset: LayoutPreset) => void
+  setPane: (index: number, target: SplitTarget) => void
+  closePane: (index: number) => void
+  swapPanes: (a: number, b: number) => void
+  // Pointer-based pane drag (reliable where native HTML5 DnD isn't): reorder the
+  // secondary panes by inserting at a position, or drop onto the sidebar favorites.
+  paneDragFrom: number | null
+  paneDropAt: number | 'fav' | null
+  beginPaneReorder: (from: number) => void
+  setPaneDropAt: (at: number | 'fav' | null) => void
+  endPaneReorder: () => void
+  reorderPanes: (from: number, to: number) => void
+  // Open a dragged target in the primary work area (view → navigate, chat → open).
+  openTargetPrimary: (target: SplitTarget) => void
+  // What kind of drag is in progress (gates drop-zone affordances): a pane
+  // module/conversation/pane-swap, a skill being dropped into a chat, or none.
+  dragKind: 'pane' | 'skill' | null
+  setDragKind: (k: 'pane' | 'skill' | null) => void
+
+  // Finder-style pinned shortcuts: drag a pane/module to the sidebar to pin it,
+  // drag a favorite back into the work area, or click to open. Persisted.
+  favorites: Favorite[]
+  addFavorite: (t: Favorite) => void
+  removeFavorite: (index: number) => void
+  toggleFavorite: (t: Favorite) => void
+  // Back-compat helpers (operate on the first secondary pane).
   setSplit: (t: SplitTarget | null) => void
   openSplitChat: (conversationId: string) => void
   closeSplit: () => void
   toggleSplit: () => void
+
+  // First-run guided tour (新手引导)
+  tourOpen: boolean
+  setTourOpen: (v: boolean) => void
+  completeOnboarding: () => Promise<void>
 
   // ⌘K quick switcher
   quickOpen: boolean
@@ -119,7 +196,10 @@ interface AppState {
 export const useStore = create<AppState>((set, get) => ({
   workspaces: [],
   activeWorkspaceId: null,
+  activeProjectId: null,
+  projectScope: 'all',
   projects: [],
+  archivedProjects: [],
   conversations: [],
   archived: [],
   openTabs: [],
@@ -133,7 +213,16 @@ export const useStore = create<AppState>((set, get) => ({
   theme: 'light',
   view: 'chat',
   shortcuts: DEFAULT_SHORTCUTS,
-  split: null,
+  panes: [],
+  layout: 'single',
+  dragKind: null,
+
+  tourOpen: false,
+  setTourOpen: (v) => set({ tourOpen: v }),
+  completeOnboarding: async () => {
+    set({ tourOpen: false })
+    await window.api.settings.set({ onboarded: '1' })
+  },
 
   quickOpen: false,
   setQuickOpen: (v) => set({ quickOpen: v }),
@@ -146,7 +235,7 @@ export const useStore = create<AppState>((set, get) => ({
   closeCard: () => set({ cardText: null }),
 
   rewriteSeed: null,
-  sendToRewrite: (text) => set({ rewriteSeed: text, view: 'rewrite', split: null }),
+  sendToRewrite: (text) => set({ rewriteSeed: text, view: 'rewrite', panes: [], layout: 'single' }),
 
   focusId: null,
   jumpTo: (target) => {
@@ -157,20 +246,118 @@ export const useStore = create<AppState>((set, get) => ({
       note: 'review'
     }
     if (target.kind === 'conversation') get().openConversation(target.id)
-    else set({ view: viewByKind[target.kind] ?? 'chat', focusId: target.id, split: null })
+    else if (target.kind === 'vault') {
+      // Vault node id is `${projectId}::${relPath}` — open that note in a pane.
+      const i = target.id.indexOf('::')
+      if (i >= 0) {
+        get().setSplit({
+          kind: 'vault-file',
+          projectId: target.id.slice(0, i),
+          rel: target.id.slice(i + 2)
+        })
+      }
+    } else
+      set({
+        view: viewByKind[target.kind] ?? 'chat',
+        focusId: target.id,
+        panes: [],
+        layout: 'single'
+      })
   },
 
   setView: (v) => set({ view: v }),
-  setSplit: (t) => set({ split: t }),
-  openSplitChat: (id) => set({ split: { kind: 'chat', id } }),
-  closeSplit: () => set({ split: null }),
-  // Toggle the split. When opening, prefer a SECOND open conversation tab (so
-  // ⌘D instantly splits two chats); fall back to a 素材库 reference pane.
+
+  // Resize the pane array to fit a preset (pad with a sensible default, trim extras).
+  setLayout: (preset) =>
+    set((s) => {
+      const want = PANE_SLOTS[preset]
+      const panes = s.panes.slice(0, want)
+      while (panes.length < want) panes.push(defaultPaneTarget(s, panes))
+      return { layout: preset, panes }
+    }),
+  setPane: (index, target) =>
+    set((s) => {
+      const panes = s.panes.slice()
+      if (index >= 0 && index < panes.length) panes[index] = target
+      return { panes }
+    }),
+  closePane: (index) =>
+    set((s) => {
+      const panes = s.panes.filter((_, i) => i !== index)
+      return { panes, layout: presetForCount(s.layout, panes.length) }
+    }),
+
+  swapPanes: (a, b) =>
+    set((s) => {
+      if (a === b || a < 0 || b < 0 || a >= s.panes.length || b >= s.panes.length) return {}
+      const panes = s.panes.slice()
+      ;[panes[a], panes[b]] = [panes[b], panes[a]]
+      return { panes }
+    }),
+
+  paneDragFrom: null,
+  paneDropAt: null,
+  beginPaneReorder: (from) => set({ paneDragFrom: from, paneDropAt: null }),
+  setPaneDropAt: (at) => set({ paneDropAt: at }),
+  endPaneReorder: () => set({ paneDragFrom: null, paneDropAt: null }),
+  reorderPanes: (from, to) =>
+    set((s) => {
+      const arr = s.panes.slice()
+      if (from < 0 || from >= arr.length) return {}
+      const [m] = arr.splice(from, 1)
+      let dest = to > from ? to - 1 : to
+      dest = Math.max(0, Math.min(dest, arr.length))
+      arr.splice(dest, 0, m)
+      return { panes: arr }
+    }),
+
+  openTargetPrimary: (target) => {
+    if (target.kind === 'view') get().setView(target.view)
+    else if (target.kind === 'chat') get().openConversation(target.id)
+    // vault-file isn't a primary view → route it into a pane instead.
+    else get().setSplit(target)
+  },
+
+  setDragKind: (k) => set({ dragKind: k }),
+
+  favorites: [],
+  addFavorite: (t) => {
+    const key = JSON.stringify(t)
+    if (get().favorites.some((f) => JSON.stringify(f) === key)) return
+    const favorites = [...get().favorites, t]
+    set({ favorites })
+    void window.api.settings.set({ favorites: JSON.stringify(favorites) })
+  },
+  removeFavorite: (index) => {
+    const favorites = get().favorites.filter((_, i) => i !== index)
+    set({ favorites })
+    void window.api.settings.set({ favorites: JSON.stringify(favorites) })
+  },
+  // Add or remove a target by identity — for the per-item「收藏/取消收藏」menus.
+  toggleFavorite: (t) => {
+    const key = JSON.stringify(t)
+    const has = get().favorites.some((f) => JSON.stringify(f) === key)
+    const favorites = has
+      ? get().favorites.filter((f) => JSON.stringify(f) !== key)
+      : [...get().favorites, t]
+    set({ favorites })
+    void window.api.settings.set({ favorites: JSON.stringify(favorites) })
+  },
+
+  // Back-compat: operate on the first secondary pane.
+  setSplit: (t) =>
+    set((s) => {
+      if (!t) return { panes: [], layout: 'single' }
+      const panes = s.panes.length ? [t, ...s.panes.slice(1)] : [t]
+      return { panes, layout: s.panes.length ? s.layout : 'col-2' }
+    }),
+  openSplitChat: (id) => get().setSplit({ kind: 'chat', id }),
+  closeSplit: () => set({ panes: [], layout: 'single' }),
+  // ⌘D: open a second pane (prefer another open chat, else 素材库) or close all.
   toggleSplit: () =>
     set((s) => {
-      if (s.split) return { split: null }
-      const other = s.openTabs.find((t) => t !== s.activeId)
-      return { split: other ? { kind: 'chat', id: other } : { kind: 'view', view: 'materials' } }
+      if (s.panes.length) return { panes: [], layout: 'single' }
+      return { panes: [defaultPaneTarget(s, [])], layout: 'col-2' }
     }),
 
   setTheme: async (theme) => {
@@ -198,6 +385,12 @@ export const useStore = create<AppState>((set, get) => ({
     } catch {
       storedShortcuts = null
     }
+    let favorites: Favorite[] = []
+    try {
+      favorites = settings.favorites ? (JSON.parse(settings.favorites) as Favorite[]) : []
+    } catch {
+      favorites = []
+    }
     set({
       hasApiKey: settings.hasApiKey,
       providers,
@@ -205,7 +398,9 @@ export const useStore = create<AppState>((set, get) => ({
       theme: settings.theme,
       shortcuts: mergeShortcuts(storedShortcuts),
       workspaces,
-      activeWorkspaceId
+      activeWorkspaceId,
+      tourOpen: !settings.onboarded, // first run → show the guided tour
+      favorites
     })
     await get().refreshAll()
     const { conversations } = get()
@@ -216,8 +411,11 @@ export const useStore = create<AppState>((set, get) => ({
   refreshAll: async () => {
     const ws = get().activeWorkspaceId
     if (!ws) return
-    const [projects] = await Promise.all([window.api.projects.list(ws)])
-    set({ projects })
+    const [projects, archivedProjects] = await Promise.all([
+      window.api.projects.list(ws),
+      window.api.projects.listArchived(ws)
+    ])
+    set({ projects, archivedProjects })
     await get().refreshConversations()
   },
 
@@ -232,7 +430,16 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   switchWorkspace: async (id) => {
-    set({ activeWorkspaceId: id, openTabs: [], activeId: null, messages: [], streaming: null })
+    set({
+      activeWorkspaceId: id,
+      activeProjectId: null,
+      projectScope: 'all',
+      openTabs: [],
+      activeId: null,
+      messages: [],
+      streaming: null
+    })
+    await window.api.scope.set('all') // projects differ per workspace → reset scope
     await window.api.settings.set({ activeWorkspace: id })
     await get().refreshAll()
     const { conversations } = get()
@@ -274,7 +481,10 @@ export const useStore = create<AppState>((set, get) => ({
   newProject: async () => {
     const ws = get().activeWorkspaceId
     if (!ws) return
-    await window.api.projects.create(ws, '新项目')
+    const proj = await window.api.projects.create(ws, '新项目')
+    // Select it so the 知识库 view lands on the new project (ready to bind a
+    // folder); the sidebar's inline rename then lets the user name it.
+    set({ activeProjectId: proj.id })
     await get().refreshAll()
   },
 
@@ -285,7 +495,35 @@ export const useStore = create<AppState>((set, get) => ({
 
   deleteProject: async (id) => {
     await window.api.projects.delete(id)
+    await get().clearProjectSelection(id)
     await get().refreshAll()
+  },
+
+  archiveProject: async (id) => {
+    await window.api.projects.archive(id, true)
+    await get().clearProjectSelection(id)
+    await get().refreshAll()
+  },
+
+  unarchiveProject: async (id) => {
+    await window.api.projects.archive(id, false)
+    await get().refreshAll()
+  },
+
+  reorderProjects: async (orderedIds) => {
+    await window.api.projects.reorder(orderedIds)
+    await get().refreshAll()
+  },
+
+  // When a project leaves the active set (deleted/archived), drop it from the
+  // vault selection + asset scope so views don't point at a gone project.
+  clearProjectSelection: async (id) => {
+    const s = get()
+    if (s.activeProjectId === id) set({ activeProjectId: null })
+    if (s.projectScope === id) {
+      await window.api.scope.set('all')
+      set({ projectScope: 'all' })
+    }
   },
 
   bindProjectDir: async (id) => {
@@ -293,7 +531,25 @@ export const useStore = create<AppState>((set, get) => ({
     if (dir) {
       await window.api.projects.setDir(id, dir)
       await get().refreshAll()
+      // Land the user in the freshly-bound knowledge base, scoped to it.
+      await window.api.scope.set(id)
+      set({ activeProjectId: id, projectScope: id, view: 'vault', panes: [], layout: 'single' })
     }
+  },
+
+  // Switch the asset scope (top-of-sidebar switcher). A real project also
+  // becomes the Vault's active project so 知识库 follows the selection.
+  setProjectScope: async (scope) => {
+    await window.api.scope.set(scope)
+    const isProject = scope !== 'all' && scope !== 'unfiled'
+    set({ projectScope: scope, ...(isProject ? { activeProjectId: scope } : {}) })
+  },
+
+  // Open a specific project's knowledge base in the 知识库 view, scoping assets
+  // to it as well.
+  openProjectVault: (id) => {
+    window.api.scope.set(id)
+    set({ activeProjectId: id, projectScope: id, view: 'vault', panes: [], layout: 'single' })
   },
 
   openConversation: async (id) => {
@@ -313,9 +569,11 @@ export const useStore = create<AppState>((set, get) => ({
       if (s.activeId === id) activeId = openTabs[openTabs.length - 1] ?? null
       return { openTabs, activeId }
     })
-    // If a split was showing the closed conversation, drop the split too.
-    const sp = get().split
-    if (sp?.kind === 'chat' && sp.id === id) set({ split: null })
+    // Drop any pane that was showing the closed conversation.
+    const panes = get().panes.filter((p) => !(p.kind === 'chat' && p.id === id))
+    if (panes.length !== get().panes.length) {
+      set({ panes, layout: presetForCount(get().layout, panes.length) })
+    }
     const next = get().activeId
     if (next) get().openConversation(next)
     // Closing the last tab → show the empty greeting (a new conversation is
@@ -359,6 +617,27 @@ export const useStore = create<AppState>((set, get) => ({
   togglePin: async (id, pinned) => {
     await window.api.conversations.setPinned(id, pinned)
     await get().refreshConversations()
+  },
+
+  // Write a conversation into a project's knowledge base as a .md note, then
+  // open it. Picks the conversation's own project, else the active one, else any
+  // project with a bound folder.
+  exportConversationToVault: async (id) => {
+    const s = get()
+    const conv = s.conversations.find((c) => c.id === id) ?? s.archived.find((c) => c.id === id)
+    const bound = (pid?: string | null): Project | undefined =>
+      s.projects.find((p) => p.id === pid && p.dir_path)
+    const project =
+      bound(conv?.project_id) ?? bound(s.activeProjectId) ?? s.projects.find((p) => p.dir_path)
+    if (!project) {
+      window.alert('请先为某个项目「绑定知识库文件夹」，才能把对话导出到知识库。')
+      return
+    }
+    const rel = await window.api.conversations.exportToVault(id, project.id)
+    // Scope to that project and show the new note in a split pane.
+    await window.api.scope.set(project.id)
+    set({ activeProjectId: project.id, projectScope: project.id })
+    get().setSplit({ kind: 'vault-file', projectId: project.id, rel })
   },
 
   setSearch: (q) => set({ search: q }),

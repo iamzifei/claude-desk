@@ -13,6 +13,7 @@ export interface Project {
   name: string
   dir_path: string | null
   sort: number
+  archived: number
   created_at: number
 }
 
@@ -20,6 +21,21 @@ export interface FileEntry {
   name: string
   path: string
   isDir: boolean
+}
+
+/** A node in the Vault (knowledge base) file tree. `rel` is '' for the root. */
+export interface VaultNode {
+  name: string
+  rel: string
+  isDir: boolean
+  children?: VaultNode[]
+}
+
+/** A referenced conversation injected as context (上下文迁移). */
+export interface ContextRef {
+  id: string
+  title: string
+  messageCount: number
 }
 
 export interface ScheduledTask {
@@ -78,6 +94,7 @@ export interface Skill {
   enabled: number
   source: string
   created_at: number
+  slug: string // `/command`-friendly id for invoking the skill in chat
 }
 
 export type CodingEvent =
@@ -217,8 +234,24 @@ export interface Atom {
   created_at: number
 }
 
-/** What the split (secondary) pane shows: a second conversation, or a reference view. */
-export type SplitTarget = { kind: 'chat'; id: string } | { kind: 'view'; view: MainView }
+/**
+ * What the split (secondary) pane shows: a second conversation, a reference
+ * view, or a specific Vault note (`rel` path within `projectId`'s knowledge base).
+ */
+export type SplitTarget =
+  | { kind: 'chat'; id: string }
+  | { kind: 'view'; view: MainView }
+  | { kind: 'vault-file'; projectId: string; rel: string }
+
+/** iTerm-style tiling presets for the work area (primary + 0–3 secondary panes). */
+export type LayoutPreset = 'single' | 'col-2' | 'row-2' | 'col-3' | 'quad'
+
+/**
+ * A pinned sidebar shortcut: a pane target (module/chat/file) opened on click,
+ * or a skill dragged into a conversation to invoke it. The skill case lets a
+ * creator keep frequently-used skills one drag away instead of `/`-searching.
+ */
+export type Favorite = SplitTarget | { kind: 'skill'; name: string; slug: string }
 
 export type MainView =
   | 'chat'
@@ -237,6 +270,7 @@ export type MainView =
   | 'publish'
   | 'rewrite'
   | 'files'
+  | 'vault'
 
 export interface Conversation {
   id: string

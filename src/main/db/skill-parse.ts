@@ -5,6 +5,35 @@ export interface ParsedSkill {
   source: string
 }
 
+/**
+ * Slugify a skill name into a `/command`-friendly token: lowercase, spaces and
+ * punctuation → '-', collapse repeats. CJK characters are kept (so 「小红书写手」
+ * → 「小红书写手」). Pure & unit-tested.
+ */
+export function slugifySkillName(name: string): string {
+  return (
+    name
+      .trim()
+      .toLowerCase()
+      .replace(/[\s/\\:*?"<>|,.，。、]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '') || 'skill'
+  )
+}
+
+/**
+ * Extract `/command` tokens from message text (used to detect skill invocations).
+ * A token starts at a line/whitespace boundary, then `/`, then non-space chars.
+ * Pure & unit-tested.
+ */
+export function extractSlashTokens(text: string): string[] {
+  const out: string[] = []
+  const re = /(?:^|\s)\/([^\s/]+)/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) out.push(m[1])
+  return out
+}
+
 /** Parse a SKILL.md-style document (YAML-ish frontmatter + body). Pure. */
 export function parseSkillMd(text: string): ParsedSkill {
   const m = text.match(/^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/)

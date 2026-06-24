@@ -242,6 +242,63 @@ function migrate(d: Database.Database): void {
     `
     ALTER TABLE materials ADD COLUMN status TEXT NOT NULL DEFAULT 'inbox';
     UPDATE materials SET status = '已整理';
+    `,
+    // 0014 — 知识库 Vault (Obsidian-style). The disk `.md` folder bound to a
+    // project is the source of truth; these tables are a *rebuildable* derived
+    // index (one row per note + resolved [[wikilink]] edges) for fast lookups
+    // and the relationship graph. Safe to drop & re-derive from disk anytime.
+    `
+    CREATE TABLE vault_files (
+      project_id  TEXT NOT NULL,
+      rel_path    TEXT NOT NULL,        -- path relative to the vault root
+      title       TEXT,                 -- frontmatter.title or filename
+      frontmatter TEXT,                 -- raw YAML, JSON-encoded
+      mtime       INTEGER NOT NULL,
+      size        INTEGER NOT NULL,
+      PRIMARY KEY (project_id, rel_path)
+    );
+    CREATE TABLE vault_links (
+      project_id TEXT NOT NULL,
+      src_rel    TEXT NOT NULL,         -- note containing the [[link]]
+      dst_title  TEXT NOT NULL,         -- raw [[title]] text
+      dst_rel    TEXT                   -- resolved target rel_path (null = unresolved)
+    );
+    CREATE INDEX idx_vault_links_proj ON vault_links(project_id);
+    CREATE INDEX idx_vault_links_dst ON vault_links(project_id, dst_rel);
+    `,
+    // 0015 — scope assets to a project (素材/原子/选题/发布). Nullable so the
+    // change is non-destructive: existing rows stay project_id NULL ("未归类")
+    // and remain visible under the 全部 scope. The top-of-sidebar project
+    // switcher filters by these columns; new assets are stamped with the
+    // active project.
+    `
+    ALTER TABLE materials ADD COLUMN project_id TEXT;
+    ALTER TABLE atoms ADD COLUMN project_id TEXT;
+    ALTER TABLE topics ADD COLUMN project_id TEXT;
+    ALTER TABLE publications ADD COLUMN project_id TEXT;
+    CREATE INDEX idx_materials_project ON materials(project_id);
+    CREATE INDEX idx_atoms_project ON atoms(project_id);
+    CREATE INDEX idx_topics_project ON topics(project_id);
+    CREATE INDEX idx_publications_project ON publications(project_id);
+    `,
+    // 0016 — archive flag for projects (parallels conversations.archived).
+    // Archived projects drop out of the switcher/active list but keep their
+    // data; they can be restored. Sorting uses the existing `sort` column.
+    `
+    ALTER TABLE projects ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;
+    `,
+    // 0017 — context references (上下文迁移). A conversation can reference other
+    // conversations by their id ("Session ID"); their full history is injected
+    // as context on each send. The link is the Codex-style "paste a session id
+    // to sync context" feature, kept local (no remote fetch needed).
+    `
+    CREATE TABLE context_refs (
+      conversation_id TEXT NOT NULL,   -- the conversation doing the referencing
+      ref_id          TEXT NOT NULL,   -- the referenced conversation (its session id)
+      created_at      INTEGER NOT NULL,
+      PRIMARY KEY (conversation_id, ref_id)
+    );
+    CREATE INDEX idx_context_refs_conv ON context_refs(conversation_id);
     `
   ]
 

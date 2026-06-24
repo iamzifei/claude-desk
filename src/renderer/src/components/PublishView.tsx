@@ -9,6 +9,7 @@ import type { Publication } from '../types'
 
 export function PublishView(): JSX.Element {
   const ws = useStore((s) => s.activeWorkspaceId)
+  const projectScope = useStore((s) => s.projectScope)
   const setView = useStore((s) => s.setView)
   const [pubs, setPubs] = useState<Publication[]>([])
   const [editing, setEditing] = useState<Publication | 'new' | null>(null)
@@ -20,7 +21,7 @@ export function PublishView(): JSX.Element {
   }
   useEffect(() => {
     refresh()
-  }, [ws])
+  }, [ws, projectScope])
 
   const suggest = async (): Promise<void> => {
     if (!ws || suggesting) return

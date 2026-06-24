@@ -10,14 +10,15 @@ export function TagsView(): JSX.Element {
   const [active, setActive] = useState<string | null>(null)
   const [items, setItems] = useState<TaggedItem[]>([])
   const jumpTo = useStore((s) => s.jumpTo)
+  const projectScope = useStore((s) => s.projectScope)
 
   useEffect(() => {
     window.api.tags.groups().then(setGroups)
-  }, [])
+  }, [projectScope])
   useEffect(() => {
     if (active) window.api.tags.byTag(active).then(setItems)
     else setItems([])
-  }, [active])
+  }, [active, projectScope])
 
   const empty = groups.length === 0
 

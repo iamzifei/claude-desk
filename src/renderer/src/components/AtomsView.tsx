@@ -5,12 +5,14 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Header, Empty } from './ScheduledView'
 import { WikiText, Backlinks } from './WikiText'
+import { useStore } from '../store'
 import { useFocusHighlight } from '../useFocusHighlight'
 import type { Atom, AtomType } from '../types'
 
 const ATOM_TYPES: AtomType[] = ['观点', '金句', '数据', '案例', '钩子', '方法']
 
 export function AtomsView(): JSX.Element {
+  const projectScope = useStore((s) => s.projectScope)
   const [atoms, setAtoms] = useState<Atom[]>([])
   const [search, setSearch] = useState('')
   const [type, setType] = useState('all')
@@ -24,7 +26,7 @@ export function AtomsView(): JSX.Element {
   useEffect(() => {
     const t = setTimeout(refresh, 150)
     return () => clearTimeout(t)
-  }, [search])
+  }, [search, projectScope])
 
   const extract = async (): Promise<void> => {
     if (!raw.trim() || extracting) return

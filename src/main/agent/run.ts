@@ -41,7 +41,10 @@ export function runChat(
   onChunk: (c: Chunk) => void,
   modelOverride?: string | null,
   systemOverride?: string,
-  webSearch?: boolean
+  webSearch?: boolean,
+  /** Additive system prefix (e.g. referenced-conversation context). Ignored
+   *  when `systemOverride` is given. */
+  systemPrefix?: string
 ): RunHandle {
   const controller = new AbortController()
 
@@ -65,7 +68,12 @@ export function runChat(
     // enabled skills + in-context materials shape the assistant.
     const system =
       systemOverride ??
-      [buildSkillsSystemPrompt(), buildMaterialsSystemPrompt(), buildAtomsSystemPrompt()]
+      [
+        systemPrefix,
+        buildSkillsSystemPrompt(),
+        buildMaterialsSystemPrompt(),
+        buildAtomsSystemPrompt()
+      ]
         .filter(Boolean)
         .join('\n\n')
 
@@ -176,7 +184,10 @@ function attempt(
         else if (c.type === 'error') {
           // Only retry when nothing was streamed yet and the error looks transient.
           if (retries > 0 && !out.trim() && TRANSIENT_ERROR.test(c.message)) {
-            setTimeout(() => resolve(attempt(history, modelOverride, systemOverride, retries - 1)), 800)
+            setTimeout(
+              () => resolve(attempt(history, modelOverride, systemOverride, retries - 1)),
+              800
+            )
           } else {
             resolve(out.trim() ? out : `[错误] ${c.message}`)
           }

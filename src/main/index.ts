@@ -6,6 +6,7 @@ import { initDb } from './db'
 import { registerIpc } from './ipc'
 import { startScheduler } from './scheduler'
 import { buildAppMenu } from './menu'
+import { stopAllWatch } from './vault'
 
 // Opt-in dev remote-debugging port (off by default). Enable for CDP-driven QA:
 //   CLAUDE_DESK_CDP=9223 npm run dev
@@ -99,6 +100,9 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
+
+// Tear down all vault file watchers so no chokidar handles leak on exit.
+app.on('will-quit', () => stopAllWatch())
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.

@@ -18,6 +18,7 @@ import { Input } from './ui/input'
 import { Header, Empty } from './ScheduledView'
 import { WikiText, Backlinks } from './WikiText'
 import { WikiTextarea } from './WikiTextarea'
+import { useStore } from '../store'
 import { useFocusHighlight } from '../useFocusHighlight'
 import { PLATFORM_OPTIONS, labelForPlatform } from '../platforms'
 import { MATERIAL_TEMPLATES, templateById } from '../material-templates'
@@ -26,6 +27,7 @@ import type { Material, MaterialKind } from '../types'
 const NONE = '__none__' // platform-filter key for un-tagged materials
 
 export function MaterialsView(): JSX.Element {
+  const projectScope = useStore((s) => s.projectScope)
   const [materials, setMaterials] = useState<Material[]>([])
   const [search, setSearch] = useState('')
   const [platform, setPlatform] = useState('all')
@@ -40,7 +42,7 @@ export function MaterialsView(): JSX.Element {
   useEffect(() => {
     const t = setTimeout(refresh, 150)
     return () => clearTimeout(t)
-  }, [search])
+  }, [search, projectScope])
 
   // Platform groups present in the data drive the filter chips.
   const present = Array.from(new Set(materials.map((m) => m.platform).filter(Boolean))) as string[]

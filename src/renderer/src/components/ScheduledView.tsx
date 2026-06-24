@@ -32,7 +32,14 @@ export function ScheduledView(): JSX.Element {
         }
       />
 
-      {adding ? <TaskForm onDone={() => { setAdding(false); refresh() }} /> : null}
+      {adding ? (
+        <TaskForm
+          onDone={() => {
+            setAdding(false)
+            refresh()
+          }}
+        />
+      ) : null}
 
       <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto">
         {tasks.length === 0 ? (
@@ -69,7 +76,11 @@ function TaskForm({ onDone }: { onDone: () => void }): JSX.Element {
 
   return (
     <div className="mt-4 space-y-3 rounded-xl border border-border bg-card p-4">
-      <Input placeholder="任务名称，如「每日资讯摘要」" value={name} onChange={(e) => setName(e.target.value)} />
+      <Input
+        placeholder="任务名称，如「每日资讯摘要」"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
       <textarea
         placeholder="提示词，如「总结今天 AI 领域值得关注的 3 条新闻」"
         value={prompt}
@@ -131,12 +142,17 @@ function TaskRow({ task, onChange }: { task: ScheduledTask; onChange: () => void
           {task.last_run ? ` · 上次：${new Date(task.last_run).toLocaleString()}` : ''}
         </div>
       </div>
-      <label className="flex shrink-0 cursor-pointer items-center" title={task.enabled ? '已启用' : '已停用'}>
+      <label
+        className="flex shrink-0 cursor-pointer items-center"
+        title={task.enabled ? '已启用' : '已停用'}
+      >
         <input
           type="checkbox"
           className="peer sr-only"
           checked={!!task.enabled}
-          onChange={(e) => window.api.scheduledTasks.toggle(task.id, e.target.checked).then(onChange)}
+          onChange={(e) =>
+            window.api.scheduledTasks.toggle(task.id, e.target.checked).then(onChange)
+          }
         />
         <span className="h-5 w-9 rounded-full bg-muted p-0.5 transition-colors peer-checked:bg-primary">
           <span
@@ -208,14 +224,15 @@ export function Header({
   action?: JSX.Element
 }): JSX.Element {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-border-soft pb-4">
-      <div className="flex gap-3">
+    <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border-soft pb-4">
+      <div className="flex min-w-0 gap-3">
         <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-foreground">
           <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
         </div>
-        <div>
+        <div className="min-w-0">
           <h1 className="text-[17px] font-semibold">{title}</h1>
-          <p className="mt-0.5 text-[13px] text-muted-foreground">{desc}</p>
+          {/* clamp so a long description never swallows a short split pane */}
+          <p className="mt-0.5 line-clamp-2 text-[13px] text-muted-foreground">{desc}</p>
         </div>
       </div>
       {action}

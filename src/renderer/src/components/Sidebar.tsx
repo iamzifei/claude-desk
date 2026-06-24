@@ -1,4 +1,4 @@
-import { JSX, useEffect, useState } from 'react'
+import { JSX, useEffect, useState, type ReactNode } from 'react'
 import {
   PencilLine,
   Search,
@@ -11,6 +11,9 @@ import {
   Code2,
   Library,
   Atom,
+  BookText,
+  Layers,
+  Check,
   Lightbulb,
   Tags,
   Network,
@@ -28,14 +31,30 @@ import {
   Pin,
   PinOff,
   SplitSquareHorizontal,
+  SlidersHorizontal,
+  Copy,
+  HelpCircle,
+  FileDown,
+  Star,
+  X,
   type LucideIcon
 } from 'lucide-react'
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
 import { formatAccelerator } from '../shortcuts'
 import { Logo } from './Logo'
+import { ProjectsModal } from './ProjectsModal'
 import { groupConversations } from '../group-conversations'
-import type { Conversation, Project } from '../types'
+import {
+  setDragTarget,
+  hasPaneDrop,
+  getDragTarget,
+  hasSkillDrag,
+  getSkillDrag,
+  setSkillDrag,
+  isFavorited
+} from '../dnd'
+import type { Conversation, SplitTarget, Favorite } from '../types'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -50,8 +69,6 @@ interface Props {
 }
 
 type NavAction =
-  | 'new'
-  | 'search'
   | 'scheduled'
   | 'review'
   | 'minutes'
@@ -66,189 +83,163 @@ type NavAction =
   | 'graph'
   | 'publish'
   | 'rewrite'
+  | 'vault'
 interface NavItem {
   icon: LucideIcon
   label: string
   action: NavAction
 }
-interface NavSection {
-  title?: string // a header above the group (omitted for the always-on top group)
-  collapsible?: boolean // 工具 collapses to keep the daily creation loop front-and-center
-  items: NavItem[]
-}
 
-// Grouped to mirror the product's mental model (素材→原子→选题→改写→发布) instead
-// of one flat 16-item list. 通用/开发类工具收进默认折叠的「工具」组。
-const NAV_SECTIONS: NavSection[] = [
-  {
-    items: [
-      { icon: PencilLine, label: '新建创作', action: 'new' },
-      { icon: Search, label: '搜索', action: 'search' }
-    ]
-  },
-  {
-    title: '资产库',
-    items: [
-      { icon: Library, label: '素材库', action: 'materials' },
-      { icon: Atom, label: '知识原子', action: 'atoms' },
-      { icon: Tags, label: '标签', action: 'tags' },
-      { icon: Network, label: '知识图谱', action: 'graph' }
-    ]
-  },
-  {
-    title: '选题 · 成稿',
-    items: [
-      { icon: Lightbulb, label: '选题库', action: 'topics' },
-      { icon: Repeat2, label: '多平台改写', action: 'rewrite' },
-      { icon: TrendingUp, label: '发布数据', action: 'publish' }
-    ]
-  },
-  {
-    title: '笔记',
-    items: [
-      { icon: CalendarDays, label: '每日笔记', action: 'daily' },
-      { icon: BarChart3, label: '每日回顾', action: 'review' },
-      { icon: ClipboardList, label: '会议纪要', action: 'minutes' }
-    ]
-  },
-  {
-    title: '工具',
-    collapsible: true,
-    items: [
-      { icon: Puzzle, label: '技能', action: 'skills' },
-      { icon: Clock, label: '定时任务', action: 'scheduled' },
-      { icon: Globe, label: '浏览器', action: 'browser' },
-      { icon: Code2, label: '编程', action: 'coding' }
-    ]
-  }
+// 项目为中心的两组导航：常驻「创作」组 = 产品主轴（素材→原子→选题→改写→发布，
+// 知识库与图谱并列）；「更多」组（默认折叠）收纳低频的笔记与开发类工具，降低首屏
+// 认知负担。新建/搜索提升为顶部快捷行，不再混在导航里。
+const CREATE_ITEMS: NavItem[] = [
+  { icon: BookText, label: '知识库', action: 'vault' },
+  { icon: Library, label: '素材库', action: 'materials' },
+  { icon: Atom, label: '知识原子', action: 'atoms' },
+  { icon: Tags, label: '标签', action: 'tags' },
+  { icon: Network, label: '知识图谱', action: 'graph' },
+  { icon: Lightbulb, label: '选题库', action: 'topics' },
+  { icon: Repeat2, label: '多平台改写', action: 'rewrite' },
+  { icon: TrendingUp, label: '发布数据', action: 'publish' }
+]
+const MORE_ITEMS: NavItem[] = [
+  { icon: CalendarDays, label: '每日笔记', action: 'daily' },
+  { icon: BarChart3, label: '每日回顾', action: 'review' },
+  { icon: ClipboardList, label: '会议纪要', action: 'minutes' },
+  { icon: Puzzle, label: '技能', action: 'skills' },
+  { icon: Clock, label: '定时任务', action: 'scheduled' },
+  { icon: Globe, label: '浏览器', action: 'browser' },
+  { icon: Code2, label: '编程', action: 'coding' }
 ]
 
 export function Sidebar({ onOpenSettings }: Props): JSX.Element {
   const conversations = useStore((s) => s.conversations)
   const archived = useStore((s) => s.archived)
-  const projects = useStore((s) => s.projects)
   const search = useStore((s) => s.search)
   const create = useStore((s) => s.newConversation)
-  const newProject = useStore((s) => s.newProject)
   const ws = useStore((s) => s.activeWorkspaceId)
   const view = useStore((s) => s.view)
   const setView = useStore((s) => s.setView)
   const setQuickOpen = useStore((s) => s.setQuickOpen)
   const shortcuts = useStore((s) => s.shortcuts)
+  const scope = useStore((s) => s.projectScope)
+  const setDragKind = useStore((s) => s.setDragKind)
+  const setTourOpen = useStore((s) => s.setTourOpen)
+  const favorites = useStore((s) => s.favorites)
+  const toggleFavorite = useStore((s) => s.toggleFavorite)
 
   const [results, setResults] = useState<Conversation[] | null>(null)
   const [showArchived, setShowArchived] = useState(false)
-  const [showTools, setShowTools] = useState(false)
+  const [showMore, setShowMore] = useState(false)
 
-  const renderNavItem = (item: NavItem): JSX.Element => (
-    <button
-      key={item.label}
-      onClick={() => {
-        if (item.action === 'new') create(null)
-        else if (item.action === 'search') setQuickOpen(true)
-        else setView(item.action)
-      }}
-      className={cn(
-        'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] transition-colors',
-        item.action === view
-          ? 'bg-accent text-foreground'
-          : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-      )}
-    >
-      <item.icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
-      <span className="flex-1 text-left">{item.label}</span>
-      {item.action === 'search' ? (
-        <span className="text-[10.5px] text-muted-foreground/50">
-          {formatAccelerator(shortcuts['quick-switch'])}
-        </span>
-      ) : null}
-    </button>
-  )
+  // The project the new-conversation button creates into (null under 全部/未归类).
+  const currentProjectId = scope !== 'all' && scope !== 'unfiled' ? scope : null
+
+  // Modules: draggable into the work area, and favoritable via a hover star.
+  const renderNavItem = (item: NavItem): JSX.Element => {
+    const t: SplitTarget = { kind: 'view', view: item.action }
+    const fav = isFavorited(favorites, t)
+    return (
+      <div key={item.label} className="group/nav relative flex items-center">
+        <button
+          draggable
+          onDragStart={(e) => {
+            setDragTarget(e, t)
+            setDragKind('pane')
+          }}
+          onDragEnd={() => setDragKind(null)}
+          onClick={() => setView(item.action)}
+          className={cn(
+            'flex flex-1 items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] transition-colors',
+            item.action === view
+              ? 'bg-accent text-foreground'
+              : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+          )}
+        >
+          <item.icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
+          <span className="flex-1 text-left">{item.label}</span>
+        </button>
+        <button
+          onClick={() => toggleFavorite(t)}
+          title={fav ? '从收藏夹移除' : '添加到收藏夹'}
+          className={cn(
+            'absolute right-1.5 rounded p-0.5 transition',
+            fav
+              ? 'text-primary'
+              : 'text-muted-foreground/40 opacity-0 hover:text-primary group-hover/nav:opacity-100'
+          )}
+        >
+          <Star className={cn('h-3.5 w-3.5', fav && 'fill-current')} />
+        </button>
+      </div>
+    )
+  }
 
   useEffect(() => {
     if (!search.trim() || !ws) {
       setResults(null)
       return
     }
-    const t = setTimeout(async () => setResults(await window.api.conversations.search(ws, search)), 180)
+    const t = setTimeout(
+      async () => setResults(await window.api.conversations.search(ws, search)),
+      180
+    )
     return () => clearTimeout(t)
   }, [search, ws])
 
-  const all = results ?? conversations
-  const ungrouped = all.filter((c) => !c.project_id)
-  const inProject = (p: Project): Conversation[] => all.filter((c) => c.project_id === p.id)
+  // Conversations scoped to the current project (the hero switcher above):
+  // 全部 → everything, 未归类 → only ungrouped, <project> → that project's chats.
+  const scoped = (results ?? conversations).filter((c) =>
+    scope === 'all' ? true : scope === 'unfiled' ? !c.project_id : c.project_id === scope
+  )
+  const convGroups = groupConversations(scoped, Date.now())
 
   return (
     <aside className="flex min-h-0 flex-col bg-sidebar">
-      <div className="flex items-center gap-2 px-4 pb-2.5 pt-1">
+      <div className="flex items-center gap-2 px-4 pb-2 pt-1">
         <Logo className="h-6 w-6 rounded-[7px] shadow-sm" />
         <span className="text-sm font-semibold tracking-tight">
           墨栖 <span className="text-muted-foreground/70">InkNest</span>
         </span>
       </div>
 
-      {/* Nav + conversation list share one scroll region so a tall nav never
-          clips the pinned footer (settings) under the app's overflow-hidden shell. */}
+      {/* Hero: the active project drives scope for both conversations and assets. */}
+      <ProjectBar />
+
+      {/* Quick actions — pinned above the scroll region for one-click reach. */}
+      <div className="flex gap-1 px-3 pb-1.5 pt-1">
+        <button
+          onClick={() => create(currentProjectId)}
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-2.5 py-1.5 text-[12.5px] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          <PencilLine className="h-3.5 w-3.5" /> 新建对话
+        </button>
+        <Tip label={`搜索 ${formatAccelerator(shortcuts['quick-switch'])}`}>
+          <button
+            onClick={() => setQuickOpen(true)}
+            className="flex items-center justify-center rounded-lg border border-border-soft px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <Search className="h-4 w-4" />
+          </button>
+        </Tip>
+      </div>
+
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <nav className="flex flex-col px-2 pb-2">
-        {NAV_SECTIONS.map((section, si) => {
-          const collapsed = section.collapsible && !showTools
-          return (
-            <div key={section.title ?? 'top'} className={si === 0 ? '' : 'mt-1.5'}>
-              {section.title ? (
-                section.collapsible ? (
-                  <button
-                    onClick={() => setShowTools((v) => !v)}
-                    className="flex w-full items-center gap-1 px-2.5 pb-0.5 pt-1 text-[11px] font-medium text-muted-foreground/55 transition-colors hover:text-muted-foreground"
-                  >
-                    {showTools ? (
-                      <ChevronDown className="h-3 w-3" />
-                    ) : (
-                      <ChevronRight className="h-3 w-3" />
-                    )}
-                    {section.title}
-                  </button>
-                ) : (
-                  <div className="px-2.5 pb-0.5 pt-1 text-[11px] font-medium text-muted-foreground/55">
-                    {section.title}
-                  </div>
-                )
-              ) : null}
-              {!collapsed ? (
-                <div className="flex flex-col gap-px">{section.items.map(renderNavItem)}</div>
-              ) : null}
-            </div>
-          )
-        })}
-      </nav>
+        {/* 收藏 — Finder-style pinned shortcuts (drag a pane/module here). */}
+        <FavoritesBar />
 
-      <div className="px-2 pb-2">
-        {projects.map((p) => (
-          <ProjectGroup key={p.id} project={p} items={inProject(p)} />
-        ))}
-
-        <div className="mb-1.5">
-          <div className="flex items-center justify-between px-2 pb-1 pt-1.5">
-            <span className="text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground/70">
-              对话
-            </span>
-            <Tip label="新建项目">
-              <button
-                onClick={() => newProject()}
-                className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] text-muted-foreground/70 transition-colors hover:bg-accent hover:text-primary"
-              >
-                <Plus className="h-3 w-3" /> 项目
-              </button>
-            </Tip>
-          </div>
-          {ungrouped.length === 0 ? (
+        {/* 对话 — scoped to the current project (short, so it sits above nav). */}
+        <div className="px-2 pb-1 pt-1">
+          <SectionLabel>对话</SectionLabel>
+          {scoped.length === 0 ? (
             <div className="px-2.5 py-1.5 text-[12.5px] text-muted-foreground/60">
-              {search ? '没有匹配' : '还没有开始对话'}
+              {search ? '没有匹配' : currentProjectId ? '此项目还没有对话' : '还没有开始对话'}
             </div>
           ) : (
-            groupConversations(ungrouped, Date.now()).map((g) => (
+            convGroups.map((g) => (
               <div key={g.key} className="mb-0.5">
-                <div className="flex items-center gap-1 px-2.5 pb-0.5 pt-1.5 text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground/45">
+                <div className="flex items-center gap-1 px-2.5 pb-0.5 pt-1 text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground/45">
                   {g.key === 'pinned' ? <Pin className="h-2.5 w-2.5" /> : null}
                   {g.label}
                 </div>
@@ -258,26 +249,45 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
               </div>
             ))
           )}
+
+          {archived.length > 0 ? (
+            <div className="mt-0.5">
+              <button
+                onClick={() => setShowArchived((v) => !v)}
+                className="flex w-full items-center gap-1 px-2.5 py-1 text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground/45 transition-colors hover:text-muted-foreground"
+              >
+                {showArchived ? (
+                  <ChevronDown className="h-3 w-3" />
+                ) : (
+                  <ChevronRight className="h-3 w-3" />
+                )}
+                归档
+                <span className="ml-auto">{archived.length}</span>
+              </button>
+              {showArchived ? archived.map((c) => <ConvItem key={c.id} conv={c} />) : null}
+            </div>
+          ) : null}
         </div>
 
-        {archived.length > 0 ? (
-          <div className="mb-1.5">
-            <button
-              onClick={() => setShowArchived((v) => !v)}
-              className="flex w-full items-center gap-1 px-2 py-1 text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground/70"
-            >
-              {showArchived ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronRight className="h-3 w-3" />
-              )}
-              归档
-              <span className="ml-auto font-normal text-muted-foreground/50">{archived.length}</span>
-            </button>
-            {showArchived ? archived.map((c) => <ConvItem key={c.id} conv={c} />) : null}
-          </div>
-        ) : null}
-      </div>
+        {/* 创作 — the core asset/creation loop (always visible). */}
+        <nav className="flex flex-col px-2 pb-1 pt-1.5">
+          <SectionLabel>创作</SectionLabel>
+          <div className="flex flex-col gap-px">{CREATE_ITEMS.map(renderNavItem)}</div>
+        </nav>
+
+        {/* 更多 — low-frequency notes + dev tools, collapsed by default. */}
+        <nav className="flex flex-col px-2 pb-2">
+          <button
+            onClick={() => setShowMore((v) => !v)}
+            className="flex w-full items-center gap-1 px-2.5 pb-0.5 pt-1 text-[11px] font-medium text-muted-foreground/55 transition-colors hover:text-muted-foreground"
+          >
+            {showMore ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+            更多
+          </button>
+          {showMore ? (
+            <div className="flex flex-col gap-px">{MORE_ITEMS.map(renderNavItem)}</div>
+          ) : null}
+        </nav>
       </div>
 
       <div className="flex items-center justify-between border-t border-border-soft px-3 py-2.5">
@@ -287,84 +297,338 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
           </div>
           <span className="text-[13px] text-muted-foreground">James</span>
         </div>
-        <Tip label="设置">
-          <button
-            onClick={onOpenSettings}
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
-            <Settings className="h-4 w-4" />
-          </button>
-        </Tip>
+        <div className="flex items-center gap-0.5">
+          <Tip label="新手引导">
+            <button
+              onClick={() => setTourOpen(true)}
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </button>
+          </Tip>
+          <Tip label="设置">
+            <button
+              onClick={onOpenSettings}
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+          </Tip>
+        </div>
       </div>
     </aside>
   )
 }
 
-function ProjectGroup({ project, items }: { project: Project; items: Conversation[] }): JSX.Element {
-  const [open, setOpen] = useState(true)
-  const create = useStore((s) => s.newConversation)
-  const rename = useStore((s) => s.renameProject)
-  const remove = useStore((s) => s.deleteProject)
-  const bindDir = useStore((s) => s.bindProjectDir)
+// Display label for a pinned favorite (view → nav label, chat → title, file → name).
+const VIEW_LABELS: Record<string, string> = Object.fromEntries(
+  [...CREATE_ITEMS, ...MORE_ITEMS].map((it) => [it.action, it.label])
+)
+
+/**
+ * Finder-style favorites: a sidebar drop zone that pins panes/modules dragged
+ * from the work area, AND skills dragged from the 技能 view. Pane favorites open
+ * on click + drag back out; skill favorites drag into a conversation to invoke
+ * them (handy for frequently-used skills instead of `/`-searching).
+ */
+function FavoritesBar(): JSX.Element | null {
+  const favorites = useStore((s) => s.favorites)
+  const addFavorite = useStore((s) => s.addFavorite)
+  const removeFavorite = useStore((s) => s.removeFavorite)
+  const openPrimary = useStore((s) => s.openTargetPrimary)
+  const dragKind = useStore((s) => s.dragKind)
+  const setDragKind = useStore((s) => s.setDragKind)
+  const conversations = useStore((s) => s.conversations)
+  const paneDragFrom = useStore((s) => s.paneDragFrom)
+  const paneDropAt = useStore((s) => s.paneDropAt)
+  const [over, setOver] = useState(false)
+  // any draggable in flight (native skill/module, or pointer-driven pane)
+  const dragging = dragKind !== null || paneDragFrom !== null
+  const highlight = over || paneDropAt === 'fav' // pointer pane hovering the zone
+
+  const labelOf = (t: Favorite): string =>
+    t.kind === 'skill'
+      ? t.name
+      : t.kind === 'view'
+        ? (VIEW_LABELS[t.view] ?? t.view)
+        : t.kind === 'chat'
+          ? (conversations.find((c) => c.id === t.id)?.title ?? '对话')
+          : (t.rel.split('/').pop() ?? '文件')
 
   return (
-    <div className="mb-1.5">
-      <div className="group flex items-center gap-1 px-2 py-1">
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="flex flex-1 items-center gap-1 text-[12.5px] font-medium text-muted-foreground"
-        >
-          {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-          <Folder className="h-3.5 w-3.5" />
-          <span className="truncate">{project.name}</span>
-        </button>
-        <Tip label="此项目内新建对话">
+    <div className="px-2 pb-1 pt-1">
+      <SectionLabel>收藏</SectionLabel>
+      <div
+        data-favzone
+        onDragOver={(e) => {
+          if (hasPaneDrop(e) || hasSkillDrag(e)) {
+            e.preventDefault()
+            e.dataTransfer.dropEffect = 'copy' // ensure the drop is permitted
+            setOver(true)
+          }
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => {
+          setOver(false)
+          const skill = getSkillDrag(e)
+          if (skill) {
+            e.preventDefault()
+            addFavorite({ kind: 'skill', name: skill.name, slug: skill.slug })
+            return
+          }
+          const t = getDragTarget(e)
+          if (t) {
+            e.preventDefault()
+            addFavorite(t)
+          }
+        }}
+        className={cn(
+          'rounded-lg border border-dashed transition-colors',
+          highlight
+            ? 'border-primary bg-primary-soft/40'
+            : dragging
+              ? 'border-primary/50 bg-primary-soft/20'
+              : favorites.length
+                ? 'border-transparent'
+                : 'border-border/70'
+        )}
+      >
+        {favorites.length === 0 ? (
+          <div className="px-2 py-1.5 text-[11.5px] text-muted-foreground/60">
+            {dragging ? '松手收藏到这里 ★' : '把窗格、模块或技能拖到这里收藏'}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-px p-0.5">
+            {favorites.map((t, i) => (
+              <div
+                key={i}
+                draggable
+                onDragStart={(e) => {
+                  if (t.kind === 'skill') {
+                    setSkillDrag(e, { name: t.name, slug: t.slug })
+                    setDragKind('skill')
+                  } else {
+                    setDragTarget(e, t)
+                    setDragKind('pane')
+                  }
+                }}
+                onDragEnd={() => setDragKind(null)}
+                onClick={() => {
+                  if (t.kind !== 'skill') openPrimary(t)
+                }}
+                title={t.kind === 'skill' ? '拖进对话即可调用此技能' : undefined}
+                className={cn(
+                  'group flex items-center gap-2 rounded-md px-1.5 py-1 text-[13px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
+                  t.kind === 'skill' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+                )}
+              >
+                {t.kind === 'skill' ? (
+                  <Puzzle className="h-3.5 w-3.5 shrink-0 text-primary/60" />
+                ) : (
+                  <Star className="h-3.5 w-3.5 shrink-0 text-primary/60" />
+                )}
+                <span className="min-w-0 flex-1 truncate">
+                  {t.kind === 'skill' ? (
+                    <span className="font-mono text-[12px]">/{t.slug}</span>
+                  ) : (
+                    labelOf(t)
+                  )}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    removeFavorite(i)
+                  }}
+                  title="移除收藏"
+                  className="rounded p-0.5 text-muted-foreground/50 opacity-0 transition hover:text-foreground group-hover:opacity-100"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SectionLabel({ children }: { children: ReactNode }): JSX.Element {
+  return (
+    <div className="px-2.5 pb-0.5 pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/55">
+      {children}
+    </div>
+  )
+}
+
+/**
+ * Hero project switcher — the app's primary scope control. Selecting a project
+ * filters the conversation list AND every asset view (素材/原子/标签/图谱/选题/
+ * 发布) + graph to it. 全部 shows everything; 未归类 shows items with no project.
+ * Per-project management (rename / bind / open / delete / new) lives here too,
+ * so the concept exists in exactly one place.
+ */
+function ProjectBar(): JSX.Element {
+  const projects = useStore((s) => s.projects)
+  const scope = useStore((s) => s.projectScope)
+  const setScope = useStore((s) => s.setProjectScope)
+  const newProject = useStore((s) => s.newProject)
+  const rename = useStore((s) => s.renameProject)
+  const remove = useStore((s) => s.deleteProject)
+  const archive = useStore((s) => s.archiveProject)
+  const bindDir = useStore((s) => s.bindProjectDir)
+  const openVault = useStore((s) => s.openProjectVault)
+
+  const current = projects.find((p) => p.id === scope)
+  const label =
+    scope === 'all' ? '全部项目' : scope === 'unfiled' ? '未归类' : (current?.name ?? '项目')
+
+  const [manageOpen, setManageOpen] = useState(false)
+
+  // Inline rename of the current project (Electron has no window.prompt).
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const startEdit = (): void => {
+    if (!current) return
+    setDraft(current.name)
+    setEditing(true)
+  }
+  const commit = (): void => {
+    const next = draft.trim()
+    if (current && next && next !== current.name) rename(current.id, next)
+    setEditing(false)
+  }
+
+  return (
+    <div className="flex items-center gap-1 px-3 pb-1.5">
+      {editing && current ? (
+        <input
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit()
+            else if (e.key === 'Escape') setEditing(false)
+          }}
+          className="h-8 min-w-0 flex-1 rounded-lg border border-ring bg-background px-2.5 text-[12.5px] text-foreground outline-none"
+        />
+      ) : (
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-border-soft bg-background/60 px-2.5 py-1.5 text-[12.5px] text-foreground outline-none transition-colors hover:bg-accent focus-visible:bg-accent">
+            <Folder className="h-3.5 w-3.5 shrink-0 text-primary" />
+            <span className="min-w-0 flex-1 truncate text-left font-medium">{label}</span>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-[60vh] w-[208px] overflow-y-auto">
+            <ScopeRow value="all" text="全部项目" scope={scope} onPick={setScope} icon={Layers} />
+            <ScopeRow
+              value="unfiled"
+              text="未归类"
+              scope={scope}
+              onPick={setScope}
+              icon={FolderInput}
+            />
+            {projects.length > 0 ? <DropdownMenuSeparator /> : null}
+            {projects.map((p) => (
+              <ScopeRow
+                key={p.id}
+                value={p.id}
+                text={p.name}
+                scope={scope}
+                onPick={setScope}
+                icon={Folder}
+              />
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => newProject()}>
+              <Plus /> 新建项目
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setManageOpen(true)}>
+              <SlidersHorizontal /> 管理项目…
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+
+      {/* Open this project's knowledge base directly (only when bound). */}
+      {current?.dir_path ? (
+        <Tip label="打开知识库">
           <button
-            onClick={() => create(project.id)}
-            className="rounded p-0.5 text-muted-foreground/70 opacity-0 transition hover:bg-accent hover:text-primary group-hover:opacity-100"
+            onClick={() => openVault(current.id)}
+            className="rounded-lg p-1.5 text-primary/80 transition-colors hover:bg-accent hover:text-primary"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <BookText className="h-4 w-4" />
           </button>
         </Tip>
+      ) : null}
+
+      {/* Manage the current project (rename / bind / delete). */}
+      {current ? (
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="rounded p-0.5 text-muted-foreground/70 opacity-0 transition hover:bg-accent hover:text-foreground group-hover:opacity-100">
-              <MoreHorizontal className="h-3.5 w-3.5" />
-            </button>
+          <DropdownMenuTrigger className="rounded-lg p-1.5 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:bg-accent">
+            <MoreHorizontal className="h-4 w-4" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onSelect={() => {
-                const n = window.prompt('重命名项目', project.name)
-                if (n?.trim()) rename(project.id, n.trim())
-              }}
-            >
+          {/* Prevent Radix from restoring focus to the trigger on close — otherwise
+              it steals focus from the rename input we mount, which then blurs and
+              commits instantly (looked like 重命名 "没反应"). */}
+          <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
+            <DropdownMenuItem onSelect={() => startEdit()}>
               <PencilLine /> 重命名
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => bindDir(project.id)}>
-              <FolderInput /> {project.dir_path ? '更换文件夹' : '绑定文件夹'}
+            <DropdownMenuItem onSelect={() => bindDir(current.id)}>
+              <FolderInput /> {current.dir_path ? '更换知识库文件夹' : '绑定知识库文件夹'}
+            </DropdownMenuItem>
+            {current.dir_path ? (
+              <DropdownMenuItem onSelect={() => openVault(current.id)}>
+                <BookText /> 打开知识库
+              </DropdownMenuItem>
+            ) : null}
+            <DropdownMenuItem onSelect={() => setManageOpen(true)}>
+              <SlidersHorizontal /> 管理项目…
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => archive(current.id)}>
+              <Archive /> 归档项目
+            </DropdownMenuItem>
             <DropdownMenuItem
               destructive
               onSelect={() => {
-                if (window.confirm(`删除项目「${project.name}」？对话会移到最近对话。`))
-                  remove(project.id)
+                if (window.confirm(`删除项目「${current.name}」？对话会移到未归类。`))
+                  remove(current.id)
               }}
             >
               <Trash2 /> 删除项目
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
-      {open ? (
-        items.length === 0 ? (
-          <div className="px-2.5 py-1 text-[12.5px] text-muted-foreground/50">空项目</div>
-        ) : (
-          items.map((c) => <ConvItem key={c.id} conv={c} />)
-        )
       ) : null}
+
+      <ProjectsModal open={manageOpen} onOpenChange={setManageOpen} />
     </div>
+  )
+}
+
+/** One selectable scope row in the project switcher dropdown. */
+function ScopeRow({
+  value,
+  text,
+  scope,
+  onPick,
+  icon: Icon
+}: {
+  value: string
+  text: string
+  scope: string
+  onPick: (v: string) => void
+  icon: LucideIcon
+}): JSX.Element {
+  return (
+    <DropdownMenuItem onSelect={() => onPick(value)}>
+      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+      <span className="flex-1 truncate">{text}</span>
+      {scope === value ? <Check className="h-3.5 w-3.5 text-primary" /> : null}
+    </DropdownMenuItem>
   )
 }
 
@@ -375,6 +639,11 @@ function ConvItem({ conv }: { conv: Conversation }): JSX.Element {
   const archive = useStore((s) => s.archiveConversation)
   const rename = useStore((s) => s.renameConversation)
   const togglePin = useStore((s) => s.togglePin)
+  const exportToVault = useStore((s) => s.exportConversationToVault)
+  const setDragKind = useStore((s) => s.setDragKind)
+  const favorites = useStore((s) => s.favorites)
+  const toggleFavorite = useStore((s) => s.toggleFavorite)
+  const isFav = isFavorited(favorites, { kind: 'chat', id: conv.id })
   const openSplitChat = useStore((s) => s.openSplitChat)
 
   const [editing, setEditing] = useState(false)
@@ -389,6 +658,12 @@ function ConvItem({ conv }: { conv: Conversation }): JSX.Element {
 
   return (
     <div
+      draggable={!editing}
+      onDragStart={(e) => {
+        setDragTarget(e, { kind: 'chat', id: conv.id })
+        setDragKind('pane')
+      }}
+      onDragEnd={() => setDragKind(null)}
       onClick={() => open(conv.id)}
       onDoubleClick={() => {
         setDraft(conv.title)
@@ -396,7 +671,9 @@ function ConvItem({ conv }: { conv: Conversation }): JSX.Element {
       }}
       className={cn(
         'group relative flex cursor-pointer items-center gap-2 rounded-lg py-[7px] pl-2.5 pr-1.5 text-[13.5px] transition-colors',
-        active ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
+        active
+          ? 'bg-accent text-foreground'
+          : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
       )}
     >
       {/* Arc-style leading indicator: filled when active, a quiet ring otherwise. */}
@@ -473,6 +750,16 @@ function ConvItem({ conv }: { conv: Conversation }): JSX.Element {
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => openSplitChat(conv.id)}>
               <SplitSquareHorizontal /> 在分屏打开
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => navigator.clipboard?.writeText(conv.id)}>
+              <Copy /> 复制 Session ID
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => toggleFavorite({ kind: 'chat', id: conv.id })}>
+              <Star className={cn(isFav && 'fill-current text-primary')} />{' '}
+              {isFav ? '从收藏夹移除' : '添加到收藏夹'}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => exportToVault(conv.id)}>
+              <FileDown /> 导出到知识库
             </DropdownMenuItem>
             {conv.archived ? null : (
               <DropdownMenuItem onSelect={() => archive(conv.id)}>

@@ -157,6 +157,40 @@
 .markdown h3 {
   @apply font-semibold mt-4 mb-2;
 }
+/* GitHub-Flavored Markdown: tables, blockquotes, task lists, rules, images */
+.markdown table {
+  @apply my-3 w-full border-collapse text-[13px];
+  display: block;
+  overflow-x: auto;
+}
+.markdown th,
+.markdown td {
+  @apply border border-border px-3 py-1.5 text-left align-top;
+}
+.markdown thead th {
+  @apply bg-muted font-semibold;
+}
+.markdown tbody tr:nth-child(even) {
+  @apply bg-muted/40;
+}
+.markdown blockquote {
+  @apply my-3 border-l-2 border-border pl-3 text-muted-foreground;
+}
+.markdown hr {
+  @apply my-4 border-border;
+}
+.markdown img {
+  @apply my-2 max-w-full rounded-lg;
+}
+.markdown input[type='checkbox'] {
+  @apply mr-1.5 align-middle;
+}
+.markdown ul.contains-task-list {
+  @apply list-none pl-2;
+}
+.markdown del {
+  @apply line-through opacity-70;
+}
 
 /* Scrollbars */
 ::-webkit-scrollbar {

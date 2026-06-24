@@ -1,5 +1,6 @@
 import { JSX, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Bot, User, Save, Atom, Check, Loader2, Image as ImageIcon } from 'lucide-react'
 import { useStore } from '../store'
 
@@ -38,7 +39,7 @@ export function MessageBubble({ role, content, thinking }: Props): JSX.Element {
         ) : (
           <>
             <div className="markdown">
-              <ReactMarkdown>{content}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
             </div>
             {content.trim() ? <AssistantActions content={content} /> : null}
           </>
