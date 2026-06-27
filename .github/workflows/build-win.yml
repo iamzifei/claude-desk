@@ -65,3 +65,5 @@ jobs:
           files: dist/*-setup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# (re-index nudge)
