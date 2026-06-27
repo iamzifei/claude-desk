@@ -1,0 +1,67 @@
+# Build the Windows installer on a real Windows runner.
+#
+# Why CI and not a cross-build from macOS: InkNest depends on native (N-API)
+# modules — better-sqlite3 and sherpa-onnx-node. Their Windows binaries only get
+# installed / rebuilt for the Electron ABI when `npm install` runs ON Windows
+# (npm skips OS-mismatched optional deps, and `electron-builder install-app-deps`
+# in postinstall rebuilds against Electron). Building from macOS would ship a
+# broken .exe with no SQLite and no speech recognition. So we build here.
+#
+# Anti reverse-engineering is unchanged and already cross-platform: the JS
+# obfuscator runs on every production build, and the Electron Fuses in
+# electron-builder.yml (runAsNode off, inspect args off, asar integrity
+# validation on, onlyLoadAppFromAsar) are flipped into the packaged .exe here.
+name: Build Windows
+
+on:
+  # Tag push like `v1.5.2` → build and attach the installer to a GitHub Release.
+  push:
+    tags:
+      - 'v*'
+  # Manual run from the Actions tab → build and upload as a workflow artifact.
+  workflow_dispatch:
+
+jobs:
+  build-win:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Installs deps AND runs `electron-builder install-app-deps` (postinstall),
+      # which rebuilds better-sqlite3 against Electron's ABI and pulls in
+      # sherpa-onnx-win-x64. windows-latest ships the VS Build Tools + Python
+      # that node-gyp needs as a fallback when no prebuild matches.
+      - name: Install dependencies
+        run: npm ci
+
+      # `build:win` = `npm run build` (typecheck + electron-vite build, which
+      # applies the obfuscator) followed by `electron-builder --win` (which
+      # flips the Electron Fuses and produces the NSIS installer).
+      - name: Build Windows installer
+        run: npm run build:win
+
+      # Upload the unsigned installer for every run (tag or manual) so it's
+      # downloadable from the run page even without a release.
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: InkNest-windows-setup
+          path: dist/*-setup.exe
+          if-no-files-found: error
+
+      # On a version tag, also publish a GitHub Release with the installer.
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*-setup.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
