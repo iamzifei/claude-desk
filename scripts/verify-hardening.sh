@@ -31,9 +31,15 @@ if [[ "$APP" == *.app ]]; then
   ASAR="$APP/Contents/Resources/app.asar"
   FUSE_TARGET="$APP"
 else
-  # Windows unpacked layout: resources/app.asar next to the .exe.
+  # Windows unpacked layout: resources/app.asar next to the .exe. Prefer the
+  # known app executable (electron-builder win.executableName=claude-desk);
+  # fall back to the first .exe if the name ever changes.
   ASAR="$APP/resources/app.asar"
-  FUSE_TARGET=$(ls "$APP"/*.exe 2>/dev/null | head -1) || true
+  if [ -f "$APP/claude-desk.exe" ]; then
+    FUSE_TARGET="$APP/claude-desk.exe"
+  else
+    FUSE_TARGET=$(ls "$APP"/*.exe 2>/dev/null | head -1 || true)
+  fi
   [ -z "${FUSE_TARGET:-}" ] && fail "executable not found under $APP"
 fi
 [ -f "$ASAR" ] || fail "app.asar missing (onlyLoadAppFromAsar requires it)"
@@ -47,17 +53,16 @@ fi
 # K2, …) — so identifier-based detection is a false negative. A readable
 # (DISABLE_OBFUSCATION) build has ~0 of these markers; an obfuscated one has
 # hundreds. Threshold 20 clears incidental use with a wide margin.
-# Extract the main bundle directly rather than pre-checking via `asar list` —
-# list output uses OS-native path separators (backslashes on Windows) which
-# breaks a forward-slash grep. `asar extract-file` takes a forward-slash path
-# on every platform and writes the file (by basename) into the current dir,
-# so run it from a temp dir and read the result there.
-TMP=$(mktemp -d)
-ASAR_ABS=$(cd "$(dirname "$ASAR")" && pwd)/$(basename "$ASAR")
-( cd "$TMP" && npx --yes @electron/asar extract-file "$ASAR_ABS" out/main/index.js >/dev/null 2>&1 )
-[ -s "$TMP/index.js" ] || fail "main bundle not found / unreadable inside app.asar"
-MARKERS=$(grep -oE 'atob|charCodeAt|fromCharCode' "$TMP/index.js" | wc -l | tr -d ' ')
-rm -rf "$TMP"
+#
+# We read the build output `out/main/index.js` directly instead of extracting
+# it from app.asar. electron-builder packs out/ into the asar verbatim, so the
+# two are byte-identical — and reading the file on disk avoids the fragile,
+# platform-dependent `npx @electron/asar extract-file` (MSYS path translation
+# on Windows made it fail silently under `set -e`). The asar presence + fuse +
+# signature checks below still validate the actual shipped artifact.
+MAIN_BUNDLE="out/main/index.js"
+[ -s "$MAIN_BUNDLE" ] || fail "build output $MAIN_BUNDLE missing — run the build before this gate"
+MARKERS=$(grep -oE 'atob|charCodeAt|fromCharCode' "$MAIN_BUNDLE" | wc -l | tr -d ' ')
 [ "$MARKERS" -ge 20 ] || fail "main bundle is NOT obfuscated (only $MARKERS string-array decode markers; expected ≥20)"
 ok "obfuscation present in main bundle ($MARKERS string-array decode markers)"
 
