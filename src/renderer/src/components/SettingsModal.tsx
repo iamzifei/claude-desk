@@ -1,6 +1,17 @@
 import { JSX, useEffect, useState } from 'react'
-import { ShieldCheck, Sun, Moon, Download, Check, Keyboard, RotateCcw } from 'lucide-react'
+import {
+  ShieldCheck,
+  Sun,
+  Moon,
+  Download,
+  Check,
+  Keyboard,
+  RotateCcw,
+  Cloud,
+  ExternalLink
+} from 'lucide-react'
 import { useStore } from '../store'
+import { LINGXI_CLOUD_URL, ccapiModelUrl } from '../brand'
 import { cn } from '../lib/utils'
 import type { ProviderInfo } from '../types'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'
@@ -122,6 +133,19 @@ export function SettingsModal({ open, onOpenChange }: Props): JSX.Element {
           <div className="min-w-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
             {page === 'general' ? (
               <>
+                {/* Cross-promotion: low-key pointer to the cloud edition for key-less users. */}
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-border-soft bg-muted/50 px-3 py-2">
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Cloud className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+                    没有 API Key？可以用灵犀云版，注册即用
+                  </span>
+                  <button
+                    onClick={() => void window.api.app.openExternal(LINGXI_CLOUD_URL)}
+                    className="flex shrink-0 items-center gap-1 text-xs text-primary transition-colors hover:text-primary/80"
+                  >
+                    打开 <ExternalLink className="h-3 w-3" strokeWidth={1.75} />
+                  </button>
+                </div>
                 <ThemeToggle />
                 <label className="block space-y-1.5">
                   <span className="text-xs font-medium text-muted-foreground">供应商</span>
@@ -166,6 +190,21 @@ export function SettingsModal({ open, onOpenChange }: Props): JSX.Element {
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder={hasApiKey ? '••••••••' : '粘贴你的供应商 API key'}
                   />
+                  {/* Purchase guidance: users without an overseas-model key can buy
+                      Claude credits at the CCAPI relay. Deep-links to the landing
+                      page of the currently selected model, with UTM attribution. */}
+                  <span className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>需要购买 Claude 等海外模型额度？</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void window.api.app.openExternal(ccapiModelUrl(model, 'settings'))
+                      }
+                      className="flex shrink-0 items-center gap-1 text-primary transition-colors hover:text-primary/80"
+                    >
+                      去 CCAPI 中转站 <ExternalLink className="h-3 w-3" strokeWidth={1.75} />
+                    </button>
+                  </span>
                 </label>
 
                 <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">

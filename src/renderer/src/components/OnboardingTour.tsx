@@ -3,14 +3,16 @@ import {
   ArrowRight,
   ArrowLeft,
   Check,
+  ExternalLink,
   FolderOpen,
-  PenLine,
+  Workflow,
   MessageSquare,
   LayoutGrid,
   Puzzle,
   type LucideIcon
 } from 'lucide-react'
 import { useStore } from '../store'
+import { LINGXI_CLOUD_URL, ccapiModelUrl } from '../brand'
 import { cn } from '../lib/utils'
 import { Logo } from './Logo'
 import { Dialog, DialogContent } from './ui/dialog'
@@ -33,13 +35,13 @@ const STEPS: Step[] = [
   {
     icon: FolderOpen,
     title: '项目 = 一个知识库',
-    body: '墨栖以项目为中心。左上角的项目切换器用来新建/切换项目；为项目「绑定知识库文件夹」即可直接打开你的 Obsidian vault，在「知识库」里读写真实的 .md 文件——磁盘才是本体，改了会双向同步。',
+    body: '灵犀桌面版以项目为中心。左上角的项目切换器用来新建/切换项目；为项目「绑定知识库文件夹」即可直接打开你的 Obsidian vault，在「知识库」里读写真实的 .md 文件——磁盘才是本体，改了会双向同步。',
     image: vaultShot
   },
   {
-    icon: PenLine,
-    title: '创作流水线',
-    body: '侧边栏「创作」是主轴：知识库 → 素材库 → 知识原子 → 标签 / 知识图谱 → 选题库 → 多平台改写 → 发布数据。这些资产都跟随顶部选中的项目过滤，互不串台。图为从对话里的 [[双链]] 自动长出的知识图谱。',
+    icon: Workflow,
+    title: '创作流水线：7 阶段引导式创作',
+    body: '侧边栏「创作」组顶部的「创作流水线」带你走完整条路：选题 → 策略 → 写作 → 去AI味 → 配图 → 排版 → 复盘。每个阶段一次对话、产出可回溯；重跑上游阶段后，下游会标「需重跑」。新建时选长文或短视频脚本，并可绑定人设。素材库、知识原子等资产视图仍跟随顶部选中的项目过滤。',
     image: graphShot
   },
   {
@@ -105,11 +107,33 @@ export function OnboardingTour(): JSX.Element {
             <h2 className="text-[16px] font-semibold text-foreground">{step.title}</h2>
             {i === 0 ? (
               <span className="ml-auto flex items-center gap-1.5 text-[12px] text-muted-foreground/70">
-                <Logo className="h-4 w-4 rounded shadow-sm" /> 墨栖 InkNest
+                <Logo className="h-4 w-4 rounded shadow-sm" /> 灵犀桌面版
               </span>
             ) : null}
           </div>
           <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">{step.body}</p>
+          {/* Cross-promotion: last step points key-less users to the cloud edition,
+              and BYOK users to the CCAPI relay to buy Claude credits (UTM-tagged). */}
+          {last ? (
+            <div className="mt-2.5 flex flex-col gap-1.5 self-start">
+              <button
+                onClick={() => void window.api.app.openExternal(LINGXI_CLOUD_URL)}
+                className="flex items-center gap-1.5 self-start text-[12.5px] text-muted-foreground transition-colors hover:text-primary"
+              >
+                没有 API Key？可以用灵犀云版，注册即用
+                <ExternalLink className="h-3 w-3" strokeWidth={1.75} />
+              </button>
+              <button
+                onClick={() =>
+                  void window.api.app.openExternal(ccapiModelUrl(undefined, 'onboarding'))
+                }
+                className="flex items-center gap-1.5 self-start text-[12.5px] text-muted-foreground transition-colors hover:text-primary"
+              >
+                想自备 Key？可在 CCAPI 中转站直接购买 Claude 等海外模型额度
+                <ExternalLink className="h-3 w-3" strokeWidth={1.75} />
+              </button>
+            </div>
+          ) : null}
         </div>
 
         {/* progress dots */}

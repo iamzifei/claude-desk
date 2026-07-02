@@ -299,6 +299,55 @@ function migrate(d: Database.Database): void {
       PRIMARY KEY (conversation_id, ref_id)
     );
     CREATE INDEX idx_context_refs_conv ON context_refs(conversation_id);
+    `,
+    // 0018 — 人设 (personas). Five-dimension creator profiles following the
+    // persona-builder methodology (过去/专业/观点/实力/生活). Each dimension is a
+    // JSON string[] of material points; the row flagged is_default injects a
+    // "## 当前人设" section into every conversation's system prompt. Schema is
+    // field-compatible with lingxi's brand personas for JSON import/export.
+    `
+    CREATE TABLE personas (
+      id               TEXT PRIMARY KEY,
+      name             TEXT NOT NULL,
+      positioning      TEXT,               -- 一句话定位
+      tone_formality   TEXT,               -- 正式程度: 轻松 / 半正式 / 正式
+      tone_expertise   TEXT,               -- 专业程度: 科普向 / 专业易懂 / 深度专业
+      tone_person      TEXT,               -- 人称: 我 / 我们
+      target_platforms TEXT,               -- JSON string[]
+      banned_words     TEXT,               -- JSON string[]
+      past             TEXT,               -- JSON string[] 过去（故事）
+      expertise        TEXT,               -- JSON string[] 专业（干货）
+      stance           TEXT,               -- JSON string[] 观点态度
+      proof            TEXT,               -- JSON string[] 结果实力
+      life             TEXT,               -- JSON string[] 生活（温度）
+      content_calendar TEXT,               -- JSON {dimension: ratio} 发布配比
+      is_default       INTEGER NOT NULL DEFAULT 0,
+      project_id       TEXT,               -- nullable, same scoping as other assets
+      created_at       INTEGER NOT NULL,
+      updated_at       INTEGER NOT NULL
+    );
+    CREATE INDEX idx_personas_project ON personas(project_id);
+    CREATE INDEX idx_personas_default ON personas(is_default);
+    `,
+    // 0019 — 创作流水线 (creation pipeline). One row per guided creation going
+    // through the shared 7-phase flow (选题→策略→写作→去AI味→配图→排版→复盘,
+    // isomorphic with lingxi's workspace). `phase_outputs` is a JSON map of
+    // phase id → {status, output, input, updated_at} (see agent/pipeline-util);
+    // `format` branches article vs short-video script (script skips 配图 and
+    // turns 排版 into a shooting list). persona_id binds an optional 人设.
+    `
+    CREATE TABLE creations (
+      id            TEXT PRIMARY KEY,
+      title         TEXT NOT NULL,
+      format        TEXT NOT NULL DEFAULT 'article',   -- 'article' | 'script'
+      persona_id    TEXT,                              -- nullable → default persona
+      current_phase INTEGER NOT NULL DEFAULT 1,        -- 1..7, derived after each run
+      phase_outputs TEXT NOT NULL DEFAULT '{}',        -- JSON: {"1": {status,...}}
+      project_id    TEXT,                              -- same scoping as other assets
+      created_at    INTEGER NOT NULL,
+      updated_at    INTEGER NOT NULL
+    );
+    CREATE INDEX idx_creations_project ON creations(project_id);
     `
   ]
 

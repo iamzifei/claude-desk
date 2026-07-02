@@ -58,10 +58,12 @@ import {
   deleteSkill,
   parseSkillMd,
   syncInstalledSkills,
+  syncBuiltinSkills,
   buildInvokedSkillsPrompt,
   listSkillNames,
   type NewSkill
 } from '../db/skills'
+import { scanBuiltinSkills } from '../db/builtin-skills'
 import { scanInstalledSkills } from '../agent/installed-skills'
 import { formatConversationMarkdown, safeFileName } from '../agent/export-conversation'
 import {
@@ -107,6 +109,15 @@ import {
 } from '../db/atoms'
 import { extractAtoms } from '../agent/extract-atoms'
 import { getMaterial } from '../db/materials'
+import {
+  listPersonas,
+  getPersona,
+  createPersona,
+  updatePersona,
+  deletePersona,
+  setDefaultPersona
+} from '../db/personas'
+import { personaToJson, parsePersonaJson, type PersonaData } from '../db/persona-util'
 import { runDiagnose, runDeAI } from '../agent/diagnose'
 import {
   listTopics,
@@ -127,6 +138,16 @@ import {
   DEFAULT_TRANSCRIBE_MODEL
 } from '../db/settings'
 import { runChat, runOnce, type RunHandle } from '../agent/run'
+import {
+  listCreations,
+  getCreation,
+  createCreation,
+  renameCreation,
+  setCreationPersona,
+  deleteCreation
+} from '../db/creations'
+import { runPhase, cancelPhase } from '../agent/pipeline'
+import type { CreationFormat } from '../agent/pipeline-util'
 import { decideBrowserAction, type PageElement } from '../agent/browser'
 import { runCodingAgent, cancelCoding } from '../agent/coding'
 import {
@@ -209,10 +230,35 @@ function dateTitle(prefix: string): string {
   return `${prefix} · ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
+/**
+ * Where the bundled creator skills live on disk.
+ *   - dev: `<project root>/resources/builtin-skills` (getAppPath = project root)
+ *   - packaged: `resources/**` is asarUnpacked (electron-builder.yml), so the
+ *     files sit next to the asar under `app.asar.unpacked/resources/…`.
+ */
+function builtinSkillsRoot(): string {
+  const appPath = app.isPackaged
+    ? app.getAppPath().replace('app.asar', 'app.asar.unpacked')
+    : app.getAppPath()
+  return join(appPath, 'resources', 'builtin-skills')
+}
+
+/** Seed/refresh bundled builtin skills into the DB. Idempotent, best-effort. */
+function seedBuiltinSkills(): void {
+  try {
+    syncBuiltinSkills(scanBuiltinSkills(builtinSkillsRoot()))
+  } catch {
+    /* a missing/corrupt bundle must never break startup */
+  }
+}
+
 export function registerIpc(): void {
-  // Surface locally installed skills (~/.claude/skills + plugins) on startup so
-  // the 技能 view shows them without a manual import. Bounded + best-effort.
+  // Seed the app-bundled creator skills (11× SKILL.md under
+  // resources/builtin-skills) and surface locally installed skills
+  // (~/.claude/skills + plugins) on startup so the 技能 view shows them
+  // without a manual import. Bounded + best-effort.
   setImmediate(() => {
+    seedBuiltinSkills()
     try {
       syncInstalledSkills(scanInstalledSkills())
       for (const win of BrowserWindow.getAllWindows()) {
@@ -534,6 +580,70 @@ export function registerIpc(): void {
   })
   ipcMain.handle('materials:imageData', (_e, path: string) => imageDataUrl(path))
 
+  // ---- personas: (人设五维档案) ----------------------------------------
+  ipcMain.handle('personas:list', () => listPersonas())
+  ipcMain.handle('personas:create', (_e, d: PersonaData) => createPersona(d))
+  ipcMain.handle('personas:update', (_e, id: string, d: PersonaData) => updatePersona(id, d))
+  ipcMain.handle('personas:delete', (_e, id: string) => deletePersona(id))
+  ipcMain.handle('personas:setDefault', (_e, id: string, on: boolean) => setDefaultPersona(id, on))
+  // Export one persona as a portable JSON file (schema shared with lingxi so
+  // the same profile can be imported on the cloud side and vice versa).
+  ipcMain.handle('personas:export', async (_e, id: string) => {
+    const p = getPersona(id)
+    if (!p) return null
+    const win = BrowserWindow.getFocusedWindow()
+    const opts = {
+      defaultPath: join(app.getPath('downloads'), `${safeFileName(p.name)}.persona.json`),
+      filters: [{ name: 'Persona JSON', extensions: ['json'] }]
+    }
+    const res = win ? await dialog.showSaveDialog(win, opts) : await dialog.showSaveDialog(opts)
+    if (res.canceled || !res.filePath) return null
+    writeFileSync(res.filePath, personaToJson(p), 'utf8')
+    return res.filePath
+  })
+  // Import a persona JSON file (defensive parse — a malformed file returns
+  // null instead of throwing across the IPC boundary).
+  ipcMain.handle('personas:import', async () => {
+    const win = BrowserWindow.getFocusedWindow()
+    const opts = {
+      properties: ['openFile' as const],
+      filters: [{ name: 'Persona JSON', extensions: ['json'] }]
+    }
+    const res = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts)
+    if (res.canceled || !res.filePaths[0]) return null
+    try {
+      const data = parsePersonaJson(readFileSync(res.filePaths[0], 'utf8'))
+      return data ? createPersona(data) : null
+    } catch {
+      return null
+    }
+  })
+
+  // ---- creations: (创作流水线 — 7 阶段引导式创作) ----------------------
+  ipcMain.handle('creations:list', () => listCreations())
+  ipcMain.handle('creations:get', (_e, id: string) => getCreation(id))
+  ipcMain.handle(
+    'creations:create',
+    (_e, title: string, format: CreationFormat, personaId: string | null) =>
+      createCreation(title, format, personaId)
+  )
+  ipcMain.handle('creations:rename', (_e, id: string, title: string) => renameCreation(id, title))
+  ipcMain.handle('creations:setPersona', (_e, id: string, personaId: string | null) =>
+    setCreationPersona(id, personaId)
+  )
+  ipcMain.handle('creations:delete', (_e, id: string) => {
+    cancelPhase(id) // stop any in-flight phase run before the row disappears
+    deleteCreation(id)
+  })
+  // Run one phase; stream chunks back as 'pipeline:chunk' (creationId, phaseId, chunk).
+  ipcMain.handle('pipeline:runPhase', (e, creationId: string, phaseId: number, input: string) => {
+    const wc = e.sender
+    runPhase(creationId, phaseId, input, (chunk) => {
+      if (!wc.isDestroyed()) wc.send('pipeline:chunk', creationId, phaseId, chunk)
+    })
+  })
+  ipcMain.handle('pipeline:cancel', (_e, creationId: string) => cancelPhase(creationId))
+
   // ---- rewrite: (一键多平台改写) --------------------------------------
   ipcMain.handle('rewrite:run', (_e, source: string, platforms: string[]) =>
     runRewrite(source, platforms)
@@ -626,8 +736,10 @@ export function registerIpc(): void {
   ipcMain.handle('skills:create', (_e, s: NewSkill) => createSkill(s))
   ipcMain.handle('skills:toggle', (_e, id: string, enabled: boolean) => toggleSkill(id, enabled))
   ipcMain.handle('skills:delete', (_e, id: string) => deleteSkill(id))
-  // Re-scan locally installed skills (~/.claude/skills + plugins) into the list.
+  // Re-scan locally installed skills (~/.claude/skills + plugins) into the
+  // list, and re-seed the bundled builtin skills (both idempotent).
   ipcMain.handle('skills:rescan', () => {
+    seedBuiltinSkills()
     try {
       syncInstalledSkills(scanInstalledSkills())
     } catch {

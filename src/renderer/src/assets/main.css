@@ -3,7 +3,7 @@
 /* Class-based dark mode (toggle `.dark` on <html>) */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ── 墨栖 InkNest — design tokens ───────────────────────────────────────
+/* ── 灵犀桌面版 LingXi Desktop — design tokens ───────────────────────────────────────
    Cool indigo-violet creative identity (a deliberate departure from the
    warm-amber reference look). Content-creator studio vibe: clean, airy. */
 :root {

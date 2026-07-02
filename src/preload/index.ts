@@ -179,6 +179,37 @@ const api = {
     importImage: () => ipcRenderer.invoke('materials:importImage'),
     imageData: (path: string) => ipcRenderer.invoke('materials:imageData', path)
   },
+  personas: {
+    list: () => ipcRenderer.invoke('personas:list'),
+    create: (d: unknown) => ipcRenderer.invoke('personas:create', d),
+    update: (id: string, d: unknown) => ipcRenderer.invoke('personas:update', id, d),
+    delete: (id: string) => ipcRenderer.invoke('personas:delete', id),
+    setDefault: (id: string, on: boolean) => ipcRenderer.invoke('personas:setDefault', id, on),
+    export: (id: string) => ipcRenderer.invoke('personas:export', id),
+    import: () => ipcRenderer.invoke('personas:import')
+  },
+  creations: {
+    list: () => ipcRenderer.invoke('creations:list'),
+    get: (id: string) => ipcRenderer.invoke('creations:get', id),
+    create: (title: string, format: string, personaId: string | null) =>
+      ipcRenderer.invoke('creations:create', title, format, personaId),
+    rename: (id: string, title: string) => ipcRenderer.invoke('creations:rename', id, title),
+    setPersona: (id: string, personaId: string | null) =>
+      ipcRenderer.invoke('creations:setPersona', id, personaId),
+    delete: (id: string) => ipcRenderer.invoke('creations:delete', id)
+  },
+  pipeline: {
+    runPhase: (creationId: string, phaseId: number, input: string) =>
+      ipcRenderer.invoke('pipeline:runPhase', creationId, phaseId, input),
+    cancel: (creationId: string) => ipcRenderer.invoke('pipeline:cancel', creationId),
+    // Subscribe to streamed phase chunks. Returns an unsubscribe function.
+    onChunk: (cb: (creationId: string, phaseId: number, chunk: unknown) => void) => {
+      const listener = (_e: unknown, creationId: string, phaseId: number, chunk: unknown): void =>
+        cb(creationId, phaseId, chunk)
+      ipcRenderer.on('pipeline:chunk', listener)
+      return () => ipcRenderer.removeListener('pipeline:chunk', listener)
+    }
+  },
   rewrite: {
     run: (source: string, platforms: string[]) =>
       ipcRenderer.invoke('rewrite:run', source, platforms)

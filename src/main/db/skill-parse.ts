@@ -1,6 +1,8 @@
 export interface ParsedSkill {
   name: string
   description?: string
+  /** `/command` id declared in frontmatter (`slug:`), if any. */
+  slug?: string
   content: string
   source: string
 }
@@ -34,23 +36,69 @@ export function extractSlashTokens(text: string): string[] {
   return out
 }
 
+/**
+ * Read a top-level frontmatter value. Handles inline scalars
+ * (`key: value`, quoted or not) and YAML block scalars (`key: |` / `key: >`,
+ * with the text on the following indented lines — folded into one line).
+ * Pure; only top-level keys match (nested keys are indented).
+ */
+function fmValue(fm: string, key: string): string | undefined {
+  const lines = fm.split('\n')
+  const re = new RegExp(`^${key}\\s*:(.*)$`)
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(re)
+    if (!m) continue
+    const inline = m[1].trim().replace(/^["']|["']$/g, '')
+    // Inline value present and not a block-scalar indicator (`|`, `|-`, `>`, `>-`).
+    if (inline && !/^[|>][+-]?$/.test(inline)) return inline
+    // Block scalar or empty value: collect the indented lines that follow.
+    const block: string[] = []
+    for (let j = i + 1; j < lines.length; j++) {
+      if (lines[j].trim() === '') continue
+      if (!/^[ \t]/.test(lines[j])) break // back to a top-level key → stop
+      block.push(lines[j].trim())
+    }
+    const text = block.join(' ').trim()
+    return text || undefined
+  }
+  return undefined
+}
+
 /** Parse a SKILL.md-style document (YAML-ish frontmatter + body). Pure. */
 export function parseSkillMd(text: string): ParsedSkill {
   const m = text.match(/^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/)
   if (!m) return { name: '导入的技能', content: text.trim(), source: 'imported' }
   const fm = m[1]
   const body = m[2].trim()
-  const get = (k: string): string | undefined =>
-    fm
-      .match(new RegExp(`^${k}\\s*:\\s*(.+)$`, 'm'))?.[1]
-      ?.trim()
-      .replace(/^["']|["']$/g, '')
   return {
-    name: get('name') || '导入的技能',
-    description: get('description'),
+    name: fmValue(fm, 'name') || '导入的技能',
+    description: fmValue(fm, 'description'),
+    slug: fmValue(fm, 'slug'),
     content: body || text.trim(),
     source: 'imported'
   }
+}
+
+/**
+ * Collapse skills that share a `/slug`, letting user-managed versions
+ * (installed / custom / imported) override the app-bundled `builtin` one.
+ * Keeps the input order of the surviving entries. Pure.
+ */
+export function dedupeSkillsBySlug<T extends { slug: string; source: string }>(skills: T[]): T[] {
+  const bySlug = new Map<string, T>()
+  const order: string[] = []
+  for (const s of skills) {
+    const key = s.slug.toLowerCase()
+    const prev = bySlug.get(key)
+    if (!prev) {
+      bySlug.set(key, s)
+      order.push(key)
+    } else if (prev.source === 'builtin' && s.source !== 'builtin') {
+      // A user-managed skill with the same slug wins over the builtin copy.
+      bySlug.set(key, s)
+    }
+  }
+  return order.map((k) => bySlug.get(k) as T)
 }
 
 /** Concatenate enabled skills into a system-prompt fragment. Pure. */

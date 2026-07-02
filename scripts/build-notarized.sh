@@ -60,6 +60,12 @@ if [[ -n "$DMG" ]]; then
 fi
 
 echo "✓ Done. Verifying…"
-APP="dist/mac-arm64/InkNest.app"
+# productName is "LingXi Desktop" (renamed from InkNest); glob keeps this
+# robust against future renames.
+APP=$(ls -d dist/mac-arm64/*.app 2>/dev/null | head -1)
 [[ -d "$APP" ]] && { xcrun stapler validate "$APP" || true; spctl -a -vv -t exec "$APP" || true; }
 [[ -n "$DMG" ]] && spctl -a -vv -t open --context context:primary-signature "$DMG" || true
+
+# Anti-reverse gate: packaging fails unless obfuscation + fuses + signature
+# are all present in the artifact. Required on EVERY build (standing rule).
+bash scripts/verify-hardening.sh "$APP"

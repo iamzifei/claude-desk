@@ -4,6 +4,7 @@ import { getSetting, resolveApiKey } from '../db/settings'
 import { buildSkillsSystemPrompt } from '../db/skills'
 import { buildMaterialsSystemPrompt, listContextImages } from '../db/materials'
 import { buildAtomsSystemPrompt } from '../db/atoms'
+import { buildDefaultPersonaSystemPrompt } from '../db/personas'
 import { buildRequestTools } from './tools'
 import type { Message } from '../db/conversations'
 
@@ -28,6 +29,21 @@ export type Chunk =
 
 export interface RunHandle {
   cancel: () => void
+}
+
+/**
+ * Models that accept `thinking: { type: 'adaptive' }` — the Claude 4.6+
+ * families (Fable 5 / Mythos 5, Opus 4.6/4.7/4.8, Sonnet 4.6). Sending the
+ * param to anything else is a hard 400: Haiku 4.5 and older Claude models
+ * don't support adaptive thinking, and non-Anthropic models reached through
+ * Anthropic-compatible endpoints (DeepSeek, Zhipu, Moonshot) don't understand
+ * the field at all. For those we omit `thinking` entirely — the request then
+ * runs without extended thinking, which is the correct degradation.
+ * (Fable 5 has thinking always on, so omitting would also work there, but
+ * sending adaptive is accepted and keeps the summarized display.)
+ */
+export function supportsAdaptiveThinking(model: string): boolean {
+  return /^claude-(fable-5|mythos-5|opus-4-[678]|sonnet-4-6)/.test(model)
 }
 
 /**
@@ -65,11 +81,14 @@ export function runChat(
 
     const client = new Anthropic({ apiKey, baseURL: provider.baseURL })
     // A caller-supplied system (e.g. platform rewrite) wins; otherwise the
-    // enabled skills + in-context materials shape the assistant.
+    // default persona + enabled skills + in-context materials shape the
+    // assistant. The persona comes first: identity frames how the skills and
+    // materials below get applied.
     const system =
       systemOverride ??
       [
         systemPrefix,
+        buildDefaultPersonaSystemPrompt(),
         buildSkillsSystemPrompt(),
         buildMaterialsSystemPrompt(),
         buildAtomsSystemPrompt()
@@ -112,8 +131,12 @@ export function runChat(
         {
           model,
           max_tokens: 64000, // streaming → generous ceiling (see claude-api guidance)
-          // Adaptive thinking, with a readable summary streamed to the UI.
-          thinking: { type: 'adaptive', display: 'summarized' },
+          // Adaptive thinking (readable summary streamed to the UI) — but only
+          // for models that support it. Haiku 4.5 / older Claude / third-party
+          // models 400 on the param, so it's capability-gated (see helper).
+          ...(supportsAdaptiveThinking(model)
+            ? { thinking: { type: 'adaptive', display: 'summarized' } as const }
+            : {}),
           ...(system ? { system } : {}),
           ...(tools ? { tools } : {}),
           messages

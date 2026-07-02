@@ -89,6 +89,29 @@ export interface ContextRef {
   messageCount: number
 }
 
+
+/** 创作流水线 — one guided creation moving through the 7-phase pipeline. */
+export type CreationFormat = 'article' | 'script'
+export type PhaseStatus = 'pending' | 'running' | 'done' | 'error' | 'stale' | 'skipped'
+export interface PhaseState {
+  status: PhaseStatus
+  output: string
+  input: string
+  error?: string
+  updated_at: number
+}
+export interface Creation {
+  id: string
+  title: string
+  format: CreationFormat
+  persona_id: string | null
+  current_phase: number
+  phases: Record<number, PhaseState>
+  project_id: string | null
+  created_at: number
+  updated_at: number
+}
+
 export type Chunk =
   | { type: 'text'; text: string }
   | { type: 'thinking'; text: string }
@@ -165,6 +188,30 @@ export interface FetchedUrl {
   title: string
   content: string
   url: string
+}
+
+/** 人设五维 dimension keys — aligned with lingxi / persona-builder skill. */
+export type PersonaDimensionKey = 'past' | 'expertise' | 'stance' | 'proof' | 'life'
+
+/** Editable persona payload (五维 material points + base info). */
+export interface NewPersona {
+  name: string
+  positioning: string
+  toneFormality: string
+  toneExpertise: string
+  tonePerson: string
+  targetPlatforms: string[]
+  bannedWords: string[]
+  dimensions: Record<PersonaDimensionKey, string[]>
+  contentCalendar: Record<string, string>
+}
+
+export interface Persona extends NewPersona {
+  id: string
+  is_default: number
+  project_id: string | null
+  created_at: number
+  updated_at: number
 }
 
 export type TopicStatus = '灵感' | '待写' | '进行' | '已发'
@@ -463,6 +510,28 @@ export interface Api {
     fetchUrl: (url: string) => Promise<FetchedUrl>
     importImage: () => Promise<string | null>
     imageData: (path: string) => Promise<string | null>
+  }
+  personas: {
+    list: () => Promise<Persona[]>
+    create: (d: NewPersona) => Promise<Persona>
+    update: (id: string, d: NewPersona) => Promise<void>
+    delete: (id: string) => Promise<void>
+    setDefault: (id: string, on: boolean) => Promise<void>
+    export: (id: string) => Promise<string | null>
+    import: () => Promise<Persona | null>
+  }
+  creations: {
+    list: () => Promise<Creation[]>
+    get: (id: string) => Promise<Creation | undefined>
+    create: (title: string, format: CreationFormat, personaId: string | null) => Promise<Creation>
+    rename: (id: string, title: string) => Promise<void>
+    setPersona: (id: string, personaId: string | null) => Promise<void>
+    delete: (id: string) => Promise<void>
+  }
+  pipeline: {
+    runPhase: (creationId: string, phaseId: number, input: string) => Promise<void>
+    cancel: (creationId: string) => Promise<void>
+    onChunk: (cb: (creationId: string, phaseId: number, chunk: Chunk) => void) => () => void
   }
   rewrite: {
     run: (source: string, platforms: string[]) => Promise<RewriteResult[]>

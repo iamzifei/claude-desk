@@ -28,7 +28,7 @@ export function OnboardingCard(): JSX.Element | null {
   return (
     <div className="mb-6 w-full max-w-md rounded-2xl border border-primary/30 bg-primary-soft/50 p-5 text-center">
       <div className="flex items-center justify-center gap-1.5 text-[15px] font-semibold text-foreground">
-        <Hand className="h-4 w-4 text-primary" strokeWidth={1.75} /> 第一次用墨栖?
+        <Hand className="h-4 w-4 text-primary" strokeWidth={1.75} /> 第一次用灵犀桌面版?
       </div>
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
         内容创作者的资产工作台:沉淀素材 → 拆原子 → 选题装配成稿 → 多平台改写发布 → 数据反哺选题。

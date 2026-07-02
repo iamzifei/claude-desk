@@ -29,6 +29,25 @@ export const minorOf = (v: string): string => v.split('.').slice(0, 2).join('.')
 // Latest first. The in-app modal shows the entry matching the running version.
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.6.0',
+    title: '「墨栖」更名「灵犀桌面版」',
+    icon: Sparkles,
+    items: [
+      {
+        icon: Rocket,
+        text: '全新名字：加入「灵犀」品牌家族——线上版叫灵犀，这里是灵犀桌面版。你的对话、素材、知识库全部原地不动。'
+      },
+      {
+        icon: FolderOpen,
+        text: '成稿库：原「发布数据」视图更名为「成稿库」，与灵犀线上版叫法一致，功能不变。'
+      },
+      {
+        icon: Link2,
+        text: '灵犀云版直达：没有 API Key？设置页和新手引导里新增云版入口，注册即用。'
+      }
+    ]
+  },
+  {
     version: '1.5.0',
     title: '从「聊天工具」升级为「创作工作台」',
     icon: Sparkles,

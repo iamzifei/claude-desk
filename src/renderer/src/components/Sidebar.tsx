@@ -32,11 +32,13 @@ import {
   PinOff,
   SplitSquareHorizontal,
   SlidersHorizontal,
+  UserRound,
   Copy,
   HelpCircle,
   FileDown,
   Star,
   X,
+  Workflow,
   type LucideIcon
 } from 'lucide-react'
 import { useStore } from '../store'
@@ -77,6 +79,7 @@ type NavAction =
   | 'skills'
   | 'coding'
   | 'materials'
+  | 'personas'
   | 'atoms'
   | 'topics'
   | 'tags'
@@ -84,6 +87,7 @@ type NavAction =
   | 'publish'
   | 'rewrite'
   | 'vault'
+  | 'creations'
 interface NavItem {
   icon: LucideIcon
   label: string
@@ -94,14 +98,16 @@ interface NavItem {
 // 知识库与图谱并列）；「更多」组（默认折叠）收纳低频的笔记与开发类工具，降低首屏
 // 认知负担。新建/搜索提升为顶部快捷行，不再混在导航里。
 const CREATE_ITEMS: NavItem[] = [
+  { icon: Workflow, label: '创作流水线', action: 'creations' },
   { icon: BookText, label: '知识库', action: 'vault' },
   { icon: Library, label: '素材库', action: 'materials' },
   { icon: Atom, label: '知识原子', action: 'atoms' },
   { icon: Tags, label: '标签', action: 'tags' },
   { icon: Network, label: '知识图谱', action: 'graph' },
   { icon: Lightbulb, label: '选题库', action: 'topics' },
+  { icon: UserRound, label: '人设', action: 'personas' },
   { icon: Repeat2, label: '多平台改写', action: 'rewrite' },
-  { icon: TrendingUp, label: '发布数据', action: 'publish' }
+  { icon: TrendingUp, label: '成稿库', action: 'publish' }
 ]
 const MORE_ITEMS: NavItem[] = [
   { icon: CalendarDays, label: '每日笔记', action: 'daily' },
@@ -200,7 +206,7 @@ export function Sidebar({ onOpenSettings }: Props): JSX.Element {
       <div className="flex items-center gap-2 px-4 pb-2 pt-1">
         <Logo className="h-6 w-6 rounded-[7px] shadow-sm" />
         <span className="text-sm font-semibold tracking-tight">
-          墨栖 <span className="text-muted-foreground/70">InkNest</span>
+          灵犀 <span className="text-muted-foreground/70">桌面版</span>
         </span>
       </div>
 

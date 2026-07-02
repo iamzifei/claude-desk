@@ -36,6 +36,7 @@ import { BrowserView } from './BrowserView'
 import { SkillsView } from './SkillsView'
 import { CodingView } from './CodingView'
 import { MaterialsView } from './MaterialsView'
+import { PersonaView } from './PersonaView'
 import { AtomsView } from './AtomsView'
 import { TopicsView } from './TopicsView'
 import { TagsView } from './TagsView'
@@ -43,6 +44,7 @@ import { GraphView } from './GraphView'
 import { PublishView } from './PublishView'
 import { OnboardingCard } from './OnboardingCard'
 import { RewriteView } from './RewriteView'
+import { CreationsView } from './CreationsView'
 
 /** Render a view by id. Chat is the fallback (uses the global session state). */
 function renderView(view: MainView): JSX.Element {
@@ -63,6 +65,8 @@ function renderView(view: MainView): JSX.Element {
       return <CodingView />
     case 'materials':
       return <MaterialsView />
+    case 'personas':
+      return <PersonaView />
     case 'atoms':
       return <AtomsView />
     case 'topics':
@@ -75,6 +79,8 @@ function renderView(view: MainView): JSX.Element {
       return <PublishView />
     case 'rewrite':
       return <RewriteView />
+    case 'creations':
+      return <CreationsView />
     case 'files':
       return <FilesView />
     case 'vault':
@@ -86,13 +92,15 @@ function renderView(view: MainView): JSX.Element {
 
 // Reference views the split pane can show (chat stays on the primary side).
 const SPLIT_VIEWS: { v: MainView; label: string }[] = [
+  { v: 'creations', label: '创作流水线' },
   { v: 'vault', label: '知识库' },
   { v: 'materials', label: '素材库' },
   { v: 'atoms', label: '知识原子' },
   { v: 'tags', label: '标签' },
   { v: 'graph', label: '知识图谱' },
   { v: 'topics', label: '选题库' },
-  { v: 'publish', label: '发布数据' },
+  { v: 'personas', label: '人设' },
+  { v: 'publish', label: '成稿库' },
   { v: 'rewrite', label: '改写工坊' },
   { v: 'skills', label: '技能' },
   { v: 'daily', label: '每日笔记' },

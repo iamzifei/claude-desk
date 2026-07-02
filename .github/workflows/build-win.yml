@@ -1,6 +1,6 @@
 # Build the Windows installer on a real Windows runner.
 #
-# Why CI and not a cross-build from macOS: InkNest depends on native (N-API)
+# Why CI and not a cross-build from macOS: LingXi Desktop depends on native (N-API)
 # modules — better-sqlite3 and sherpa-onnx-node. Their Windows binaries only get
 # installed / rebuilt for the Electron ABI when `npm install` runs ON Windows
 # (npm skips OS-mismatched optional deps, and `electron-builder install-app-deps`
@@ -48,12 +48,19 @@ jobs:
       - name: Build Windows installer
         run: npm run build:win
 
+      # Anti-reverse gate (standing rule): fail the build unless obfuscation
+      # and all Electron fuses are present in the packaged app. Checks the
+      # win-unpacked layout; code-signature check is mac-only and skipped here.
+      - name: Verify hardening
+        shell: bash
+        run: bash scripts/verify-hardening.sh dist/win-unpacked
+
       # Upload the unsigned installer for every run (tag or manual) so it's
       # downloadable from the run page even without a release.
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: InkNest-windows-setup
+          name: LingXi-Desktop-windows-setup
           path: dist/*-setup.exe
           if-no-files-found: error
 

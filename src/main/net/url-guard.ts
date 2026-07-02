@@ -58,7 +58,7 @@ export async function safeFetch(raw: string, maxBytes = 5_000_000): Promise<stri
   for (let hop = 0; hop < 5; hop++) {
     await assertPublicUrl(url)
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (InkNest material fetcher)' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (LingXi-Desktop material fetcher)' },
       redirect: 'manual',
       signal: AbortSignal.timeout(15000)
     })

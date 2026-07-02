@@ -122,6 +122,30 @@ export interface Material {
 
 export type MaterialStatus = 'inbox' | '已整理'
 
+/** 人设五维 dimension keys — aligned with lingxi / persona-builder skill. */
+export type PersonaDimensionKey = 'past' | 'expertise' | 'stance' | 'proof' | 'life'
+
+/** Editable persona payload (基础信息 + 五维素材点). */
+export interface NewPersona {
+  name: string
+  positioning: string
+  toneFormality: string // 正式程度: 轻松 / 半正式 / 正式
+  toneExpertise: string // 专业程度: 科普向 / 专业易懂 / 深度专业
+  tonePerson: string // 人称: 我 / 我们
+  targetPlatforms: string[]
+  bannedWords: string[]
+  dimensions: Record<PersonaDimensionKey, string[]>
+  contentCalendar: Record<string, string>
+}
+
+export interface Persona extends NewPersona {
+  id: string
+  is_default: number // 1 → injected into every conversation's system prompt
+  project_id: string | null
+  created_at: number
+  updated_at: number
+}
+
 export interface NewMaterial {
   title: string
   content: string
@@ -253,6 +277,31 @@ export type LayoutPreset = 'single' | 'col-2' | 'row-2' | 'col-3' | 'quad'
  */
 export type Favorite = SplitTarget | { kind: 'skill'; name: string; slug: string }
 
+/** 创作流水线 — one guided creation moving through the 7-phase pipeline. */
+export type CreationFormat = 'article' | 'script'
+
+export type PhaseStatus = 'pending' | 'running' | 'done' | 'error' | 'stale' | 'skipped'
+
+export interface PhaseState {
+  status: PhaseStatus
+  output: string
+  input: string
+  error?: string
+  updated_at: number
+}
+
+export interface Creation {
+  id: string
+  title: string
+  format: CreationFormat
+  persona_id: string | null
+  current_phase: number
+  phases: Record<number, PhaseState>
+  project_id: string | null
+  created_at: number
+  updated_at: number
+}
+
 export type MainView =
   | 'chat'
   | 'scheduled'
@@ -263,6 +312,7 @@ export type MainView =
   | 'skills'
   | 'coding'
   | 'materials'
+  | 'personas'
   | 'atoms'
   | 'topics'
   | 'tags'
@@ -271,6 +321,7 @@ export type MainView =
   | 'rewrite'
   | 'files'
   | 'vault'
+  | 'creations'
 
 export interface Conversation {
   id: string

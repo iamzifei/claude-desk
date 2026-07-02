@@ -5,8 +5,10 @@ import {
   parseSkillMd,
   formatSkillsPrompt,
   slugifySkillName,
-  extractSlashTokens
+  extractSlashTokens,
+  dedupeSkillsBySlug
 } from './skill-parse'
+import { BUILTIN_ID_PREFIX, planBuiltinSeed, type BuiltinSkillFile } from './builtin-skills'
 
 export { parseSkillMd }
 
@@ -16,7 +18,7 @@ interface SkillRow {
   description: string | null
   content: string
   enabled: number
-  source: string // 'custom' | 'imported' | 'installed'
+  source: string // 'custom' | 'imported' | 'installed' | 'builtin'
   created_at: number
 }
 
@@ -25,11 +27,14 @@ export interface Skill extends SkillRow {
 }
 
 /**
- * A skill's `/command` slug. Installed skills use their on-disk folder name
- * (e.g. `ads-review`); others slugify the name. Same logic on both the picker
+ * A skill's `/command` slug. Builtin skills carry it in their id
+ * (`builtin:<slug>` — frontmatter-declared, never derived from the often-CJK
+ * display name); installed skills use their on-disk folder name (e.g.
+ * `ads-review`); others slugify the name. Same logic on both the picker
  * (insert `/slug`) and the send-time parser (match `/slug`).
  */
 export function skillSlug(id: string, name: string): string {
+  if (id.startsWith(BUILTIN_ID_PREFIX)) return id.slice(BUILTIN_ID_PREFIX.length)
   if (id.startsWith('inst:')) return basename(dirname(id.slice(5)))
   return slugifySkillName(name)
 }
@@ -48,9 +53,18 @@ export function listSkills(): Skill[] {
   return rows.map(withSlug)
 }
 
-/** Lightweight skill index for the composer's `/` picker (no heavy content). */
+/**
+ * Lightweight skill index for the composer's `/` picker (no heavy content).
+ * Slug-deduped so a builtin skill and the user's own copy of it (same slug in
+ * ~/.claude/skills) show as one entry — the user's version wins, matching the
+ * send-time resolution in buildInvokedSkillsPrompt.
+ */
 export function listSkillNames(): { name: string; slug: string; description: string | null }[] {
-  return listSkills().map((s) => ({ name: s.name, slug: s.slug, description: s.description }))
+  return dedupeSkillsBySlug(listSkills()).map((s) => ({
+    name: s.name,
+    slug: s.slug,
+    description: s.description
+  }))
 }
 
 export function createSkill(s: NewSkill): Skill {
@@ -79,7 +93,9 @@ export function createSkill(s: NewSkill): Skill {
 export function buildInvokedSkillsPrompt(text: string): string {
   const slugs = extractSlashTokens(text)
   if (slugs.length === 0) return ''
-  const all = listSkills()
+  // Dedupe by slug first: the user's own version of a skill (installed /
+  // custom / imported) overrides the app-bundled builtin one.
+  const all = dedupeSkillsBySlug(listSkills())
   const picked: { name: string; content: string }[] = []
   const seen = new Set<string>()
   for (const slug of slugs) {
@@ -136,10 +152,47 @@ export function syncInstalledSkills(
   })()
 }
 
-/** Concatenate enabled skills into a system-prompt fragment (empty if none). */
+/**
+ * Seed / refresh the app-bundled builtin skills (`source='builtin'`,
+ * id `builtin:<slug>`). Runs on every startup and is idempotent:
+ *   - new bundled skills are inserted (core ones enabled by default,
+ *     see builtin-skills.DEFAULT_ENABLED_SLUGS);
+ *   - content upgrades update name/description/content but preserve the
+ *     user's enable/disable choice;
+ *   - builtin rows whose bundled file disappeared are pruned.
+ * Never touches installed / custom / imported skills.
+ */
+export function syncBuiltinSkills(scanned: BuiltinSkillFile[]): void {
+  const db = getDb()
+  const existing = db
+    .prepare("SELECT id, name, description, content FROM skills WHERE source = 'builtin'")
+    .all() as { id: string; name: string; description: string | null; content: string }[]
+  const plan = planBuiltinSeed(scanned, existing)
+  if (plan.inserts.length === 0 && plan.updates.length === 0 && plan.pruneIds.length === 0) return
+  const insert = db.prepare(
+    `INSERT INTO skills (id, name, description, content, enabled, source, created_at)
+     VALUES (@id, @name, @description, @content, @enabled, 'builtin', @created_at)`
+  )
+  const update = db.prepare(
+    'UPDATE skills SET name = @name, description = @description, content = @content WHERE id = @id'
+  )
+  const remove = db.prepare('DELETE FROM skills WHERE id = ?')
+  const now = Date.now()
+  db.transaction(() => {
+    for (const s of plan.inserts) insert.run({ ...s, created_at: now })
+    for (const s of plan.updates) update.run(s)
+    for (const id of plan.pruneIds) remove.run(id)
+  })()
+}
+
+/**
+ * Concatenate enabled skills into a system-prompt fragment (empty if none).
+ * Slug-deduped so enabling both a builtin skill and the user's own same-slug
+ * copy injects only the user's version (no duplicated guidance).
+ */
 export function buildSkillsSystemPrompt(): string {
-  const enabled = getDb()
-    .prepare('SELECT name, content FROM skills WHERE enabled = 1 ORDER BY created_at')
-    .all() as { name: string; content: string }[]
-  return formatSkillsPrompt(enabled)
+  const enabled = listSkills()
+    .filter((s) => s.enabled)
+    .sort((a, b) => a.created_at - b.created_at)
+  return formatSkillsPrompt(dedupeSkillsBySlug(enabled))
 }

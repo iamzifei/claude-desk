@@ -8,7 +8,8 @@ import {
   Loader2,
   Search,
   GripVertical,
-  Star
+  Star,
+  Package
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useStore } from '../store'
@@ -18,7 +19,7 @@ import { Input } from './ui/input'
 import { Header, Empty } from './ScheduledView'
 import type { Skill } from '../types'
 
-type Filter = 'all' | 'installed' | 'custom'
+type Filter = 'all' | 'builtin' | 'installed' | 'custom'
 
 export function SkillsView(): JSX.Element {
   const [skills, setSkills] = useState<Skill[]>([])
@@ -44,12 +45,15 @@ export function SkillsView(): JSX.Element {
     setScanning(false)
   }
 
+  const builtinCount = skills.filter((s) => s.source === 'builtin').length
   const installedCount = skills.filter((s) => s.source === 'installed').length
   const q = query.trim().toLowerCase()
   const shown = skills.filter((s) => {
+    const isBuiltin = s.source === 'builtin'
     const isInstalled = s.source === 'installed'
+    if (filter === 'builtin' && !isBuiltin) return false
     if (filter === 'installed' && !isInstalled) return false
-    if (filter === 'custom' && isInstalled) return false
+    if (filter === 'custom' && (isInstalled || isBuiltin)) return false
     if (q && !(s.name.toLowerCase().includes(q) || (s.description ?? '').toLowerCase().includes(q)))
       return false
     return true
@@ -95,8 +99,9 @@ export function SkillsView(): JSX.Element {
         {(
           [
             ['all', `全部 ${skills.length}`],
+            ['builtin', `内置 ${builtinCount}`],
             ['installed', `已安装 ${installedCount}`],
-            ['custom', `自定义 ${skills.length - installedCount}`]
+            ['custom', `自定义 ${skills.length - installedCount - builtinCount}`]
           ] as [Filter, string][]
         ).map(([v, label]) => (
           <button
@@ -191,6 +196,7 @@ function SkillRow({ skill, onChange }: { skill: Skill; onChange: () => void }): 
   const toggleFavorite = useStore((s) => s.toggleFavorite)
   const favTarget = { kind: 'skill' as const, name: skill.name, slug: skill.slug }
   const fav = isFavorited(favorites, favTarget)
+  const builtin = skill.source === 'builtin'
   const installed = skill.source === 'installed'
   const badge = installed ? '已安装' : skill.source === 'imported' ? '导入' : null
   // Installed skills live on disk (`inst:<path>`); show the path on expand.
@@ -213,13 +219,17 @@ function SkillRow({ skill, onChange }: { skill: Skill; onChange: () => void }): 
         <button className="min-w-0 flex-1 text-left" onClick={() => setOpen((v) => !v)}>
           <div className="flex items-center gap-2">
             <span className="truncate font-medium">{skill.name}</span>
-            {badge ? (
+            {builtin ? (
+              // App-bundled creator skill — visually distinct from disk-scanned ones.
               <span
-                className={cn(
-                  'shrink-0 rounded-full px-2 py-0.5 text-[11px]',
-                  installed ? 'bg-primary-soft text-primary' : 'bg-muted text-muted-foreground'
-                )}
+                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-[11px] text-primary"
+                title="随应用内置的创作技能，升级时自动更新；不需要就停用"
               >
+                <Package className="h-3 w-3" strokeWidth={2} />
+                内置
+              </span>
+            ) : badge ? (
+              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
                 {badge}
               </span>
             ) : null}
@@ -259,7 +269,16 @@ function SkillRow({ skill, onChange }: { skill: Skill; onChange: () => void }): 
             />
           </span>
         </label>
-        {installed ? (
+        {builtin ? (
+          // Builtin rows are re-seeded on every launch — deleting one would just
+          // resurrect it, so offer disable (the toggle) instead of delete.
+          <span
+            className="shrink-0 px-1 text-[11px] text-muted-foreground/50"
+            title="内置技能随应用分发，无法删除；不需要就停用"
+          >
+            预装
+          </span>
+        ) : installed ? (
           <span
             className="shrink-0 px-1 text-[11px] text-muted-foreground/50"
             title="已安装的技能在磁盘上，停用即可；如需移除请删除对应文件"

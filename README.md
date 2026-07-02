@@ -1,8 +1,12 @@
-# 墨栖 InkNest
+# 灵犀桌面版 LingXi Desktop
 
 **内容创作者的素材库 × AI 创作台。** 面向抖音 / 小红书 / 公众号 / YouMind 等平台的图文与
 多媒体创作者:沉淀自己的素材与上下文,用 AI 高效产出多平台内容。本地优先(BYO-key,无后端),
 Electron + electron-vite + React,直连官方 Anthropic SDK 与兼容供应商。
+
+> 品牌:统一主品牌「灵犀」——线上版 = 灵犀(lingxi.show),本仓库 = 灵犀桌面版。
+> 曾用名 墨栖 / InkNest 已退役;内部工程名(package.json `name`、userData 目录、
+> Windows 可执行名)保持 `claude-desk` 不变以保护既有用户数据与升级链。
 
 > 起源:对 牛马AI (newmax) 架构的 clean-room 复刻,已演进为面向内容创作者的差异化产品
 > (新品牌 / 冷靛紫视觉 / 素材库 / 创作预设)。设计与定位见 `docs/DESIGN.md`,

@@ -1,5 +1,13 @@
+# appId is intentionally kept as the legacy com.inknest.app: electron-updater
+# matches updates by appId, and macOS keychain (safeStorage) / notarization
+# identity are tied to it — changing it would break the upgrade chain and lose
+# access to stored secrets for existing installs.
 appId: com.inknest.app
-productName: InkNest
+# Display/install name only. Safe to change: the userData dir (SQLite DB, models,
+# materials) is derived from package.json "name" ("claude-desk"), NOT from
+# productName — verified against the packaged app.asar, which carries no
+# productName field. Renaming here does not move any user data.
+productName: LingXi Desktop
 directories:
   buildResources: build
 files:
@@ -24,6 +32,9 @@ asarUnpack:
   - '**/node_modules/@anthropic-ai/claude-agent-sdk/**'
   - '**/*.node'
 win:
+  # Kept as the legacy exe name on purpose: existing Windows installs' desktop /
+  # start-menu shortcuts and the NSIS per-user install dir reference this exe;
+  # renaming it would strand old shortcuts after an auto-update.
   executableName: claude-desk
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
@@ -42,9 +53,9 @@ mac:
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
-    - NSMicrophoneUsageDescription: InkNest 需要麦克风用于语音输入转写。
-    - NSDocumentsFolderUsageDescription: InkNest 需要访问文稿以读写你选择的素材与文件。
-    - NSDownloadsFolderUsageDescription: InkNest 需要访问下载目录以导入素材。
+    - NSMicrophoneUsageDescription: 灵犀桌面版需要麦克风用于语音输入转写。
+    - NSDocumentsFolderUsageDescription: 灵犀桌面版需要访问文稿以读写你选择的素材与文件。
+    - NSDownloadsFolderUsageDescription: 灵犀桌面版需要访问下载目录以导入素材。
   notarize: false
 dmg:
   artifactName: ${productName}-${version}-${arch}.${ext}
@@ -62,7 +73,7 @@ npmRebuild: false
 # Fuses are flipped in the Electron binary at package time (before signing), so
 # they can't be toggled back without breaking the code signature.
 electronFuses:
-  # Block `ELECTRON_RUN_AS_NODE=1 InkNest …` — otherwise an attacker can use the
+  # Block `ELECTRON_RUN_AS_NODE=1 "LingXi Desktop" …` — otherwise an attacker can use the
   # signed binary as a Node interpreter to run arbitrary code in-process and dump
   # everything, bypassing all obfuscation. Safe here: the Claude agent subprocess
   # is spawned via a real `node`/`bun` on PATH, it does NOT rely on RUN_AS_NODE.

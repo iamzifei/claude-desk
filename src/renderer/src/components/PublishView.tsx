@@ -71,7 +71,7 @@ export function PublishView(): JSX.Element {
     <div className="mx-auto flex h-full w-full max-w-4xl flex-col px-8 py-7">
       <Header
         icon={BarChart3}
-        title="发布数据"
+        title="成稿库"
         desc="记录各平台发布与数据,让表现反哺下一轮选题——发布越多,选题越准,形成增长飞轮。"
         action={
           <div className="flex gap-2">

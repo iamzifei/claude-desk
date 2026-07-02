@@ -5,3 +5,6 @@ out
 .eslintcache
 *.log*
 scripts/notarize.env
+
+# Playwright/CDP MCP test scratch (console + page dumps)
+.playwright-mcp/
