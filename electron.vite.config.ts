@@ -18,14 +18,23 @@ import obfuscatorPlugin from 'vite-plugin-javascript-obfuscator'
 // Set DISABLE_OBFUSCATION=1 to bypass entirely when debugging a packaged build.
 const obfuscate = !process.env.DISABLE_OBFUSCATION
 
-// Shared base: string-array encoding + identifier mangling + self-defending.
+// Shared base: string-array encoding + identifier mangling.
 // `renameGlobals` stays false everywhere — renaming globals breaks interop with
 // externalized deps / the preload contextBridge.
+//
+// `selfDefending` is deliberately OFF. It injects an anti-tamper check that
+// enters an infinite `while(true)` loop when it detects its own code was
+// altered — but our pipeline runs esbuild's minify pass AFTER the obfuscator,
+// which *does* alter the code, so the check false-positives and hangs the
+// process at 100% CPU with no first paint. This was the v1.6.0 "window never
+// opens" bug (reproduced 3/3 on fresh installs). The string-array + control-
+// flow-flattening layers already make the code hostile to read; self-defending
+// bought little and cost a runtime deadlock.
 const baseObfuscation = {
   compact: true,
   identifierNamesGenerator: 'hexadecimal',
   renameGlobals: false,
-  selfDefending: true,
+  selfDefending: false,
   simplify: true,
   stringArray: true,
   stringArrayEncoding: ['base64'],
@@ -36,16 +45,21 @@ const baseObfuscation = {
 }
 
 // Renderer profile — the aggressive one. Control-flow flattening + dead-code
-// injection are what blow up an LLM's token budget and error rate; debug
-// protection + disabled console kill anyone who opens DevTools on the prod build.
+// injection are what blow up an LLM's token budget and error rate.
+//
+// `debugProtection` is deliberately OFF too. Its anti-debugger technique times
+// a `debugger` statement and spins in an infinite loop when the delta looks
+// like a debugger is attached — but on a cold first launch (slow, under load)
+// the timing check false-positives and deadlocks the renderer the same way
+// selfDefending did. It was also redundant: the packaged build already blocks
+// DevTools entirely (Electron fuses + `devTools: false`), so there is no
+// DevTools session for it to defend against. Removed to fix the hang.
 const rendererObfuscation = {
   ...baseObfuscation,
   controlFlowFlattening: true,
   controlFlowFlatteningThreshold: 0.75,
   deadCodeInjection: true,
   deadCodeInjectionThreshold: 0.4,
-  debugProtection: true,
-  debugProtectionInterval: 4000,
   disableConsoleOutput: true,
   splitStrings: true,
   splitStringsChunkLength: 8,

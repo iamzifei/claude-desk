@@ -1,6 +1,6 @@
 {
   "name": "claude-desk",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "LingXi Desktop — local-first AI workbench for content creators",
   "main": "./out/main/index.js",
   "author": "example.com",
