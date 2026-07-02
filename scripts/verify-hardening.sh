@@ -47,14 +47,15 @@ fi
 # K2, …) — so identifier-based detection is a false negative. A readable
 # (DISABLE_OBFUSCATION) build has ~0 of these markers; an obfuscated one has
 # hundreds. Threshold 20 clears incidental use with a wide margin.
-MAIN_JS=$(npx --yes @electron/asar list "$ASAR" | grep -E '^/out/main/index\.js$' || true)
-[ -z "$MAIN_JS" ] && fail "main bundle not found inside app.asar"
-# `asar extract-file` writes the file (by basename) into the current dir, not
-# stdout — so run it from a temp dir and read the result there.
+# Extract the main bundle directly rather than pre-checking via `asar list` —
+# list output uses OS-native path separators (backslashes on Windows) which
+# breaks a forward-slash grep. `asar extract-file` takes a forward-slash path
+# on every platform and writes the file (by basename) into the current dir,
+# so run it from a temp dir and read the result there.
 TMP=$(mktemp -d)
 ASAR_ABS=$(cd "$(dirname "$ASAR")" && pwd)/$(basename "$ASAR")
 ( cd "$TMP" && npx --yes @electron/asar extract-file "$ASAR_ABS" out/main/index.js >/dev/null 2>&1 )
-[ -s "$TMP/index.js" ] || fail "could not read main bundle from app.asar"
+[ -s "$TMP/index.js" ] || fail "main bundle not found / unreadable inside app.asar"
 MARKERS=$(grep -oE 'atob|charCodeAt|fromCharCode' "$TMP/index.js" | wc -l | tr -d ' ')
 rm -rf "$TMP"
 [ "$MARKERS" -ge 20 ] || fail "main bundle is NOT obfuscated (only $MARKERS string-array decode markers; expected ≥20)"
